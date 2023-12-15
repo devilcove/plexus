@@ -1,0 +1,30 @@
+{{define "navbar"}}
+
+<div class="w3-bar w3-theme-d5 w3-opacity w3-hover-opacity-off w3-center">
+
+    <div class="w3-bar w3-hide-small ">
+        <button type="button" class="w3-bar-item w3-button">
+            <img src="images/network-small.png" alt="Plexus">
+        </button>
+        <button type="button" class="w3-bar-item w3-button" hx-get="/networks" hx-target="#content">
+            <i class="fa fa-file-alt w3-xxlarge"></i>
+            Networks</button>
+        <button type="button" class="w3-bar-item w3-button" hx-get="/peers" hx-target="#content">
+            <i class="fa fa-file-alt w3-xxlarge"></i>
+            Peers</button>
+        <button type="button" class="w3-bar-item w3-button" hx-get="/keys" hx-target="#content">
+            <i class="fa fa-file-alt w3-xxlarge"></i>
+            Keys</button>
+        <button type="button" class="w3-bar-item w3-button" hx-get="/users" hx-target="#content">
+            <i class="fa fa-user w3-xxlarge"></i>
+            Users</button>
+        <button type="button" class="w3-bar-item w3-button" hx-get="/config" hx-target="#content">
+            <i class="fa fa-cog w3-xxlarge"></i>
+            Settings</button>
+        <button type="button" class="w3-bar-item w3-button"
+            onclick="document.getElementById('About').style.display='block'">
+            <i class="fa fa-info-circle w3-xxlarge"></i>
+            About</button>
+    </div>
+</div>
+{{end}}

@@ -1,0 +1,50 @@
+{{define "layout"}}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Plexus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css" type="text/css">
+    <link rel="stylesheet" href="https://www.w3schools.com/lib/w3-theme-{{.Theme}}.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family={{.Font}}">
+    <link rel="stylesheet" href="/assets/css/fontawesome.min.css">
+    <link rel="stylesheet" href="/assets/css/brands.min.css">
+    <link rel="stylesheet" href="/assets/css/solid.min.css">
+    <script src="https://unpkg.com/htmx.org@1.9.9"
+        integrity="sha384-QFjmbokDn2DjBjq+fM+8LUIVrAgqcNW2s0PjAxHETgRn9l4fvX31ZxDxvwQnyMOX"
+        crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/response-targets.js"></script>
+    <style>
+        body,
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            font-family: '{{.Font}}';
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        ul {
+            list-style-type: none;
+        }
+    </style>
+</head>
+
+<body class="w3-theme-l3" id="main">
+    <div hx-ext="response-targets">
+        {{template "about" . }}
+        {{template "navbar" .}}
+        <div id="error"></div>
+        {{template "content" .}}
+        {{template "footer" .}}
+    </div>
+</body>
+
+</html>
+{{end}}

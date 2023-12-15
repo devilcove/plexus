@@ -1,0 +1,20 @@
+{{define "about"}}
+<!-- [html-validate-disable no-inline-style]-->
+<div id="About" class="w3-modal">
+    <div class="w3-modal-content w3-card-4 w3-animate-zoom w3-padding" style="width:50%">
+        <div class="w3-container w3-center w3-theme-dark">
+            <h2>Plexus</h2>
+            <small>Version {{ .Version }}</small>
+            <h3>&copy; 2023 Matthew R. Kasun</h3>
+            <a href="mailto://mkasun@nusak.ca?subject=trimetraced">
+                <i class="fa fa-paper-plane w3-small"></i>
+                mkasun@nusak.ca</a><br>
+            <a href="https://github.com/devilcove/plexus" target="_blank">
+                <i class="fab fa-github"></i>
+                repo</a>
+            <br><br>
+            <button type="submit" class="w3-button w3-block w3-padding" onclick="document.getElementById('About').style.display='none'">Close</button>
+        </div>
+    </div>
+</div>
+{{end}}

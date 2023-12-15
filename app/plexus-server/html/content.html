@@ -1,0 +1,50 @@
+{{define "content"}}
+<!-- [html-validate-disable prefer-tbody]-->
+{{if (eq .NeedsLogin true)}}
+{{template "login" .}}
+{{ else }}
+<div class="w3-container w3-center w3-padding-64" id="content" hx-get="/projects/status" hx-trigger="every {{.Refresh}}m">
+    <div class="w3-row">
+        <div class="w3-third"><br></div>
+        <div class="w3-third">
+            <table class="w3-table">
+                <tr>
+                    <td class="w3-theme-l3"><b>Current Project: </b></td>
+                    <td class="w3-theme-l3">{{.Status.Current}}</td>
+                </tr>
+                <tr>
+                    <td class="w3-theme-l3">Time This Session </td>
+                    <td class="w3-theme-l3">{{.Status.Elapsed}}</td>
+                </tr>
+                <tr>
+                    <td class="w3-theme-l3">Time Today </td>
+                    <td class="w3-theme-l3">{{.Status.CurrentTotal}}</td>
+                </tr>
+            </table>
+            {{ if .Tracking }}
+            <form hx-post="projects/stop" hx-target="#main">
+                <button class="w3-button" type="submit"><i class="fa fa-stopwatch"></i> Stop</button>
+            </form>
+            {{end}}
+
+            <h2> Time worked today </h2>
+            <table class="w3-table">
+                {{range .Status.Durations}}
+                <tr>
+                    <td><b><label class="w3-left">{{ .Project }}</label></b></td>
+                    <td>{{ .Elapsed }}</td>
+                </tr>
+                {{end}}
+                <tr>
+                    <td><strong><label>Total Time Today</label></strong></td>
+                    <td><label>{{ .Status.DailyTotal }}</label><br></td>
+                </tr>
+            </table>
+            <br>
+            <br>
+            <br>
+        </div>
+    </div>
+</div>
+{{end}}
+{{end}}

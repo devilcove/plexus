@@ -1,0 +1,67 @@
+{{define "report"}}
+<div class="w3-row">
+    <div class="w3-third"><br></div>
+    <div class="w3-third">
+        <h1>Reports</h1>
+        <form class="w3-container" hx-post="/reports" hx-target="#content">
+            <p><label>Start Date</label></p>
+            <p><input type="date" name="start" value="{{.DefaultDate}}" required></p>
+            <p><label>End Date</label></p>
+            <p><input type="date" name="end" value="{{.DefaultDate}}" required></p>
+            <p><label>Limit to Project</label></p>
+            <p><select class="w3-select" name="project">
+                    <option value=""></option>
+                    {{range .Projects}}
+                    <option value="{{.}}">{{.}}</option>
+                    {{end}}
+                </select></p>
+            <p><button class="w3-button w3-theme-dark w3-padding large" type="button" hx-get="/"
+                    hx-target="#main">Cancel</button>
+                <button class="w3-button w3-theme-dark w3-padding large" type="submit">Submit</button>
+            </p>
+        </form>
+    </div>
+</div>
+{{end}}
+
+{{define "results"}}
+<div class="w3-row">
+    <div class="w3-third"><br></div>
+    <div class="w3-third">
+        <h1>TimeTrace Report</h1>
+        {{range .}}
+        <h2>Project {{.Project}}</h2>
+        {{range .Items}}
+        <button hx-get="/records/{{ .ID }}" hx-target="#content" type="button">
+            {{.Start.Format "Jan 02, 2006 15:04"}} &nbsp; {{.End.Format "Jan 02, 2006 15:04"}}
+        </button><br>
+        {{end}}
+        <h2>{{.Total}}</h2>
+        {{end}}
+        <button class="w3-button w3-theme-dark w3-padding large" hx-get="/" hx-target="#main" type="button">Close</button>
+    </div>
+</div>
+{{end}}
+
+{{define "editRecord"}}
+<div class="w3-row">
+    <div class="w3-third"><br></div>
+    <div class="w3-third">
+        <h1>Edit Record</h1>
+        <form hx-post="/records/{{ .ID }}" hx-target="#content">
+            <input type="hidden" name="ID" value="{{.ID}}">
+            <label>Start</label>
+            <input class="w3-input" type="date" name="Start" value='{{.Start.Format "2006-01-02"}}'>
+            <input class="w3-input" type="time" name="StartTime" value='{{.Start.Format "15:04"}}'>
+            <label>End</label>
+            <input class="w3-input" type="date" name="End" value='{{.End.Format "2006-01-02"}}'>
+            <input class="w3-input" type="time" name="EndTime" value='{{.End.Format "15:04"}}'>
+
+            <p><button class="w3-button w3-theme-dark w3-padding-large" type="button" hx-get="/"
+                    hx-target="#main">Cancel</button>
+                <button class="w3-button w3-theme-dark w3-padding-large" type="submit">Submit</button>
+            </p>
+        </form>
+    </div>
+</div>
+{{end}}

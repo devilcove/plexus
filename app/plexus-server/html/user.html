@@ -1,0 +1,54 @@
+{{define "user"}}
+<!-- [html-validate-disable prefer-tbody]-->
+<div class="w3-row">
+    <div class="w3-third"><br></div>
+    <div class="w3-third">
+        <h1>Users</h1>
+        <table class="w3-table-all w3-center">
+            <tr class="w3-theme-d5 w3-center">
+                <td>Name</td>
+                <td>Admin</td>
+                <td>Edit</td>
+                <td>Delete</td>
+            </tr>
+            {{range . }}
+            <tr>
+                <td>{{.Username}}</td>
+                <td>{{.IsAdmin}}</td>
+                <td><i class="fa fa-edit" hx-get="/users/{{.Username}}" hx-target="#content"></i></td>
+                <td><i class="fa fa-user-slash"></i></td>
+            </tr>
+            {{end}}
+        </table>
+    </div>
+</div>
+{{end}}
+
+{{define "editUser"}}
+<div class="w3-row">
+    <div class="w3-third"><br></div>
+    <div class="w3-third">
+        <h1>Edit User</h1>
+        <h2>{{.Username}}</h2>
+        <form name="editUser" hx-post="/users/{{.Username}}" hx-target="#content" onsubmit="return valPass()">
+            <label for="password">New Password: </label>
+            <input type="password" placeholder="new password" name="Password" required><br>
+            <label for="verify">Verify Password: </label>
+            <input type="password" placeholder="new password" name="verify" required><br><br>
+            <button type="button" hx-get="/" hx-target="#main">Cancel</button>
+            <button type="submit">Submit</button>
+        </form>
+        <script>
+            function valPass() {
+                var x = document.forms["editUser"]["Password"].value;
+                var y = document.forms["editUser"]["verify"].value;
+                console.log(x, y)
+                if (x != y) {
+                    alert("password are not the same");
+                    return false;
+                }
+            }
+        </script>
+    </div>
+</div>
+{{end}}
