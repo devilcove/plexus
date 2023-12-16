@@ -68,7 +68,6 @@ func login(c *gin.Context) {
 	session.Set("page", "peers")
 	session.Options(sessions.Options{MaxAge: sessionAge, Secure: false, SameSite: http.SameSiteLaxMode})
 	_ = session.Save()
-	user.Password = ""
 	slog.Debug("login", "user", user.Username)
 	page := getPage(user.Username)
 	page.NeedsLogin = false
