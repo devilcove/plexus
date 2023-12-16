@@ -58,6 +58,30 @@ func GetAllUsers() ([]plexus.User, error) {
 	return users, nil
 }
 
+func AdminExist() bool {
+	var user plexus.User
+	var found bool
+	if err := db.View(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte(USERS_TABLE_NAME))
+		if b == nil {
+			return ErrNoResults
+		}
+		_ = b.ForEach(func(k, v []byte) error {
+			if err := json.Unmarshal(v, &user); err != nil {
+				return err
+			}
+			if user.IsAdmin {
+				found = true
+			}
+			return nil
+		})
+		return nil
+	}); err != nil {
+		return false
+	}
+	return found
+}
+
 func DeleteUser(name string) error {
 	if _, err := GetUser(name); err != nil {
 		return err

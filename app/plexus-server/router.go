@@ -3,7 +3,6 @@ package main
 import (
 	"embed"
 	"fmt"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -102,31 +101,31 @@ func auth(c *gin.Context) {
 }
 
 func checkDefaultUser() {
-	user := os.Getenv("USER")
-	pass := os.Getenv("PASS")
-	users, err := database.GetAllUsers()
-	if err != nil {
-		log.Fatal(err)
-	}
-	if len(users) > 1 {
-		slog.Debug("user exists")
+	if database.AdminExist() {
+		slog.Debug("admin exists")
 		return
 	}
-	if user == "" {
+	user, ok := os.LookupEnv("PLEXUS_USER")
+	if !ok {
 		user = "admin"
 	}
-	if pass == "" {
+	pass, ok := os.LookupEnv("PLEXUS_PASS")
+	if !ok {
 		pass = "password"
 	}
 	password, err := database.HashPassword(pass)
 	if err != nil {
 		slog.Error("hash error", "error", err)
+		return
 	}
-	_ = database.SaveUser(&plexus.User{
+	if err = database.SaveUser(&plexus.User{
 		Username: user,
 		Password: password,
 		IsAdmin:  true,
 		Updated:  time.Now(),
-	})
+	}); err != nil {
+		slog.Error("create default user", "error", err)
+		return
+	}
 	slog.Info("default user created")
 }

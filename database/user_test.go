@@ -90,7 +90,25 @@ func TestDeleteUser(t *testing.T) {
 		err = DeleteUser("testing")
 		assert.Nil(t, err)
 	})
+}
 
+func TestAdminExists(t *testing.T) {
+	err := deleteAllUsers(true)
+	assert.Nil(t, err)
+	t.Run("noadmin", func(t *testing.T) {
+		admin := AdminExist()
+		assert.False(t, admin)
+	})
+	t.Run("adminexists", func(t *testing.T) {
+		err := createTestUser(plexus.User{
+			Username: "admin",
+			Password: "testing",
+			IsAdmin:  true,
+		})
+		assert.Nil(t, err)
+		admin := AdminExist()
+		assert.True(t, admin)
+	})
 }
 
 func createTestUser(user plexus.User) (err error) {
