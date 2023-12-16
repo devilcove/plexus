@@ -37,6 +37,8 @@ func setupRouter() *gin.Engine {
 	_ = router.SetTrustedProxies(nil)
 	router.Use(gin.Recovery(), session)
 	router.GET("/", displayMain)
+	router.POST("/login", login)
+	router.GET("/logout", logout)
 	//router.GET("/login", displayLogin)
 	//users := router.Group("/users", auth)
 	//{
@@ -47,8 +49,6 @@ func setupRouter() *gin.Engine {
 	//	users.DELETE(":name", deleteUser)
 	//	users.GET(":name", getUser)
 	//}
-	//router.POST("/login", login)
-	//router.GET("/logout", logout)
 	//router.GET("/register", register)
 	//router.POST("/register", regUser)
 	//projects := router.Group("/projects", auth)

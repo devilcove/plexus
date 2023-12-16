@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/devilcove/plexus/database"
-	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/kr/pretty"
 	"github.com/nats-io/nats-server/v2/server"
@@ -152,22 +151,4 @@ func loginReply(msg *nats.Msg) {
 	pretty.Println("sub", msg.Sub.Queue, msg.Sub.Subject)
 	msg.Respond([]byte("hello, " + name))
 	slog.Info("login reply", "duration", time.Since(start))
-}
-
-func login(c *gin.Context) {
-	start := time.Now()
-	type User struct {
-		Name string `json:"name"`
-	}
-	var user User
-	if err := c.BindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		c.Abort()
-		return
-	}
-	slog.Info("login", "name", user.Name)
-	//pretty.Println("header", c.Request.Header)
-	//pretty.Println("body", c.Request.Body)
-	c.String(http.StatusOK, "hello, %s", user.Name)
-	slog.Info("login", "duration", time.Since(start))
 }
