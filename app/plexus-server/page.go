@@ -31,6 +31,9 @@ func displayMain(c *gin.Context) {
 	loggedin := session.Get("loggedin")
 	slog.Debug("display main page", "user", user, "loggedin", loggedin)
 	page := getPage(user)
+	if loggedin == nil {
+		page.NeedsLogin = true
+	}
 	c.HTML(http.StatusOK, "layout", page)
 }
 
