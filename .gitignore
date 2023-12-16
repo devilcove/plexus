@@ -1,3 +1,5 @@
 **/.env
 plexus-server/plexus-server
 coverage.out
+test.db
+time.db

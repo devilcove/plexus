@@ -11,8 +11,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/devilcove/timetraced/database"
-	"github.com/devilcove/timetraced/models"
+	"github.com/devilcove/plexus"
+	"github.com/devilcove/plexus/database"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
@@ -37,6 +37,8 @@ func setupRouter() *gin.Engine {
 	//router.SetHTMLTemplate(template.Must(template.New("").Parse("html/*")))
 	_ = router.SetTrustedProxies(nil)
 	router.Use(gin.Recovery(), session)
+	router.GET("/", displayMain)
+	//router.GET("/login", displayLogin)
 	//users := router.Group("/users", auth)
 	//{
 	//	users.GET("", getUsers)
@@ -46,11 +48,9 @@ func setupRouter() *gin.Engine {
 	//	users.DELETE(":name", deleteUser)
 	//	users.GET(":name", getUser)
 	//}
-	//router.GET("/login", displayLogin)
 	//router.POST("/login", login)
 	//router.GET("/logout", logout)
 	//router.GET("/register", register)
-	router.GET("/", displayMain)
 	//router.POST("/register", regUser)
 	//projects := router.Group("/projects", auth)
 	//{
@@ -118,11 +118,11 @@ func checkDefaultUser() {
 	if pass == "" {
 		pass = "password"
 	}
-	password, err := hashPassword(pass)
+	password, err := database.HashPassword(pass)
 	if err != nil {
 		slog.Error("hash error", "error", err)
 	}
-	_ = database.SaveUser(&models.User{
+	_ = database.SaveUser(&plexus.User{
 		Username: user,
 		Password: password,
 		IsAdmin:  true,

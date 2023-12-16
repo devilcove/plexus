@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/devilcove/plexus/database"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/kr/pretty"
@@ -22,11 +23,13 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		slog.Warn("Error loading .env file")
 	}
-	verbosity, ok := os.LookupEnv("verbosity")
+	verbosity, ok := os.LookupEnv("VERBOSITY")
 	if !ok {
 		verbosity = "INFO"
 	}
 	logger := setLogging(verbosity)
+	database.InitializeDatabase()
+	checkDefaultUser()
 	wg := sync.WaitGroup{}
 	quit := make(chan os.Signal, 1)
 	reset := make(chan os.Signal, 1)
