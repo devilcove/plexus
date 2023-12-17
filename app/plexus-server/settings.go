@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/devilcove/plexus"
@@ -21,7 +22,10 @@ func setConfig(c *gin.Context) {
 	config := plexus.Config{}
 	if err := c.Bind(&config); err != nil {
 		log.Println("failed to read config", err)
+		processError(c, http.StatusBadRequest, "invalid config")
+		return
 	}
+	slog.Debug("setConfig", "config", config)
 	SetTheme(user, config.Theme)
 	SetFont(user, config.Font)
 	SetRefresh(user, config.Refresh)

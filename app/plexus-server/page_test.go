@@ -23,6 +23,7 @@ var (
 func TestMain(m *testing.M) {
 	os.Setenv("DB_FILE", "test.db")
 	_ = database.InitializeDatabase()
+	setLogging("DEBUG")
 	defer database.Close()
 	//checkDefaultUser()
 	router = setupRouter()
@@ -167,18 +168,24 @@ func deleteAllUsers(deleteAll bool) (errs error) {
 	return errs
 }
 
-func testLogin(data plexus.User) *http.Cookie {
+func testLogin(data plexus.User) (*http.Cookie, error) {
 	w := httptest.NewRecorder()
-	body, _ := json.Marshal(data)
-	req, _ := http.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(body))
+	body, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(body))
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Set("Content-Type", "application/json")
 	router.ServeHTTP(w, req)
 	for _, cookie := range w.Result().Cookies() {
-		if cookie.Name == "time" {
-			return cookie
+		if cookie.Name == "plexus" {
+			return cookie, nil
 		}
 	}
-	return nil
+	return nil, errors.New("no cookie")
 }
 
 func createTestUser(user plexus.User) error {

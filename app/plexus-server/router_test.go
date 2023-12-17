@@ -1,6 +1,9 @@
 package main
 
 import (
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 
@@ -36,4 +39,15 @@ func TestDefaultUser(t *testing.T) {
 		assert.Equal(t, "Administrator", user.Username)
 		assert.Equal(t, true, user.IsAdmin)
 	})
+}
+
+func TestAuthFail(t *testing.T) {
+	req, err := http.NewRequest(http.MethodGet, "/config/", nil)
+	assert.Nil(t, err)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+	body, err := io.ReadAll(w.Body)
+	assert.Nil(t, err)
+	assert.Contains(t, string(body), "<h1>Login</h1")
 }

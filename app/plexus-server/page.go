@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -54,7 +53,7 @@ func login(c *gin.Context) {
 		slog.Error("bind err", "error", err)
 		return
 	}
-	slog.Debug("login by", "user", user)
+	slog.Info("login by", "user", user)
 	if !validateUser(&user) {
 		session.Clear()
 		_ = session.Save()
@@ -68,7 +67,7 @@ func login(c *gin.Context) {
 	session.Set("page", "peers")
 	session.Options(sessions.Options{MaxAge: sessionAge, Secure: false, SameSite: http.SameSiteLaxMode})
 	_ = session.Save()
-	slog.Debug("login", "user", user.Username)
+	slog.Info("login", "user", user.Username)
 	page := getPage(user.Username)
 	page.NeedsLogin = false
 	page.Page = "peers"
@@ -81,9 +80,7 @@ func validateUser(visitor *plexus.User) bool {
 		slog.Error("no such user", "user", visitor.Username, "error", err)
 		return false
 	}
-	fmt.Println(visitor.Username, user.Username)
 	if visitor.Username == user.Username && checkPassword(visitor, &user) {
-		visitor.IsAdmin = user.IsAdmin
 		return true
 	}
 	return false

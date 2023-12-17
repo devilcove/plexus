@@ -71,11 +71,11 @@ func setupRouter() *gin.Engine {
 	//	records.GET("/:id", getRecord)
 	//	records.POST("/:id", editRecord)
 	//}
-	//configuration := router.Group("/config", auth)
-	//{
-	//	configuration.GET("/", config)
-	//	configuration.POST("/", setConfig)
-	//}
+	configuration := router.Group("/config", auth)
+	{
+		configuration.GET("/", config)
+		configuration.POST("/", setConfig)
+	}
 	return router
 }
 
