@@ -26,6 +26,7 @@ type Page struct {
 	Font        string
 	Refresh     int
 	DefaultDate string
+	Networks    []string
 }
 
 func init() {
@@ -112,6 +113,7 @@ func initialize() Page {
 		Refresh:     5,
 		DefaultDate: time.Now().Local().Format("2006-01-02"),
 		Page:        "peers",
+		Networks:    []string{},
 	}
 }
 
@@ -120,6 +122,7 @@ func getPage(user any) Page {
 		return initialize()
 	}
 	if page, ok := pages[user.(string)]; ok {
+		page.DefaultDate = time.Now().Local().Format("2006-01-02")
 		return page
 	}
 	pages[user.(string)] = initialize()

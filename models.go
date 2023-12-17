@@ -2,6 +2,7 @@ package plexus
 
 import (
 	"log/slog"
+	"net"
 	"net/http"
 	"time"
 
@@ -30,4 +31,10 @@ type User struct {
 	Password string `json:"password" form:"password"`
 	IsAdmin  bool
 	Updated  time.Time
+}
+
+type Network struct {
+	Name          string
+	Address       net.IPNet
+	AddressString string
 }

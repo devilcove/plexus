@@ -39,6 +39,12 @@ func setupRouter() *gin.Engine {
 	router.GET("/", displayMain)
 	router.POST("/login", login)
 	router.GET("/logout", logout)
+	networks := router.Group("networks", auth)
+	{
+		networks.GET("/add", displayAddNetwork)
+		networks.POST("add", addNetwork)
+		networks.GET("/:id", displayNetwork)
+	}
 	//router.GET("/login", displayLogin)
 	//users := router.Group("/users", auth)
 	//{

@@ -2,13 +2,25 @@
 
 <div class="w3-bar w3-theme-d5 w3-opacity w3-hover-opacity-off w3-center">
 
-    <div class="w3-bar w3-hide-small ">
+    <div class="w3-bar">
         <button type="button" class="w3-bar-item w3-button">
             <img src="images/network-small.png" alt="Plexus">
         </button>
-        <button type="button" class="w3-bar-item w3-button" hx-get="/networks" hx-target="#content">
-            <i class="fa fa-file-alt w3-xxlarge"></i>
-            Networks</button>
+        <div id="networkdropdown" class="w3-bar-item w3-button">
+            <details>
+                <summary><i class="fa fa-file-alt w3-xxlarge"></i>Networks</summary>
+                <hr>
+                <form hx-get="networks/add" hx-target="#content">
+                    <button type="submit" class="w3-button">New Network</button>
+                </form>
+                <hr>
+                {{range .Networks}}
+                <button type="button" class="w3-button"
+                    hx-get="networks/{{.}}" hx-target="#content">{{.}}
+                </button>
+                {{end}}
+            </details>
+        </div>
         <button type="button" class="w3-bar-item w3-button" hx-get="/peers" hx-target="#content">
             <i class="fa fa-file-alt w3-xxlarge"></i>
             Peers</button>
