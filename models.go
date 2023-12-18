@@ -38,3 +38,11 @@ type Network struct {
 	Address       net.IPNet
 	AddressString string `form:"addressstring"`
 }
+
+type Key struct {
+	ID       string
+	Name     string
+	Usage    int
+	Expires  int
+	Networks []string
+}

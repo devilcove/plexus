@@ -5,6 +5,7 @@ go 1.21.5
 require (
 	github.com/gin-contrib/sessions v0.0.5
 	github.com/gin-gonic/gin v1.9.1
+	github.com/google/uuid v1.5.0
 	github.com/joho/godotenv v1.5.1
 	github.com/kr/pretty v0.3.1
 	github.com/nats-io/nats-server/v2 v2.10.7
