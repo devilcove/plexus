@@ -47,20 +47,33 @@ func TestGetPage(t *testing.T) {
 	assert.Equal(t, "v0.1.0", page.Version)
 }
 
+func TestSetPage(t *testing.T) {
+	t.Run("nil", func(t *testing.T) {
+		setPage(nil, "something")
+		page := getPage("someuser")
+		assert.Equal(t, "peers", page.Page)
+	})
+	t.Run("sameuser", func(t *testing.T) {
+		setPage("newuser", "something")
+		page := getPage("newuser")
+		assert.Equal(t, "something", page.Page)
+	})
+}
+
 func TestSetTheme(t *testing.T) {
-	SetTheme("themeuser", "black")
+	setTheme("themeuser", "black")
 	page := getPage("themeuser")
 	assert.Equal(t, "black", page.Theme)
 }
 
 func TestSetFont(t *testing.T) {
-	SetFont("fontuser", "Lato")
+	setFont("fontuser", "Lato")
 	page := getPage("fontuser")
 	assert.Equal(t, "Lato", page.Font)
 }
 
 func TestSetRefresh(t *testing.T) {
-	SetRefresh("refreshuser", 2)
+	setRefresh("refreshuser", 2)
 	page := getPage("refreshuser")
 	assert.Equal(t, 2, page.Refresh)
 }

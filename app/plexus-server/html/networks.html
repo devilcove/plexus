@@ -1,8 +1,52 @@
 {{define "networks"}}
-<div id="networks">
+<!-- [html-validate-disable no-dup-id]-->
+<div id="content">
+    <div class="w3-container w3-center w3-theme-dark w3-padding">
+        <div id="error" class="w3-red"></div>
+        <h1>Networks</h1>
+        {{range .}}
+        <h2>{{.Name}} {{.AddressString}}
+            <button class="w3-button" type="button" 
+                hx-delete="networks/{{.Name}}" hx-target="#content" hx-target-error="#error">
+            Delete</button>
+        </h2>
+        {{end}}
+        <h3>
+            <button class="w3-button" type="button"
+                hx-get="networks/add" hx-target="#content" hx-target-error="#error">
+            Create New Network</button>
+        </h3>
+    </div>
+</div>
+{{end}}
+
+{{ define "addNetwork"}}
+<div id="content">
+    <div class="w3-container w3-center w3-theme-dark">
+        <div id="error"></div>
+        <h1>Add Network</h1>
+        <form hx-post="/networks/add" hx-target="#content" hx-target-error="#error">
+            <label for="name">Network Name</label>
+            <input type="text" placeholder="network name" name="name" required><br>
+            <label for="addressstring">Network CIDR</label>
+            <input type="text" placeholder="10.10.10.0/24" name="addressstring" required><br>
+            <p><button class="w3-button w3-theme-dark w3-padding large" type="button" 
+                hx-get="/networks" hx-target="#content">Cancel</button>
+                <button class="w3-button w3-theme-dark" type="reset">Reset</button>
+                <button class="W3-button w3-theme-dark" type="submit">Add</button>
+            </p>
+        </form>
+    </div>
+</div>
+{{end}}
+
+{{define "displayNetwork"}}
+<div id="content">
     <div class="w3-container w3-center w3-theme-dark">
         <div id="error"></div>
         <h1>Networks</h1>
+        <h2>{{.Name}}</h2>
+        <h2>{{.AddressString}}</h2>
     </div>
 </div>
 {{end}}

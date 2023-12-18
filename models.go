@@ -34,7 +34,7 @@ type User struct {
 }
 
 type Network struct {
-	Name          string
+	Name          string `form:"name"`
 	Address       net.IPNet
-	AddressString string
+	AddressString string `form:"addressstring"`
 }

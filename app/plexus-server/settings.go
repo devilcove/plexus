@@ -4,6 +4,7 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"net/url"
 
 	"github.com/devilcove/plexus"
 	"github.com/gin-contrib/sessions"
@@ -26,8 +27,10 @@ func setConfig(c *gin.Context) {
 		return
 	}
 	slog.Debug("setConfig", "config", config)
-	SetTheme(user, config.Theme)
-	SetFont(user, config.Font)
-	SetRefresh(user, config.Refresh)
-	displayMain(c)
+	setTheme(user, config.Theme)
+	setFont(user, config.Font)
+	setRefresh(user, config.Refresh)
+	setPage(user, "settings")
+	location := url.URL{Path: "/"}
+	c.Redirect(http.StatusFound, location.RequestURI())
 }

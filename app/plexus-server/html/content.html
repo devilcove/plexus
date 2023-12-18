@@ -1,6 +1,8 @@
 {{define "content"}}
 {{if (eq .NeedsLogin true)}}
 {{template "login" .}}
+{{ else if (eq .Page "addNetwork")}}
+{{template "addNetwork"}}
 {{ else if (eq .Page "networks")}}
 {{template "networks" . }}
 {{ else if (eq .Page "peers")}}
@@ -11,5 +13,7 @@
 {{template "users" . }}
 {{ else if (eq .Page "settings")}}
 {{template "settings" . }}
+{{ else }}
+{{template "peers"}}
 {{end}}
 {{end}}

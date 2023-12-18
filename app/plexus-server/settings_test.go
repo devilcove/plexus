@@ -67,9 +67,6 @@ func TestSetConfig(t *testing.T) {
 		req.Header.Set("content-type", "application/json")
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusOK, w.Code)
-		body, err := io.ReadAll(w.Body)
-		assert.Nil(t, err)
-		assert.Contains(t, string(body), "w3-theme-red")
+		assert.Equal(t, http.StatusFound, w.Code)
 	})
 }

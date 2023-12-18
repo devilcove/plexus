@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"log/slog"
 	"net/http"
 	"time"
@@ -38,11 +39,11 @@ func displayMain(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get("user")
 	loggedin := session.Get("loggedin")
-	slog.Debug("display main page", "user", user, "loggedin", loggedin)
 	page := getPage(user)
 	if loggedin == nil {
 		page.NeedsLogin = true
 	}
+	slog.Debug("display main page", "user", user, "page", page.Page)
 	c.HTML(http.StatusOK, "layout", page)
 }
 
@@ -123,13 +124,33 @@ func getPage(user any) Page {
 	}
 	if page, ok := pages[user.(string)]; ok {
 		page.DefaultDate = time.Now().Local().Format("2006-01-02")
+		networks, err := database.GetAllNetworks()
+		if err != nil {
+			slog.Error("get networks", "error", err)
+		}
+		for _, net := range networks {
+			page.Networks = append(page.Networks, net.Name)
+		}
 		return page
 	}
 	pages[user.(string)] = initialize()
 	return pages[user.(string)]
 }
 
-func SetTheme(user, theme string) {
+func setPage(user any, pageToSet string) {
+	log.Println("setting page", pageToSet, " for user", user)
+	if user == nil {
+		return
+	}
+	page, ok := pages[user.(string)]
+	if !ok {
+		page = initialize()
+	}
+	page.Page = pageToSet
+	pages[user.(string)] = page
+}
+
+func setTheme(user, theme string) {
 	page, ok := pages[user]
 	if !ok {
 		page = initialize()
@@ -138,7 +159,7 @@ func SetTheme(user, theme string) {
 	pages[user] = page
 }
 
-func SetFont(user, font string) {
+func setFont(user, font string) {
 	page, ok := pages[user]
 	if !ok {
 		page = initialize()
@@ -147,7 +168,7 @@ func SetFont(user, font string) {
 	pages[user] = page
 }
 
-func SetRefresh(user string, refresh int) {
+func setRefresh(user string, refresh int) {
 	page, ok := pages[user]
 	if !ok {
 		page = initialize()
