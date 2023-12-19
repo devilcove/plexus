@@ -46,6 +46,18 @@ func setupRouter() *gin.Engine {
 		networks.GET("/", displayNetworks)
 		networks.DELETE("/:id", deleteNetwork)
 	}
+	keys := router.Group("/keys", auth)
+	{
+		keys.GET("/", displayKeys)
+		keys.GET("/add", displayCreateKey)
+		keys.POST("/add", addKey)
+		keys.DELETE("/:id", deleteKey)
+
+	}
+	peers := router.Group("/peers", auth)
+	{
+		peers.GET("/", displayMain)
+	}
 	//router.GET("/login", displayLogin)
 	//users := router.Group("/users", auth)
 	//{

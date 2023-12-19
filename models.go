@@ -41,8 +41,9 @@ type Network struct {
 
 type Key struct {
 	ID       string
-	Name     string
-	Usage    int
-	Expires  int
-	Networks []string
+	Name     string `form:"name"`
+	Usage    int    `form:"usage"`
+	Expires  time.Time
+	DispExp  string   `form:"expires"`
+	Networks []string `form:"networks"`
 }

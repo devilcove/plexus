@@ -11,7 +11,6 @@ import (
 	"github.com/devilcove/plexus/database"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	"github.com/kr/pretty"
 )
 
 func displayAddNetwork(c *gin.Context) {
@@ -29,7 +28,6 @@ func addNetwork(c *gin.Context) {
 		processError(c, http.StatusBadRequest, "invalid network data")
 		return
 	}
-	pretty.Println("addNework: ", network)
 	_, cidr, err := net.ParseCIDR(network.AddressString)
 	if err != nil {
 		log.Println("net.ParseCIDR", network.AddressString)
