@@ -12,7 +12,7 @@ require (
 	github.com/nats-io/nats.go v1.31.0
 	github.com/stretchr/testify v1.8.4
 	go.etcd.io/bbolt v1.3.8
-	golang.org/x/crypto v0.16.0
+	golang.org/x/crypto v0.17.0
 )
 
 require (
