@@ -1,5 +1,6 @@
 **/.env
-plexus-server/plexus-server
+app/plexus-server/plexus-server
+app/plexus-agent/plexus-agent
 coverage.out
 test.db
 time.db

@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
 type Config struct {
@@ -46,4 +48,16 @@ type Key struct {
 	Expires  time.Time
 	DispExp  string   `form:"expires"`
 	Networks []string `form:"networks"`
+}
+
+type Device struct {
+	ID               uuid.UUID
+	Version          string
+	Name             string
+	OS               string
+	ListenPort       int
+	PublicListenPort int
+	Endpoint         net.IP
+	PrivateKey       wgtypes.Key
+	Updated          time.Time
 }
