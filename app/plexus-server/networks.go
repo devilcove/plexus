@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"regexp"
 
+	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
-	"github.com/devilcove/plexus/database"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
@@ -46,7 +46,7 @@ func addNetwork(c *gin.Context) {
 		processError(c, http.StatusBadRequest, errs.Error())
 		return
 	}
-	networks, err := database.GetAllNetworks()
+	networks, err := boltdb.GetAll(plexus.Network{}, "networks")
 	if err != nil {
 		processError(c, http.StatusInternalServerError, "database error "+err.Error())
 		return
@@ -62,7 +62,7 @@ func addNetwork(c *gin.Context) {
 		}
 	}
 	log.Println("network validation complete ... saving network ", network)
-	if err := database.SaveNetwork(&network); err != nil {
+	if err := boltdb.Save(network, network.Name, "networks"); err != nil {
 		processError(c, http.StatusInternalServerError, "unable to save network "+err.Error())
 		return
 	}
@@ -70,7 +70,7 @@ func addNetwork(c *gin.Context) {
 }
 
 func displayNetworks(c *gin.Context) {
-	networks, err := database.GetAllNetworks()
+	networks, err := boltdb.GetAll(plexus.Network{}, "networks")
 	if err != nil {
 		processError(c, http.StatusInternalServerError, err.Error())
 		return
@@ -80,8 +80,8 @@ func displayNetworks(c *gin.Context) {
 
 func deleteNetwork(c *gin.Context) {
 	network := c.Param("id")
-	if err := database.DeleteNetwork(network); err != nil {
-		if errors.Is(err, database.ErrNoResults) {
+	if err := boltdb.Delete(plexus.Network{}, network, "networks"); err != nil {
+		if errors.Is(err, boltdb.ErrNoResults) {
 			processError(c, http.StatusBadRequest, "network does not exist")
 			return
 		}

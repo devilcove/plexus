@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
-	"github.com/devilcove/plexus/database"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -44,7 +44,7 @@ func addKey(c *gin.Context) {
 	if key.Expires.IsZero() {
 		key.Expires = time.Now().Add(24 * time.Hour)
 	}
-	if err := database.SaveKey(&key); err != nil {
+	if err := boltdb.Save(key, key.Name, "keys"); err != nil {
 		processError(c, http.StatusInternalServerError, "saving key "+err.Error())
 		return
 	}
@@ -52,7 +52,7 @@ func addKey(c *gin.Context) {
 }
 
 func displayKeys(c *gin.Context) {
-	keys, err := database.GetAllKeys()
+	keys, err := boltdb.GetAll(plexus.Key{}, "keys")
 	if err != nil {
 		processError(c, http.StatusInternalServerError, err.Error())
 		return
@@ -63,8 +63,8 @@ func displayKeys(c *gin.Context) {
 
 func deleteKey(c *gin.Context) {
 	key := c.Param("id")
-	if err := database.DeleteKey(key); err != nil {
-		if errors.Is(err, database.ErrNoResults) {
+	if err := boltdb.Delete(plexus.Key{}, key, "keys"); err != nil {
+		if errors.Is(err, boltdb.ErrNoResults) {
 			processError(c, http.StatusBadRequest, "key does not exist")
 			return
 		}

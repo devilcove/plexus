@@ -10,7 +10,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/devilcove/plexus/database"
+	"github.com/devilcove/boltdb"
 	"github.com/joho/godotenv"
 )
 
@@ -23,7 +23,15 @@ func main() {
 		verbosity = "INFO"
 	}
 	logger := setLogging(verbosity)
-	database.InitializeDatabase()
+	dbfile := os.Getenv("DB_FILE")
+	if dbfile == "" {
+		dbfile = "time.db"
+	}
+	if err := boltdb.Initialize(dbfile, []string{"users", "keys", "networks", "peers", "settings"}); err != nil {
+		slog.Error("database initialization", "error", err)
+		os.Exit(1)
+	}
+	defer boltdb.Close()
 	checkDefaultUser()
 	wg := sync.WaitGroup{}
 	quit := make(chan os.Signal, 1)

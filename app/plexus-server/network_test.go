@@ -9,8 +9,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
-	"github.com/devilcove/plexus/database"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -271,12 +271,12 @@ func TestDeleteNetwork(t *testing.T) {
 
 func deleteAllNetworks() error {
 	var errs error
-	nets, err := database.GetAllNetworks()
+	nets, err := boltdb.GetAll(plexus.Network{}, "networks")
 	if err != nil {
 		return err
 	}
 	for _, net := range nets {
-		if err := database.DeleteNetwork(net.Name); err != nil {
+		if err := boltdb.Delete(plexus.Network{}, net.Name, "networks"); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}

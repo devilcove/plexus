@@ -10,8 +10,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
-	"github.com/devilcove/plexus/database"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
@@ -21,10 +21,9 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	os.Setenv("DB_FILE", "test.db")
-	_ = database.InitializeDatabase()
+	_ = boltdb.Initialize("./test.db", []string{"users", "keys", "networks", "peers", "settings"})
 	setLogging("DEBUG")
-	defer database.Close()
+	defer boltdb.Close()
 	//checkDefaultUser()
 	router = setupRouter()
 	os.Exit(m.Run())
@@ -167,13 +166,13 @@ func TestLogout(t *testing.T) {
 }
 
 func deleteAllUsers(deleteAll bool) (errs error) {
-	users, err := database.GetAllUsers()
+	users, err := boltdb.GetAll(plexus.User{}, "users")
 	if err != nil {
 		return err
 	}
 	for _, user := range users {
 		if user.Username != "admin" || deleteAll == true {
-			if err := database.DeleteUser(user.Username); err != nil {
+			if err := boltdb.Delete(plexus.User{}, user.Username, "users"); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -202,8 +201,8 @@ func testLogin(data plexus.User) (*http.Cookie, error) {
 }
 
 func createTestUser(user plexus.User) error {
-	user.Password, _ = database.HashPassword(user.Password)
-	if err := database.SaveUser(&user); err != nil {
+	user.Password, _ = hashPassword(user.Password)
+	if err := boltdb.Save(&user, user.Username, "users"); err != nil {
 		return err
 	}
 	return nil

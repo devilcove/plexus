@@ -7,7 +7,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/devilcove/plexus/database"
+	"github.com/devilcove/boltdb"
+	"github.com/devilcove/plexus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,7 +17,7 @@ func TestDefaultUser(t *testing.T) {
 		err := deleteAllUsers(true)
 		assert.Nil(t, err)
 		checkDefaultUser()
-		user, err := database.GetUser("admin")
+		user, err := boltdb.Get(plexus.User{}, "admin", "users")
 		assert.Nil(t, err)
 		assert.Equal(t, "admin", user.Username)
 		assert.Equal(t, true, user.IsAdmin)
@@ -27,14 +28,14 @@ func TestDefaultUser(t *testing.T) {
 		err = os.Setenv("PLEXUS_USER", "Administrator")
 		assert.Nil(t, err)
 		checkDefaultUser()
-		user, err := database.GetUser("Administrator")
+		user, err := boltdb.Get(plexus.User{}, "Administrator", "users")
 		assert.Nil(t, err)
 		assert.Equal(t, "Administrator", user.Username)
 		assert.Equal(t, true, user.IsAdmin)
 	})
 	t.Run("adminexists", func(t *testing.T) {
 		checkDefaultUser()
-		user, err := database.GetUser("Administrator")
+		user, err := boltdb.Get(plexus.User{}, "Administrator", "users")
 		assert.Nil(t, err)
 		assert.Equal(t, "Administrator", user.Username)
 		assert.Equal(t, true, user.IsAdmin)

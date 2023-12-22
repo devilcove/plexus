@@ -3,6 +3,7 @@ module github.com/devilcove/plexus
 go 1.21.5
 
 require (
+	github.com/devilcove/boltdb v0.0.0-20231222142428-df08030d0f77
 	github.com/gin-contrib/sessions v0.0.5
 	github.com/gin-gonic/gin v1.9.1
 	github.com/google/uuid v1.5.0

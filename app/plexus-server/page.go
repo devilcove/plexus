@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
-	"github.com/devilcove/plexus/database"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -77,7 +77,7 @@ func login(c *gin.Context) {
 }
 
 func validateUser(visitor *plexus.User) bool {
-	user, err := database.GetUser(visitor.Username)
+	user, err := boltdb.Get(plexus.User{}, visitor.Username, "users")
 	if err != nil {
 		slog.Error("no such user", "user", visitor.Username, "error", err)
 		return false
@@ -124,7 +124,7 @@ func getPage(user any) Page {
 	}
 	if page, ok := pages[user.(string)]; ok {
 		page.DefaultDate = time.Now().Local().Format("2006-01-02")
-		networks, err := database.GetAllNetworks()
+		networks, err := boltdb.GetAll(plexus.Network{}, "networks")
 		if err != nil {
 			slog.Error("get networks", "error", err)
 		}

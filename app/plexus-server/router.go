@@ -8,10 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"time"
 
-	"github.com/devilcove/plexus"
-	"github.com/devilcove/plexus/database"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
@@ -117,34 +114,4 @@ func auth(c *gin.Context) {
 		c.Abort()
 		return
 	}
-}
-
-func checkDefaultUser() {
-	if database.AdminExist() {
-		slog.Debug("admin exists")
-		return
-	}
-	user, ok := os.LookupEnv("PLEXUS_USER")
-	if !ok {
-		user = "admin"
-	}
-	pass, ok := os.LookupEnv("PLEXUS_PASS")
-	if !ok {
-		pass = "password"
-	}
-	password, err := database.HashPassword(pass)
-	if err != nil {
-		slog.Error("hash error", "error", err)
-		return
-	}
-	if err = database.SaveUser(&plexus.User{
-		Username: user,
-		Password: password,
-		IsAdmin:  true,
-		Updated:  time.Now(),
-	}); err != nil {
-		slog.Error("create default user", "error", err)
-		return
-	}
-	slog.Info("default user created")
 }

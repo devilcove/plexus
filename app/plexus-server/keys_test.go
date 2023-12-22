@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
-	"github.com/devilcove/plexus/database"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -163,7 +163,7 @@ func TestAddKey(t *testing.T) {
 		body, err := io.ReadAll(w.Body)
 		assert.Nil(t, err)
 		assert.Contains(t, string(body), "<h1>Plexus Keys</h1>")
-		keys, err := database.GetAllKeys()
+		keys, err := boltdb.GetAll(plexus.Key{}, "keys")
 		assert.Nil(t, err)
 		assert.Equal(t, time.Now().Add(24*time.Hour).Format("2006-01-02 03-04"), keys[0].Expires.Format("2006-01-02 03-04"))
 	})
@@ -187,6 +187,7 @@ func TestAddKey(t *testing.T) {
 	})
 	err = deleteAllKeys()
 	assert.Nil(t, err)
+	t.Log(err)
 }
 
 func TestDeleteKeys(t *testing.T) {
@@ -225,9 +226,7 @@ func TestDeleteKeys(t *testing.T) {
 		body, err := io.ReadAll(w.Body)
 		assert.Nil(t, err)
 		assert.Contains(t, string(body), "<h1>Plexus Keys</h1>")
-		keys, err := database.GetAllKeys()
-		assert.Nil(t, err)
-		req, err = http.NewRequest(http.MethodDelete, "/keys/"+keys[0].ID, nil)
+		req, err = http.NewRequest(http.MethodDelete, "/keys/valid", nil)
 		assert.Nil(t, err)
 		req.AddCookie(cookie)
 		router.ServeHTTP(w, req)
@@ -242,12 +241,12 @@ func TestDeleteKeys(t *testing.T) {
 
 func deleteAllKeys() error {
 	var errs error
-	keys, err := database.GetAllKeys()
+	keys, err := boltdb.GetAll(plexus.Key{}, "keys")
 	if err != nil {
 		return err
 	}
 	for _, key := range keys {
-		if err := database.DeleteKey(key.ID); err != nil {
+		if err := boltdb.Delete(plexus.Key{}, key.Name, "keys"); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
