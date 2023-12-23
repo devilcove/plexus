@@ -52,7 +52,7 @@ func addKey(c *gin.Context) {
 }
 
 func displayKeys(c *gin.Context) {
-	keys, err := boltdb.GetAll(plexus.Key{}, "keys")
+	keys, err := boltdb.GetAll[plexus.Key]("keys")
 	if err != nil {
 		processError(c, http.StatusInternalServerError, err.Error())
 		return
@@ -63,7 +63,7 @@ func displayKeys(c *gin.Context) {
 
 func deleteKey(c *gin.Context) {
 	key := c.Param("id")
-	if err := boltdb.Delete(plexus.Key{}, key, "keys"); err != nil {
+	if err := boltdb.Delete[plexus.Key](key, "keys"); err != nil {
 		if errors.Is(err, boltdb.ErrNoResults) {
 			processError(c, http.StatusBadRequest, "key does not exist")
 			return

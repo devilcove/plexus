@@ -27,7 +27,7 @@ func main() {
 	if dbfile == "" {
 		dbfile = "time.db"
 	}
-	if err := boltdb.Initialize(dbfile, []string{"users", "keys", "networks", "peers", "settings"}); err != nil {
+	if err := boltdb.Initialize(dbfile, []string{"users", "keys", "networks", "peers", "settings", "keypairs"}); err != nil {
 		slog.Error("database initialization", "error", err)
 		os.Exit(1)
 	}

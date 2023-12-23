@@ -77,7 +77,7 @@ func login(c *gin.Context) {
 }
 
 func validateUser(visitor *plexus.User) bool {
-	user, err := boltdb.Get(plexus.User{}, visitor.Username, "users")
+	user, err := boltdb.Get[plexus.User](visitor.Username, "users")
 	if err != nil {
 		slog.Error("no such user", "user", visitor.Username, "error", err)
 		return false
@@ -124,7 +124,7 @@ func getPage(user any) Page {
 	}
 	if page, ok := pages[user.(string)]; ok {
 		page.DefaultDate = time.Now().Local().Format("2006-01-02")
-		networks, err := boltdb.GetAll(plexus.Network{}, "networks")
+		networks, err := boltdb.GetAll[plexus.Network]("networks")
 		if err != nil {
 			slog.Error("get networks", "error", err)
 		}

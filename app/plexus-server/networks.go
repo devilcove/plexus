@@ -46,7 +46,7 @@ func addNetwork(c *gin.Context) {
 		processError(c, http.StatusBadRequest, errs.Error())
 		return
 	}
-	networks, err := boltdb.GetAll(plexus.Network{}, "networks")
+	networks, err := boltdb.GetAll[plexus.Network]("networks")
 	if err != nil {
 		processError(c, http.StatusInternalServerError, "database error "+err.Error())
 		return
@@ -70,7 +70,7 @@ func addNetwork(c *gin.Context) {
 }
 
 func displayNetworks(c *gin.Context) {
-	networks, err := boltdb.GetAll(plexus.Network{}, "networks")
+	networks, err := boltdb.GetAll[plexus.Network]("networks")
 	if err != nil {
 		processError(c, http.StatusInternalServerError, err.Error())
 		return
@@ -80,7 +80,7 @@ func displayNetworks(c *gin.Context) {
 
 func deleteNetwork(c *gin.Context) {
 	network := c.Param("id")
-	if err := boltdb.Delete(plexus.Network{}, network, "networks"); err != nil {
+	if err := boltdb.Delete[plexus.Network](network, "networks"); err != nil {
 		if errors.Is(err, boltdb.ErrNoResults) {
 			processError(c, http.StatusBadRequest, "network does not exist")
 			return

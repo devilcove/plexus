@@ -21,7 +21,7 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	_ = boltdb.Initialize("./test.db", []string{"users", "keys", "networks", "peers", "settings"})
+	_ = boltdb.Initialize("./test.db", []string{"users", "keys", "networks", "peers", "settings", "keypairs"})
 	setLogging("DEBUG")
 	defer boltdb.Close()
 	//checkDefaultUser()
@@ -166,13 +166,13 @@ func TestLogout(t *testing.T) {
 }
 
 func deleteAllUsers(deleteAll bool) (errs error) {
-	users, err := boltdb.GetAll(plexus.User{}, "users")
+	users, err := boltdb.GetAll[plexus.User]("users")
 	if err != nil {
 		return err
 	}
 	for _, user := range users {
 		if user.Username != "admin" || deleteAll == true {
-			if err := boltdb.Delete(plexus.User{}, user.Username, "users"); err != nil {
+			if err := boltdb.Delete[plexus.User](user.Username, "users"); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}

@@ -163,7 +163,7 @@ func TestAddKey(t *testing.T) {
 		body, err := io.ReadAll(w.Body)
 		assert.Nil(t, err)
 		assert.Contains(t, string(body), "<h1>Plexus Keys</h1>")
-		keys, err := boltdb.GetAll(plexus.Key{}, "keys")
+		keys, err := boltdb.GetAll[plexus.Key]("keys")
 		assert.Nil(t, err)
 		assert.Equal(t, time.Now().Add(24*time.Hour).Format("2006-01-02 03-04"), keys[0].Expires.Format("2006-01-02 03-04"))
 	})
@@ -241,12 +241,12 @@ func TestDeleteKeys(t *testing.T) {
 
 func deleteAllKeys() error {
 	var errs error
-	keys, err := boltdb.GetAll(plexus.Key{}, "keys")
+	keys, err := boltdb.GetAll[plexus.Key]("keys")
 	if err != nil {
 		return err
 	}
 	for _, key := range keys {
-		if err := boltdb.Delete(plexus.Key{}, key.Name, "keys"); err != nil {
+		if err := boltdb.Delete[plexus.Key](key.Name, "keys"); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
