@@ -36,12 +36,14 @@ func main() {
 	wg := sync.WaitGroup{}
 	quit := make(chan os.Signal, 1)
 	reset := make(chan os.Signal, 1)
+	brokerfail := make(chan int, 1)
+	webfail := make(chan int, 1)
 	signal.Notify(quit, syscall.SIGTERM, os.Interrupt)
 	signal.Notify(reset, syscall.SIGHUP)
 	ctx, cancel := context.WithCancel(context.Background())
 	wg.Add(2)
-	go web(ctx, &wg, logger)
-	go broker(ctx, &wg)
+	go web(ctx, &wg, webfail, logger)
+	go broker(ctx, &wg, brokerfail)
 	for {
 		select {
 		case <-quit:
@@ -55,8 +57,18 @@ func main() {
 			wg.Wait()
 			ctx, cancel = context.WithCancel(context.Background())
 			wg.Add(2)
-			go web(ctx, &wg, logger)
-			go broker(ctx, &wg)
+			go web(ctx, &wg, webfail, logger)
+			go broker(ctx, &wg, brokerfail)
+		case <-brokerfail:
+			slog.Error("error running broker .... shutting down")
+			cancel()
+			wg.Wait()
+			os.Exit(1)
+		case <-webfail:
+			slog.Error("error running web .... shutting down")
+			cancel()
+			wg.Wait()
+			os.Exit(2)
 		}
 	}
 }
@@ -96,7 +108,7 @@ func setLogging(v string) *slog.Logger {
 	return logger
 }
 
-func web(ctx context.Context, wg *sync.WaitGroup, logger *slog.Logger) {
+func web(ctx context.Context, wg *sync.WaitGroup, c chan int, logger *slog.Logger) {
 	defer wg.Done()
 	slog.Info("Starting web server...")
 	router := setupRouter()
@@ -111,6 +123,7 @@ func web(ctx context.Context, wg *sync.WaitGroup, logger *slog.Logger) {
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			slog.Error("http", "error", err.Error())
+			c <- 1
 		}
 	}()
 	<-ctx.Done()
