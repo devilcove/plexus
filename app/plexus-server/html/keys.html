@@ -29,7 +29,7 @@
                                     hx-target-error="#error">
                                     Delete</button></td>
                             <td><button class="w3-button" type="button" 
-                                onclick='navigator.clipboard.writeText("{{.ID}}").then(() =>{
+                                onclick='navigator.clipboard.writeText("{{.Value}}").then(() =>{
                                 alert("copied to clipboard");
                                 },()=>{
                                     alert("failed to copy");

@@ -13,24 +13,25 @@ import (
 	"github.com/nats-io/nkeys"
 )
 
-func broker(ctx context.Context, wg *sync.WaitGroup, c chan int) {
+func broker(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	slog.Info("Starting broker...")
 	//create admin user
 	admin, err := nkeys.CreateUser()
 	if err != nil {
 		slog.Error("could not create admin user", "error", err)
-		c <- 1
+		brokerfail <- 1
 		return
 	}
 	adminPublicKey, err := admin.PublicKey()
 	if err != nil {
 		slog.Error("could not create admin public key", "error", err)
-		c <- 1
+		brokerfail <- 1
 		return
 	}
 	//TODO :: add users
 	// users := GetUsers()
+	tokensUsers := getTokenUsers()
 	opts := &server.Options{
 		Nkeys: []*server.NkeyUser{
 			{
@@ -47,6 +48,7 @@ func broker(ctx context.Context, wg *sync.WaitGroup, c chan int) {
 		},
 		//Users: users
 	}
+	opts.Nkeys = append(opts.Nkeys, tokensUsers...)
 	ns, err := server.NewServer(opts)
 	if err != nil {
 		slog.Error("nats server", "error", err)
@@ -69,7 +71,7 @@ func broker(ctx context.Context, wg *sync.WaitGroup, c chan int) {
 	nc, err := connectOpts.Connect()
 	if err != nil {
 		slog.Error("nats connect", "error", err)
-		c <- 1
+		brokerfail <- 1
 	}
 	loginSub, err := nc.Subscribe("join", joinHandler)
 	if err != nil {
@@ -89,11 +91,41 @@ func broker(ctx context.Context, wg *sync.WaitGroup, c chan int) {
 	}
 	slog.Info("broker started")
 	//wg.Add(1)
-	<-ctx.Done()
-	loginSub.Drain()
-	checkinSub.Drain()
-	updateSub.Drain()
-	configSub.Drain()
+	for {
+		select {
+
+		case <-ctx.Done():
+			loginSub.Drain()
+			checkinSub.Drain()
+			updateSub.Drain()
+			configSub.Drain()
+			return
+		case device := <-newDevice:
+			slog.Info("new login device", "device", device)
+			kp, err := nkeys.FromSeed([]byte(device))
+			if err != nil {
+				slog.Error("seed failure", "error", err)
+				continue
+			}
+			pk, err := kp.PublicKey()
+			if err != nil {
+				slog.Error("publickey", "error", err)
+				continue
+			}
+			opts.Nkeys = append(opts.Nkeys, &server.NkeyUser{
+				Nkey: pk,
+				Permissions: &server.Permissions{
+					Publish: &server.SubjectPermission{
+						Allow: []string{"join"},
+					},
+					Subscribe: &server.SubjectPermission{
+						Allow: []string{"_INBOX.>"},
+					},
+				},
+			})
+			ns.ReloadOptions(opts)
+		}
+	}
 }
 
 func joinHandler(msg *nats.Msg) {
@@ -128,4 +160,39 @@ func getPubNkey(u string) (string, error) {
 		return "", err
 	}
 	return user.PubNkey, nil
+}
+
+func getTokenUsers() []*server.NkeyUser {
+	users := []*server.NkeyUser{}
+	keys, err := boltdb.GetAll[plexus.Key]("keys")
+	if err != nil {
+		slog.Error("unable to retrieve keys", "error", err)
+	}
+	for _, key := range keys {
+		users = append(users, createNkeyUser(key.Value))
+	}
+	return users
+}
+
+func createNkeyUser(token string) *server.NkeyUser {
+	kp, err := nkeys.FromSeed([]byte(token))
+	if err != nil {
+		slog.Error("unable to create keypair", "error", err)
+		return nil
+	}
+	pk, err := kp.PublicKey()
+	if err != nil {
+		slog.Error("unable to create public key", "error", err)
+	}
+	return &server.NkeyUser{
+		Nkey: pk,
+		Permissions: &server.Permissions{
+			Publish: &server.SubjectPermission{
+				Allow: []string{"join"},
+			},
+			Subscribe: &server.SubjectPermission{
+				Allow: []string{"_INBOX.>"},
+			},
+		},
+	}
 }

@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
@@ -42,22 +41,33 @@ type Network struct {
 }
 
 type Key struct {
-	ID       string
 	Name     string `form:"name"`
-	Usage    int    `form:"usage"`
+	Value    string
+	Usage    int `form:"usage"`
 	Expires  time.Time
 	DispExp  string   `form:"expires"`
 	Networks []string `form:"networks"`
 }
 
-type Device struct {
-	ID               uuid.UUID
+type Peer struct {
+	PublicKey        wgtypes.Key
+	PubNkey          string
 	Version          string
 	Name             string
 	OS               string
 	ListenPort       int
 	PublicListenPort int
 	Endpoint         net.IP
-	PrivateKey       wgtypes.Key
 	Updated          time.Time
+}
+
+type Device struct {
+	Peer
+	PrivateKey wgtypes.Key
+	Seed       string
+}
+
+type ServerClients struct {
+	Name    string
+	PubNKey string
 }

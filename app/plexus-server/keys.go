@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"regexp"
 	"time"
@@ -10,7 +11,7 @@ import (
 	"github.com/devilcove/plexus"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
+	"github.com/nats-io/nkeys"
 )
 
 func displayCreateKey(c *gin.Context) {
@@ -37,7 +38,8 @@ func addKey(c *gin.Context) {
 		processError(c, http.StatusBadRequest, "invalid key "+err.Error())
 		return
 	}
-	key.ID = uuid.New().String()
+	key.Value = newValue()
+	newDevice <- key.Value
 	if key.Usage == 0 {
 		key.Usage = 1
 	}
@@ -82,4 +84,16 @@ func validateKey(key plexus.Key) error {
 		return errors.New("invalid chars")
 	}
 	return nil
+}
+
+func newValue() string {
+	device, err := nkeys.CreateUser()
+	if err != nil {
+		slog.Error("key value", "error", err)
+	}
+	seed, err := device.Seed()
+	if err != nil {
+		slog.Error("key seed", "error", err)
+	}
+	return string(seed)
 }
