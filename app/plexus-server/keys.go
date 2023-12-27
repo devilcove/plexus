@@ -46,6 +46,15 @@ func addKey(c *gin.Context) {
 	if key.Expires.IsZero() {
 		key.Expires = time.Now().Add(24 * time.Hour)
 	}
+	existing, err := boltdb.Get[plexus.Key](key.Name, "keys")
+	if err != nil && !errors.Is(err, boltdb.ErrNoResults) {
+		processError(c, http.StatusInternalServerError, "retrieve key"+err.Error())
+		return
+	}
+	if existing.Name != "" {
+		processError(c, http.StatusBadRequest, "key exists with name:"+existing.Name)
+		return
+	}
 	if err := boltdb.Save(key, key.Name, "keys"); err != nil {
 		processError(c, http.StatusInternalServerError, "saving key "+err.Error())
 		return

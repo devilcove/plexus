@@ -2,11 +2,13 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -54,6 +56,13 @@ func TestDisplayAddKey(t *testing.T) {
 }
 
 func TestAddKey(t *testing.T) {
+	wg := &sync.WaitGroup{}
+	ctx, cancel := context.WithCancel(context.Background())
+	newDevice = make(chan string, 1)
+	wg.Add(1)
+	go broker(ctx, wg)
+	err := deleteAllKeys()
+	assert.Nil(t, err)
 	user := plexus.User{
 		Username: "hello",
 		Password: "world",
@@ -148,7 +157,7 @@ func TestAddKey(t *testing.T) {
 	})
 	t.Run("zeroDate", func(t *testing.T) {
 		key := plexus.Key{
-			Name:    "valid",
+			Name:    "zerodate",
 			DispExp: time.Time{}.Format("2006-01-02"),
 		}
 		payload, err := json.Marshal(&key)
@@ -185,9 +194,28 @@ func TestAddKey(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Contains(t, string(body), "<h1>Plexus Keys</h1>")
 	})
+	t.Run("duplicate", func(t *testing.T) {
+		key := plexus.Key{
+			Name:    "valid",
+			DispExp: time.Now().Format("2006-01-02"),
+		}
+		payload, err := json.Marshal(&key)
+		assert.Nil(t, err)
+		req, err := http.NewRequest(http.MethodPost, "/keys/add", bytes.NewBuffer(payload))
+		assert.Nil(t, err)
+		req.AddCookie(cookie)
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		body, err := io.ReadAll(w.Body)
+		assert.Nil(t, err)
+		assert.Contains(t, string(body), "key exists")
+	})
 	err = deleteAllKeys()
 	assert.Nil(t, err)
-	t.Log(err)
+	cancel()
+	wg.Wait()
 }
 
 func TestDeleteKeys(t *testing.T) {
