@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"sync"
 	"time"
@@ -73,7 +74,20 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 		slog.Error("nats connect", "error", err)
 		brokerfail <- 1
 	}
-	loginSub, err := nc.Subscribe("join", joinHandler)
+	loginSub, err := nc.Subscribe("join", func(msg *nats.Msg) {
+		slog.Info("join handler")
+		peer := plexus.Peer{}
+		if err := json.Unmarshal(msg.Data, &peer); err != nil {
+			msg.Respond([]byte("unable to decode join data"))
+			return
+		}
+		if err := createPeer(peer, ns, opts); err != nil {
+			msg.Respond([]byte("unable to create peer"))
+			return
+		}
+		response := "hello " + string(msg.Data)
+		msg.Respond([]byte(response))
+	})
 	if err != nil {
 		slog.Error("subscribe join", "error", err)
 	}
@@ -128,12 +142,6 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 	}
 }
 
-func joinHandler(msg *nats.Msg) {
-	slog.Info("join handler")
-	response := "hello " + string(msg.Data)
-	msg.Respond([]byte(response))
-}
-
 func checkinHandler(m *nats.Msg) {
 	device := m.Subject[7:]
 	//update, err := database.GetDevice(device)
@@ -169,7 +177,12 @@ func getTokenUsers() []*server.NkeyUser {
 		slog.Error("unable to retrieve keys", "error", err)
 	}
 	for _, key := range keys {
-		users = append(users, createNkeyUser(key.Value))
+		token, err := plexus.DecodeToken(key.Value)
+		if err != nil {
+			slog.Error("decodetoken", "error", err)
+			continue
+		}
+		users = append(users, createNkeyUser(token.Seed))
 	}
 	return users
 }
@@ -195,4 +208,24 @@ func createNkeyUser(token string) *server.NkeyUser {
 			},
 		},
 	}
+}
+
+func createPeer(peer plexus.Peer, ns *server.Server, opts *server.Options) error {
+	if err := boltdb.Save(peer, peer.PubKeyStr, "peers"); err != nil {
+		return err
+	}
+	user := &server.NkeyUser{
+		Nkey: peer.PubNkey,
+		Permissions: &server.Permissions{
+			Publish: &server.SubjectPermission{
+				Allow: []string{"checkin." + peer.PubKeyStr, "update." + peer.PubKeyStr},
+			},
+			Subscribe: &server.SubjectPermission{
+				Allow: []string{"network/*", "_INBOX.>"},
+			},
+		},
+	}
+	newOpts := &server.Options{}
+	newOpts.Nkeys = append(opts.Nkeys, user)
+	return ns.ReloadOptions(newOpts)
 }

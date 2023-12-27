@@ -17,7 +17,6 @@ var (
 
 func IsAlive(pid int) bool {
 	_, err := os.Stat(filepath.Join("/proc/", strconv.Itoa(pid)))
-	log.Println(pid, err)
 	return err == nil
 }
 

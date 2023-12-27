@@ -1,6 +1,8 @@
 package plexus
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"log/slog"
 	"net"
 	"net/http"
@@ -49,8 +51,15 @@ type Key struct {
 	Networks []string `form:"networks"`
 }
 
+type KeyValue struct {
+	URL     string
+	Seed    string
+	KeyName string
+}
+
 type Peer struct {
 	PublicKey        wgtypes.Key
+	PubKeyStr        string
 	PubNkey          string
 	Version          string
 	Name             string
@@ -64,10 +73,31 @@ type Peer struct {
 type Device struct {
 	Peer
 	PrivateKey wgtypes.Key
+	PrivKeyStr string
 	Seed       string
 }
 
 type ServerClients struct {
 	Name    string
 	PubNKey string
+}
+
+type JoinRequest struct {
+	KeyName string
+	Peer
+}
+
+func DecodeToken(token string) (KeyValue, error) {
+	kv := KeyValue{}
+	data, err := base64.StdEncoding.DecodeString(token)
+	if err != nil {
+		slog.Error("base64 decode", "error", err)
+		return kv, err
+	}
+	slog.Info(string(data))
+	if err := json.Unmarshal(data, &kv); err != nil {
+		slog.Error("token unmarshal", "error", err)
+		return kv, err
+	}
+	return kv, nil
 }

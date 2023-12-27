@@ -1,8 +1,9 @@
 package main
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"errors"
-	"log/slog"
 	"net/http"
 	"regexp"
 	"time"
@@ -38,7 +39,11 @@ func addKey(c *gin.Context) {
 		processError(c, http.StatusBadRequest, "invalid key "+err.Error())
 		return
 	}
-	key.Value = newValue()
+	key.Value, err = newValue(key.Name)
+	if err != nil {
+		processError(c, http.StatusInternalServerError, "unable to encode key"+err.Error())
+		return
+	}
 	newDevice <- key.Value
 	if key.Usage == 0 {
 		key.Usage = 1
@@ -95,14 +100,23 @@ func validateKey(key plexus.Key) error {
 	return nil
 }
 
-func newValue() string {
+func newValue(name string) (string, error) {
 	device, err := nkeys.CreateUser()
 	if err != nil {
-		slog.Error("key value", "error", err)
+		return "", err
 	}
 	seed, err := device.Seed()
 	if err != nil {
-		slog.Error("key seed", "error", err)
+		return "", err
 	}
-	return string(seed)
+	keyValue := plexus.KeyValue{
+		URL:     "nats://localhost:4222",
+		Seed:    string(seed),
+		KeyName: name,
+	}
+	payload, err := json.Marshal(&keyValue)
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(payload), nil
 }
