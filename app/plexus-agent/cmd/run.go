@@ -19,34 +19,41 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
 
+	"github.com/devilcove/boltdb"
+	"github.com/devilcove/plexus"
 	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nkeys"
 	"github.com/spf13/cobra"
 )
 
-// daemonCmd represents the daemon command
-var daemonCmd = &cobra.Command{
-	Use:   "daemon",
+// runCmd represents the run command
+var runCmd = &cobra.Command{
+	Use:   "run",
 	Short: "plexus-agent deamon",
-	Long: `plexus-agent daemon maintains a connection to 
+	Long: `plexus-agent run maintains a connection to 
 a plexus server for network updates.`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("daemon called")
-		daemon()
+		fmt.Println("run called")
+		run()
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(daemonCmd)
+	rootCmd.AddCommand(runCmd)
 }
 
-func daemon() {
+func run() {
+	if err := plexus.WritePID(os.Getenv("HOME")+"/.cache/plexus-agent.pid", os.Getpid()); err != nil {
+		slog.Error("failed to write pid to file", "error", err)
+	}
 	wg := sync.WaitGroup{}
 	quit := make(chan os.Signal, 1)
 	reset := make(chan os.Signal, 1)
@@ -56,15 +63,13 @@ func daemon() {
 	signal.Notify(reset, syscall.SIGHUP)
 	signal.Notify(pause, syscall.SIGUSR1)
 	signal.Notify(unpause, syscall.SIGUSR2)
+	conn, err := connectToServer()
+	cobra.CheckErr(err)
 	ctx, cancel := context.WithCancel(context.Background())
-	nc, err := nats.Connect(config.Server, nats.Timeout(10*time.Second))
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer nc.Close()
+	defer conn.Close()
 	wg.Add(2)
-	go checkin(ctx, &wg, nc)
-	go mq(ctx, &wg, nc)
+	go checkin(ctx, &wg, conn)
+	go mq(ctx, &wg, conn)
 	for {
 		select {
 		case <-quit:
@@ -81,8 +86,8 @@ func daemon() {
 			log.Println("go routines stopped by reset")
 			wg.Add(2)
 			ctx, cancel = context.WithCancel(context.Background())
-			go checkin(ctx, &wg, nc)
-			go mq(ctx, &wg, nc)
+			go checkin(ctx, &wg, conn)
+			go mq(ctx, &wg, conn)
 		case <-pause:
 			log.Println("pause")
 			cancel()
@@ -95,8 +100,8 @@ func daemon() {
 			wg.Wait()
 			wg.Add(2)
 			ctx, cancel = context.WithCancel(context.Background())
-			go checkin(ctx, &wg, nc)
-			go mq(ctx, &wg, nc)
+			go checkin(ctx, &wg, conn)
+			go mq(ctx, &wg, conn)
 		}
 	}
 }
@@ -114,10 +119,10 @@ func mq(ctx context.Context, wg *sync.WaitGroup, nc *nats.Conn) {
 	sub.Drain()
 }
 
-func handleReply(m *nats.Msg) {
-	fmt.Println("reply handler", string(m.Data))
-	//nc.Publish(m.Reply, "reply handler")
-}
+//func handleReply(m *nats.Msg) {
+//	fmt.Println("reply handler", string(m.Data))
+//	conn.Publish(m.Reply, "reply handler")
+//}
 
 func handleHello(m *nats.Msg) {
 	fmt.Println("hello subscription", string(m.Data))
@@ -143,5 +148,35 @@ func checkin(ctx context.Context, wg *sync.WaitGroup, nc *nats.Conn) {
 			log.Println("checkin response", string(msg.Data))
 		}
 	}
+}
 
+func connectToServer() (*nats.Conn, error) {
+	home := os.Getenv("HOME")
+	dbfile, ok := os.LookupEnv("DB_FILE")
+	if !ok {
+		dbfile = home + "/.local/share/plexus/plexus-agent.db"
+	}
+	err := boltdb.Initialize(dbfile, []string{"devices"})
+	if err != nil {
+		return nil, err
+	}
+	defer boltdb.Close()
+	self, err := boltdb.Get[plexus.Device]("self", "devices")
+	if err != nil {
+		return nil, err
+	}
+
+	kp, err := nkeys.FromSeed([]byte(self.Seed))
+	cobra.CheckErr(err)
+	pk, err := kp.PublicKey()
+	cobra.CheckErr(err)
+	sign := func(nonce []byte) ([]byte, error) {
+		return kp.Sign(nonce)
+	}
+	opts := nats.Options{
+		Url:         "nats://localhost:4222",
+		Nkey:        pk,
+		SignatureCB: sign,
+	}
+	return opts.Connect()
 }
