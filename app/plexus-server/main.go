@@ -29,9 +29,10 @@ func main() {
 		verbosity = "INFO"
 	}
 	logger := setLogging(verbosity)
+	home := os.Getenv("HOME")
 	dbfile := os.Getenv("DB_FILE")
 	if dbfile == "" {
-		dbfile = "time.db"
+		dbfile = home + "/.local/share/plexus/plexus-server.db"
 	}
 	if err := boltdb.Initialize(dbfile, []string{"users", "keys", "networks", "peers", "settings", "keypairs"}); err != nil {
 		slog.Error("database initialization", "error", err)
