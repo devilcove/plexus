@@ -82,14 +82,16 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 			msg.Respond([]byte("unable to decode join data"))
 			return
 		}
+		key, err := updateKey(join.KeyName)
+		if err != nil {
+			slog.Error("key update", "error", err)
+			msg.Respond([]byte("invalid key"))
+			return
+		}
 		if err := createPeer(join.Peer, ns, opts); err != nil {
 			slog.Error("unable to create peer", "error", err)
 			msg.Respond([]byte("unable to create peer"))
 			return
-		}
-		key, err := updateKey(join.KeyName)
-		if err != nil {
-			slog.Error("key update", "error", err)
 		}
 		if err := addToNeworks(key.Networks, join.PubKeyStr); err != nil {
 			slog.Error("add to networks", "networks", key.Networks, "error", err)
