@@ -59,8 +59,8 @@ type KeyValue struct {
 }
 
 type Peer struct {
-	PublicKey        wgtypes.Key
-	PubKeyStr        string
+	WGPublicKey      wgtypes.Key
+	WGPubKeyStr      string
 	PubNkey          string
 	Version          string
 	Name             string
@@ -68,14 +68,15 @@ type Peer struct {
 	ListenPort       int
 	PublicListenPort int
 	Endpoint         net.IP
+	EPStr            string
 	Updated          time.Time
 }
 
 type Device struct {
 	Peer
-	PrivateKey wgtypes.Key
-	PrivKeyStr string
-	Seed       string
+	WGPrivateKey wgtypes.Key
+	WGPrivKeyStr string
+	Seed         string
 }
 
 type ServerClients struct {

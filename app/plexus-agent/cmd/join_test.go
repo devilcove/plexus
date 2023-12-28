@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
-	"github.com/nats-io/nkeys"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -46,25 +46,23 @@ func TestCheckPort(t *testing.T) {
 	})
 }
 
-func TestGetPubAddPort(t *testing.T) {
-	addr := getPublicAddPort()
-	t.Log(addr)
-}
+func TestNewDevice(t *testing.T) {
+	err := boltdb.Initialize("./test.db", []string{"devices"})
+	assert.Nil(t, err)
+	device := plexus.Device{}
+	err = boltdb.Delete[plexus.Device]("self", "devices")
+	assert.Nil(t, err)
+	hostname, err := os.Hostname()
+	assert.Nil(t, err)
+	t.Run("newDevice", func(t *testing.T) {
+		device = newDevice()
+		assert.Equal(t, hostname, device.Name)
+	})
+	t.Run("existingDevice", func(t *testing.T) {
+		newDevice := newDevice()
+		assert.Equal(t, device.Seed, newDevice.Seed)
+	})
+	err = boltdb.Close()
+	assert.Nil(t, err)
 
-func TestSaveDevice(t *testing.T) {
-	err := os.Setenv("DB_FILE", "./test.db")
-	assert.Nil(t, err)
-	kp, err := nkeys.CreateUser()
-	assert.Nil(t, err)
-	seed, err := kp.Seed()
-	assert.Nil(t, err)
-	peer, privKey := createPeer(string(seed))
-	device := plexus.Device{
-		Peer:       peer,
-		PrivateKey: privKey,
-		Seed:       string(seed),
-		PrivKeyStr: privKey.String(),
-	}
-	err = saveDevice(device)
-	assert.Nil(t, err)
 }
