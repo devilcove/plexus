@@ -87,8 +87,12 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 			msg.Respond([]byte("unable to create peer"))
 			return
 		}
-		if err := updateKey(join.KeyName); err != nil {
+		key, err := updateKey(join.KeyName)
+		if err != nil {
 			slog.Error("key update", "error", err)
+		}
+		if err := addToNeworks(key.Networks, join.PubKeyStr); err != nil {
+			slog.Error("add to networks", "networks", key.Networks, "error", err)
 		}
 		response := "hello " + string(msg.Data)
 		msg.Respond([]byte(response))

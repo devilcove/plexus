@@ -121,20 +121,20 @@ func newValue(name string) (string, error) {
 	return base64.StdEncoding.EncodeToString(payload), nil
 }
 
-func updateKey(name string) error {
+func updateKey(name string) (plexus.Key, error) {
 	key, err := boltdb.Get[plexus.Key](name, "keys")
 	if err != nil {
-		return err
+		return key, err
 	}
 	if key.Usage == 1 {
 		if err := boltdb.Delete[plexus.Key](name, "keys"); err != nil {
-			return err
+			return key, err
 		}
-		return nil
+		return key, nil
 	}
 	key.Usage = key.Usage - 1
 	if err := boltdb.Save(key, key.Name, "keys"); err != nil {
-		return err
+		return key, err
 	}
-	return nil
+	return key, nil
 }

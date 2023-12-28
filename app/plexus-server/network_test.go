@@ -12,6 +12,7 @@ import (
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
 	"github.com/stretchr/testify/assert"
+	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
 func TestDisplayAddNetwork(t *testing.T) {
@@ -264,6 +265,42 @@ func TestDeleteNetwork(t *testing.T) {
 		body, err := io.ReadAll(w.Body)
 		assert.Nil(t, err)
 		assert.Contains(t, string(body), "<div id=\"error\" class=\"w3-red\"></div>")
+	})
+	err = deleteAllNetworks()
+	assert.Nil(t, err)
+}
+
+func TestAddToNeworks(t *testing.T) {
+	net1 := plexus.Network{
+		Name: "net1",
+	}
+	net2 := plexus.Network{
+		Name: "net2",
+	}
+	err := boltdb.Save(net1, net1.Name, "networks")
+	assert.Nil(t, err)
+	err = boltdb.Save(net2, net2.Name, "networks")
+	assert.Nil(t, err)
+	key, err := wgtypes.GenerateKey()
+	assert.Nil(t, err)
+	t.Run("nosuchnetwork", func(t *testing.T) {
+		err := addToNeworks([]string{"net4", "net5"}, key.PublicKey().String())
+		assert.NotNil(t, err)
+		assert.True(t, errors.Is(err, boltdb.ErrNoResults))
+		assert.Contains(t, err.Error(), "could not add to network net4")
+		assert.Contains(t, err.Error(), "could not add to network net5")
+	})
+	t.Run("missingNets", func(t *testing.T) {
+		err := addToNeworks([]string{"net1", "net3"}, key.PublicKey().String())
+		assert.NotNil(t, err)
+		assert.True(t, errors.Is(err, boltdb.ErrNoResults))
+		assert.Contains(t, err.Error(), "could not add to network net3")
+		net, err := boltdb.Get[plexus.Network]("net1", "networks")
+		assert.Nil(t, err)
+		assert.Contains(t, net.Peers, key.PublicKey().String())
+		net, err = boltdb.Get[plexus.Network]("net2", "networks")
+		assert.Nil(t, err)
+		assert.Equal(t, []string(nil), net.Peers)
 	})
 	err = deleteAllNetworks()
 	assert.Nil(t, err)

@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -102,4 +103,21 @@ func validateNetworkName(name string) bool {
 func validateNetworkAddress(address net.IP) bool {
 	return address.IsPrivate()
 
+}
+
+func addToNeworks(networks []string, wgPubKey string) error {
+	var errs error
+	for _, network := range networks {
+		netToUpdate, err := boltdb.Get[plexus.Network](network, "networks")
+		if err != nil {
+			errs = errors.Join(errs, fmt.Errorf("could not add to network %s %w", network, err))
+			continue
+		}
+		netToUpdate.Peers = append(netToUpdate.Peers, wgPubKey)
+		if err := boltdb.Save(netToUpdate, netToUpdate.Name, "networks"); err != nil {
+			errs = errors.Join(errs, err)
+			continue
+		}
+	}
+	return errs
 }

@@ -40,6 +40,7 @@ type Network struct {
 	Name          string `form:"name"`
 	Address       net.IPNet
 	AddressString string `form:"addressstring"`
+	Peers         []string
 }
 
 type Key struct {
