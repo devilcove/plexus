@@ -74,16 +74,21 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 		slog.Error("nats connect", "error", err)
 		brokerfail <- 1
 	}
-	loginSub, err := nc.Subscribe("join", func(msg *nats.Msg) {
+	joinSub, err := nc.Subscribe("join", func(msg *nats.Msg) {
 		slog.Info("join handler")
-		peer := plexus.Peer{}
-		if err := json.Unmarshal(msg.Data, &peer); err != nil {
+		join := plexus.JoinRequest{}
+		if err := json.Unmarshal(msg.Data, &join.Peer); err != nil {
+			slog.Error("unable to decode join data", "error", err)
 			msg.Respond([]byte("unable to decode join data"))
 			return
 		}
-		if err := createPeer(peer, ns, opts); err != nil {
+		if err := createPeer(join.Peer, ns, opts); err != nil {
+			slog.Error("unable to create peer", "error", err)
 			msg.Respond([]byte("unable to create peer"))
 			return
+		}
+		if err := updateKey(join.KeyName); err != nil {
+			slog.Error("key update", "error", err)
 		}
 		response := "hello " + string(msg.Data)
 		msg.Respond([]byte(response))
@@ -109,7 +114,7 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 		select {
 
 		case <-ctx.Done():
-			loginSub.Drain()
+			joinSub.Drain()
 			checkinSub.Drain()
 			updateSub.Drain()
 			configSub.Drain()

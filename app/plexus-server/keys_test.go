@@ -267,6 +267,42 @@ func TestDeleteKeys(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestUpdateKey(t *testing.T) {
+	key1 := plexus.Key{
+		Name:  "one",
+		Usage: 1,
+	}
+	key2 := plexus.Key{
+		Name:  "two",
+		Usage: 10,
+	}
+	err := boltdb.Save(key1, key1.Name, "keys")
+	assert.Nil(t, err)
+	err = boltdb.Save(key2, key2.Name, "keys")
+	assert.Nil(t, err)
+	t.Run("keyDoesNotExist", func(t *testing.T) {
+		err := updateKey("doesnotexist")
+		assert.NotNil(t, err)
+		assert.True(t, errors.Is(err, boltdb.ErrNoResults))
+	})
+	t.Run("deleteKey", func(t *testing.T) {
+		err = updateKey(key1.Name)
+		assert.Nil(t, err)
+		newKey, err := boltdb.Get[plexus.Key](key1.Name, "keys")
+		assert.Equal(t, plexus.Key{}, newKey)
+		assert.True(t, errors.Is(err, boltdb.ErrNoResults))
+	})
+	t.Run("decrement usage", func(t *testing.T) {
+		err = updateKey(key2.Name)
+		assert.Nil(t, err)
+		newKey, err := boltdb.Get[plexus.Key](key2.Name, "keys")
+		assert.Nil(t, err)
+		assert.Equal(t, 9, newKey.Usage)
+	})
+	err = deleteAllKeys()
+	assert.Nil(t, err)
+}
+
 func deleteAllKeys() error {
 	var errs error
 	keys, err := boltdb.GetAll[plexus.Key]("keys")
