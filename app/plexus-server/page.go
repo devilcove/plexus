@@ -113,7 +113,7 @@ func initialize() Page {
 		Font:        "Roboto",
 		Refresh:     5,
 		DefaultDate: time.Now().Local().Format("2006-01-02"),
-		Page:        "peers",
+		Page:        "nil",
 		Networks:    []string{},
 	}
 }

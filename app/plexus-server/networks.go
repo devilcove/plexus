@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"regexp"
@@ -77,6 +78,29 @@ func displayNetworks(c *gin.Context) {
 		return
 	}
 	c.HTML(http.StatusOK, "networks", networks)
+}
+
+func networkDetails(c *gin.Context) {
+	details := struct {
+		Name  string
+		Peers []plexus.Peer
+	}{}
+	networkName := c.Param("id")
+	network, err := boltdb.Get[plexus.Network](networkName, "networks")
+	if err != nil {
+		processError(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	for _, peer := range network.Peers {
+		p, err := boltdb.Get[plexus.Peer](peer, "peers")
+		if err != nil {
+			slog.Error("could not obtains peer for network details", "peer", peer, "network", network, "error", err)
+			continue
+		}
+		details.Peers = append(details.Peers, p)
+	}
+	details.Name = networkName
+	c.HTML(http.StatusOK, "networkDetails", details)
 }
 
 func deleteNetwork(c *gin.Context) {

@@ -5,16 +5,17 @@
         <div id="error" class="w3-red"></div>
         <h1>Networks</h1>
         {{range .}}
-        <h2>{{.Name}} {{.AddressString}}
-            <button class="w3-button" type="button" 
-                hx-delete="networks/{{.Name}}" hx-target="#content" hx-target-error="#error">
-            Delete</button>
+        <h2><button class="w3-button" type="button" hx-get="networks/{{.Name}}" hx-target="#content"
+                hx-target-error="#error">
+                {{.Name}}</button>{{.AddressString}}
+            <button class="w3-button" type="button" hx-delete="networks/{{.Name}}" hx-target="#content"
+                hx-target-error="#error">
+                Delete</button>
         </h2>
         {{end}}
         <h3>
-            <button class="w3-button" type="button"
-                hx-get="networks/add" hx-target="#content" hx-target-error="#error">
-            Create New Network</button>
+            <button class="w3-button" type="button" hx-get="networks/add" hx-target="#content" hx-target-error="#error">
+                Create New Network</button>
         </h3>
     </div>
 </div>
@@ -30,8 +31,8 @@
             <input type="text" placeholder="network name" name="name" required><br>
             <label for="addressstring">Network CIDR</label>
             <input type="text" placeholder="10.10.10.0/24" name="addressstring" required><br>
-            <p><button class="w3-button w3-theme-dark w3-padding large" type="button" 
-                hx-get="/networks" hx-target="#content">Cancel</button>
+            <p><button class="w3-button w3-theme-dark w3-padding large" type="button" hx-get="/networks"
+                    hx-target="#content">Cancel</button>
                 <button class="w3-button w3-theme-dark" type="reset">Reset</button>
                 <button class="W3-button w3-theme-dark" type="submit">Add</button>
             </p>
@@ -40,13 +41,43 @@
 </div>
 {{end}}
 
-{{define "displayNetwork"}}
+{{define "networkDetails"}}
 <div id="content">
-    <div class="w3-container w3-center w3-theme-dark">
-        <div id="error"></div>
-        <h1>Networks</h1>
-        <h2>{{.Name}}</h2>
-        <h2>{{.AddressString}}</h2>
+    <div class="w3-container w3-center w3-theme-dark w3-padding">
+        <div id="error" class="w3-red"></div>
+        <h1>Network: {{.Name}}</h1>
+        <h2>Peers</h2>
+        <div class="w3-third"><br></div>
+        <div class="w3-third">
+            <table class="w3-table w3-bordered w3-theme-l3">
+                <thead>
+                    <tr>
+                        <td>Name</td>
+                        <td>Endpoint</td>
+                        <td>Port</td>
+                        <td>Version</td>
+                        <td>Status</td>
+                        <td>Edit</td>
+                        <td>Delete</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .Peers}}
+                    <tr>
+                        <td>{{.Name}}</td>
+                        <td>{{.Endpoint}}</td>
+                        <td>{{.PublicListenPort}}</td>
+                        <td>{{.Version}}</td>
+                        <td>TBD</td>
+                        <td><button class="w3-button" type="button" hx-get="peers/{{.WGPublicKey}}" hx-targer="#content"
+                                hx-target-error="#error">Edit</button></td>
+                        <td><button class="w3-button" type="button" hx-delete="peers/{{.WGPublicKey}}"
+                                hx-targer="#content" hx-target-error="#error">Delete</button></td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {{end}}

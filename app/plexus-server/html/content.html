@@ -14,6 +14,11 @@
 {{ else if (eq .Page "settings")}}
 {{template "settings" . }}
 {{ else }}
-{{template "peers"}}
+<div id="content">
+    <div class="w3-container w3-center w3-theme-dark w3-padding">
+        <div id="error" class="w3-red"></div>
+        <br>
+    </div>
+</div>
 {{end}}
 {{end}}
