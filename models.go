@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
 type Config struct {
@@ -59,23 +58,20 @@ type KeyValue struct {
 }
 
 type Peer struct {
-	WGPublicKey      wgtypes.Key
-	WGPubKeyStr      string
+	WGPublicKey      string
 	PubNkey          string
 	Version          string
 	Name             string
 	OS               string
 	ListenPort       int
 	PublicListenPort int
-	Endpoint         net.IP
-	EPStr            string
+	Endpoint         string
 	Updated          time.Time
 }
 
 type Device struct {
 	Peer
-	WGPrivateKey wgtypes.Key
-	WGPrivKeyStr string
+	WGPrivateKey string
 	Seed         string
 }
 

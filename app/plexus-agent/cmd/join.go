@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"runtime"
@@ -27,6 +28,7 @@ import (
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
+	"github.com/kr/pretty"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nkeys"
 	"github.com/pion/stun"
@@ -49,6 +51,12 @@ var joinCmd = &cobra.Command{
 
 func join(token string) {
 	fmt.Println("join called")
+	dbfile, ok := os.LookupEnv("DB_FILE")
+	if !ok {
+		dbfile = os.Getenv("HOME") + "/.local/share/plexus/plexus-agent.db"
+	}
+	err := boltdb.Initialize(dbfile, []string{"devices"})
+	cobra.CheckErr(err)
 	home, err := os.UserHomeDir()
 	cobra.CheckErr(err)
 	pid, err := plexus.ReadPID(home + "/.cache/plexus-agent.pid")
@@ -75,8 +83,10 @@ func join(token string) {
 		Nkey:        loginPublicKey,
 		SignatureCB: sign,
 	}
+	pretty.Println("join request", request)
 	payload, err := json.Marshal(&request)
 	cobra.CheckErr(err)
+	log.Println(opts.Nkey)
 	nc, err := opts.Connect()
 	cobra.CheckErr(err)
 	msg, err := nc.Request("join", payload, time.Second*5)
@@ -113,8 +123,7 @@ func newDevice() plexus.Device {
 	device = plexus.Device{
 		Peer:         peer,
 		Seed:         seed,
-		WGPrivateKey: privKey,
-		WGPrivKeyStr: privKey.String(),
+		WGPrivateKey: privKey.String(),
 	}
 	err = boltdb.Save(device, "self", "devices")
 	cobra.CheckErr(err)
@@ -136,15 +145,13 @@ func createPeer() (plexus.Peer, wgtypes.Key, string) {
 	port := checkPort(51820)
 	stunAddr := getPublicAddPort()
 	peer := plexus.Peer{
-		WGPublicKey:      pubKey,
-		WGPubKeyStr:      pubKey.String(),
+		WGPublicKey:      pubKey.String(),
 		PubNkey:          nkey,
 		Name:             name,
 		Version:          "v0.1.0",
 		ListenPort:       port,
 		PublicListenPort: stunAddr.Port,
-		Endpoint:         stunAddr.IP,
-		EPStr:            stunAddr.IP.String(),
+		Endpoint:         stunAddr.IP.String(),
 		OS:               runtime.GOOS,
 		Updated:          time.Now(),
 	}

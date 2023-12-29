@@ -9,6 +9,7 @@ import (
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
+	"github.com/kr/pretty"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nkeys"
@@ -74,10 +75,11 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 		slog.Error("nats connect", "error", err)
 		brokerfail <- 1
 	}
+	// join handler
 	joinSub, err := nc.Subscribe("join", func(msg *nats.Msg) {
 		slog.Info("join handler")
 		join := plexus.JoinRequest{}
-		if err := json.Unmarshal(msg.Data, &join.Peer); err != nil {
+		if err := json.Unmarshal(msg.Data, &join); err != nil {
 			slog.Error("unable to decode join data", "error", err)
 			msg.Respond([]byte("unable to decode join data"))
 			return
@@ -88,12 +90,13 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 			msg.Respond([]byte("invalid key"))
 			return
 		}
+		pretty.Println(join.Peer)
 		if err := createPeer(join.Peer, ns, opts); err != nil {
 			slog.Error("unable to create peer", "error", err)
 			msg.Respond([]byte("unable to create peer"))
 			return
 		}
-		if err := addToNeworks(key.Networks, join.PubKeyStr); err != nil {
+		if err := addToNeworks(key.Networks, join.WGPublicKey); err != nil {
 			slog.Error("add to networks", "networks", key.Networks, "error", err)
 		}
 		response := "hello " + string(msg.Data)
@@ -125,20 +128,24 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 			updateSub.Drain()
 			configSub.Drain()
 			return
-		case device := <-newDevice:
-			slog.Info("new login device", "device", device)
-			kp, err := nkeys.FromSeed([]byte(device))
+		case token := <-newDevice:
+			slog.Info("new login device", "device", token)
+			keyValue, err := plexus.DecodeToken(token)
+			if err != nil {
+				slog.Error("decode token", "error", err)
+			}
+			key, err := nkeys.FromSeed([]byte(keyValue.Seed))
 			if err != nil {
 				slog.Error("seed failure", "error", err)
 				continue
 			}
-			pk, err := kp.PublicKey()
+			nPubKey, err := key.PublicKey()
 			if err != nil {
 				slog.Error("publickey", "error", err)
 				continue
 			}
 			opts.Nkeys = append(opts.Nkeys, &server.NkeyUser{
-				Nkey: pk,
+				Nkey: nPubKey,
 				Permissions: &server.Permissions{
 					Publish: &server.SubjectPermission{
 						Allow: []string{"join"},
@@ -149,6 +156,7 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 				},
 			})
 			ns.ReloadOptions(opts)
+			pretty.Println(opts.Nkeys)
 		}
 	}
 }
@@ -222,14 +230,14 @@ func createNkeyUser(token string) *server.NkeyUser {
 }
 
 func createPeer(peer plexus.Peer, ns *server.Server, opts *server.Options) error {
-	if err := boltdb.Save(peer, peer.PubKeyStr, "peers"); err != nil {
+	if err := boltdb.Save(peer, peer.WGPublicKey, "peers"); err != nil {
 		return err
 	}
 	user := &server.NkeyUser{
 		Nkey: peer.PubNkey,
 		Permissions: &server.Permissions{
 			Publish: &server.SubjectPermission{
-				Allow: []string{"checkin." + peer.PubKeyStr, "update." + peer.PubKeyStr},
+				Allow: []string{"checkin." + peer.WGPublicKey, "update." + peer.WGPublicKey},
 			},
 			Subscribe: &server.SubjectPermission{
 				Allow: []string{"network/*", "_INBOX.>"},
