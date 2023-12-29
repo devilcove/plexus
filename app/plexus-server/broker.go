@@ -181,14 +181,6 @@ func configHandler(m *nats.Msg) {
 	m.Respond([]byte("config ack"))
 }
 
-func getPubNkey(u string) (string, error) {
-	user, err := boltdb.Get[plexus.Peer](u, "peers")
-	if err != nil {
-		return "", err
-	}
-	return user.PubNkey, nil
-}
-
 func getTokenUsers() []*server.NkeyUser {
 	users := []*server.NkeyUser{}
 	keys, err := boltdb.GetAll[plexus.Key]("keys")

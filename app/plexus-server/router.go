@@ -55,6 +55,7 @@ func setupRouter() *gin.Engine {
 	peers := router.Group("/peers", auth)
 	{
 		peers.GET("/", displayPeers)
+		peers.GET("/:id", peerDetails)
 	}
 	//router.GET("/login", displayLogin)
 	//users := router.Group("/users", auth)

@@ -57,22 +57,20 @@
                         <td>Port</td>
                         <td>Version</td>
                         <td>Status</td>
-                        <td>Edit</td>
                         <td>Delete</td>
                     </tr>
                 </thead>
                 <tbody>
                     {{range .Peers}}
                     <tr>
-                        <td>{{.Name}}</td>
+                        <td><button class="w3-button w3-theme" type="button" hx-get="/peers/{{.WGPublicKey}}"
+                            hx-target="#content" hx-target-error="#error">{{.Name}}</button></td>
                         <td>{{.Endpoint}}</td>
                         <td>{{.PublicListenPort}}</td>
                         <td>{{.Version}}</td>
                         <td>TBD</td>
-                        <td><button class="w3-button" type="button" hx-get="peers/{{.WGPublicKey}}" hx-targer="#content"
-                                hx-target-error="#error">Edit</button></td>
-                        <td><button class="w3-button" type="button" hx-delete="peers/{{.WGPublicKey}}"
-                                hx-targer="#content" hx-target-error="#error">Delete</button></td>
+                        <td><button class="w3-button w3-theme" type="button" hx-delete="network/peers/{{.WGPublicKey}}"
+                                hx-targer="#content" hx-target-error="#error">Remove From Network</button></td>
                     </tr>
                     {{end}}
                 </tbody>

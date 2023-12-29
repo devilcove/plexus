@@ -67,6 +67,7 @@ type Peer struct {
 	PublicListenPort int
 	Endpoint         string
 	Updated          time.Time
+	Networks         []string
 }
 
 type Device struct {
