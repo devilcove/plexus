@@ -39,7 +39,13 @@ type Network struct {
 	Name          string `form:"name"`
 	Address       net.IPNet
 	AddressString string `form:"addressstring"`
-	Peers         []string
+	Peers         []NetworkPeer
+}
+
+type NetworkPeer struct {
+	WGPublicKey      string
+	PublicListenPort int
+	Endpoint         string
 }
 
 type Key struct {

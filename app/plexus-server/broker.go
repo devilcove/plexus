@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
 	"sync"
 	"time"
@@ -34,7 +33,7 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 	//TODO :: add users
 	// users := GetUsers()
 	tokensUsers := getTokenUsers()
-	opts := &server.Options{
+	natsOptions = &server.Options{
 		Nkeys: []*server.NkeyUser{
 			{
 				Nkey: adminPublicKey,
@@ -50,14 +49,14 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 		},
 		//Users: users
 	}
-	opts.Nkeys = append(opts.Nkeys, tokensUsers...)
-	ns, err := server.NewServer(opts)
+	natsOptions.Nkeys = append(natsOptions.Nkeys, tokensUsers...)
+	natServer, err = server.NewServer(natsOptions)
 	if err != nil {
 		slog.Error("nats server", "error", err)
 		return
 	}
-	go ns.Start()
-	if !ns.ReadyForConnections(3 * time.Second) {
+	go natServer.Start()
+	if !natServer.ReadyForConnections(3 * time.Second) {
 		slog.Error("not ready for connection", "error", err)
 		return
 	}
@@ -70,50 +69,25 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 		Name:        "nats-test-nkey",
 		SignatureCB: sign,
 	}
-	nc, err := connectOpts.Connect()
+	natsConn, err = connectOpts.Connect()
 	if err != nil {
 		slog.Error("nats connect", "error", err)
 		brokerfail <- 1
 	}
 	// join handler
-	joinSub, err := nc.Subscribe("join", func(msg *nats.Msg) {
-		slog.Info("join handler")
-		join := plexus.JoinRequest{}
-		if err := json.Unmarshal(msg.Data, &join); err != nil {
-			slog.Error("unable to decode join data", "error", err)
-			msg.Respond([]byte("unable to decode join data"))
-			return
-		}
-		key, err := updateKey(join.KeyName)
-		if err != nil {
-			slog.Error("key update", "error", err)
-			msg.Respond([]byte("invalid key"))
-			return
-		}
-		pretty.Println(join.Peer)
-		if err := createPeer(join.Peer, ns, opts); err != nil {
-			slog.Error("unable to create peer", "error", err)
-			msg.Respond([]byte("unable to create peer"))
-			return
-		}
-		if err := addToNeworks(key.Networks, join.WGPublicKey); err != nil {
-			slog.Error("add to networks", "networks", key.Networks, "error", err)
-		}
-		response := "hello " + string(msg.Data)
-		msg.Respond([]byte(response))
-	})
+	joinSub, err := natsConn.Subscribe("join", joinHandler)
 	if err != nil {
 		slog.Error("subscribe join", "error", err)
 	}
-	checkinSub, err := nc.Subscribe("checkin.*", checkinHandler)
+	checkinSub, err := natsConn.Subscribe("checkin.*", checkinHandler)
 	if err != nil {
 		slog.Error("subscribe checkin", "error", err)
 	}
-	updateSub, err := nc.Subscribe("update.*", updateHandler)
+	updateSub, err := natsConn.Subscribe("update.*", updateHandler)
 	if err != nil {
 		slog.Error("subscribe update", "error", err)
 	}
-	configSub, err := nc.Subscribe("config.*", configHandler)
+	configSub, err := natsConn.Subscribe("config.*", configHandler)
 	if err != nil {
 		slog.Error("subscribe config", "error", err)
 	}
@@ -144,7 +118,7 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 				slog.Error("publickey", "error", err)
 				continue
 			}
-			opts.Nkeys = append(opts.Nkeys, &server.NkeyUser{
+			natsOptions.Nkeys = append(natsOptions.Nkeys, &server.NkeyUser{
 				Nkey: nPubKey,
 				Permissions: &server.Permissions{
 					Publish: &server.SubjectPermission{
@@ -155,8 +129,8 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 					},
 				},
 			})
-			ns.ReloadOptions(opts)
-			pretty.Println(opts.Nkeys)
+			natServer.ReloadOptions(natsOptions)
+			pretty.Println(natsOptions.Nkeys)
 		}
 	}
 }
@@ -219,24 +193,4 @@ func createNkeyUser(token string) *server.NkeyUser {
 			},
 		},
 	}
-}
-
-func createPeer(peer plexus.Peer, ns *server.Server, opts *server.Options) error {
-	if err := boltdb.Save(peer, peer.WGPublicKey, "peers"); err != nil {
-		return err
-	}
-	user := &server.NkeyUser{
-		Nkey: peer.PubNkey,
-		Permissions: &server.Permissions{
-			Publish: &server.SubjectPermission{
-				Allow: []string{"checkin." + peer.WGPublicKey, "update." + peer.WGPublicKey},
-			},
-			Subscribe: &server.SubjectPermission{
-				Allow: []string{"network/*", "_INBOX.>"},
-			},
-		},
-	}
-	newOpts := &server.Options{}
-	newOpts.Nkeys = append(opts.Nkeys, user)
-	return ns.ReloadOptions(newOpts)
 }

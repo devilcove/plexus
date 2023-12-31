@@ -12,12 +12,17 @@ import (
 
 	"github.com/devilcove/boltdb"
 	"github.com/joho/godotenv"
+	"github.com/nats-io/nats-server/v2/server"
+	"github.com/nats-io/nats.go"
 )
 
 var (
-	newDevice  chan string
-	brokerfail chan int
-	webfail    chan int
+	newDevice   chan string
+	brokerfail  chan int
+	webfail     chan int
+	natServer   *server.Server
+	natsOptions *server.Options
+	natsConn    *nats.Conn
 )
 
 func main() {

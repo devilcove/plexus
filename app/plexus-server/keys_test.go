@@ -281,13 +281,13 @@ func TestUpdateKey(t *testing.T) {
 	err = boltdb.Save(key2, key2.Name, "keys")
 	assert.Nil(t, err)
 	t.Run("keyDoesNotExist", func(t *testing.T) {
-		key, err := updateKey("doesnotexist")
+		key, err := decrementKeyUsage("doesnotexist")
 		assert.NotNil(t, err)
 		assert.True(t, errors.Is(err, boltdb.ErrNoResults))
 		assert.Equal(t, plexus.Key{}, key)
 	})
 	t.Run("deleteKey", func(t *testing.T) {
-		key, err := updateKey(key1.Name)
+		key, err := decrementKeyUsage(key1.Name)
 		assert.Nil(t, err)
 		newKey, err := boltdb.Get[plexus.Key](key1.Name, "keys")
 		assert.Equal(t, plexus.Key{}, newKey)
@@ -295,7 +295,7 @@ func TestUpdateKey(t *testing.T) {
 		assert.Equal(t, 1, key.Usage)
 	})
 	t.Run("decrement usage", func(t *testing.T) {
-		key, err := updateKey(key2.Name)
+		key, err := decrementKeyUsage(key2.Name)
 		assert.Nil(t, err)
 		assert.Equal(t, 9, key.Usage)
 	})

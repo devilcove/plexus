@@ -121,7 +121,7 @@ func newValue(name string) (string, error) {
 	return base64.StdEncoding.EncodeToString(payload), nil
 }
 
-func updateKey(name string) (plexus.Key, error) {
+func decrementKeyUsage(name string) (plexus.Key, error) {
 	key, err := boltdb.Get[plexus.Key](name, "keys")
 	if err != nil {
 		return key, err

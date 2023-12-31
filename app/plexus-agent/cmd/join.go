@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"net"
 	"os"
 	"runtime"
@@ -55,7 +56,7 @@ func join(token string) {
 	if !ok {
 		dbfile = os.Getenv("HOME") + "/.local/share/plexus/plexus-agent.db"
 	}
-	err := boltdb.Initialize(dbfile, []string{"devices"})
+	err := boltdb.Initialize(dbfile, []string{"devices", "networks"})
 	cobra.CheckErr(err)
 	home, err := os.UserHomeDir()
 	cobra.CheckErr(err)
@@ -89,9 +90,23 @@ func join(token string) {
 	log.Println(opts.Nkey)
 	nc, err := opts.Connect()
 	cobra.CheckErr(err)
+	slog.Info("connected to broker")
 	msg, err := nc.Request("join", payload, time.Second*5)
+	if err != nil {
+		slog.Error("join request", "error", err)
+	}
 	cobra.CheckErr(err)
-	fmt.Println(string(msg.Data))
+	fmt.Println("response", "reply:", string(msg.Reply), "data:", string(msg.Data))
+	networks := []plexus.Network{}
+	if err := json.Unmarshal(msg.Data, &networks); err != nil {
+		fmt.Println("join unsuccessful", string(msg.Data))
+	} else {
+		for _, network := range networks {
+			if err := boltdb.Save(network, network.Name, "networks"); err != nil {
+				fmt.Println("error saving network", network.Name, err)
+			}
+		}
+	}
 	if plexus.IsAlive(pid) {
 		unix.Kill(pid, syscall.SIGUSR2)
 	}
