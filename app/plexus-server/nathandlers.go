@@ -2,7 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
+	"log"
 	"log/slog"
+	"net"
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
@@ -42,16 +45,6 @@ func joinHandler(msg *nats.Msg) {
 		msg.Respond([]byte("failed to save peer" + err.Error()))
 		return
 	}
-	// add new peer to networks and publish to network topic
-	netPeer := plexus.NetworkPeer{
-		WGPublicKey:      request.Peer.WGPublicKey,
-		PublicListenPort: request.Peer.PublicListenPort,
-		Endpoint:         request.Peer.Endpoint,
-	}
-	data, err := json.Marshal(&netPeer)
-	if err != nil {
-		slog.Error("marshal new network peer", "error", err)
-	}
 	joinResponse := []plexus.Network{}
 	for _, network := range key.Networks {
 		netToUpdate, err := boltdb.Get[plexus.Network](network, "networks")
@@ -62,20 +55,36 @@ func joinHandler(msg *nats.Msg) {
 		// check if peer is already part of network
 		found := false
 		for _, peer := range netToUpdate.Peers {
-			if peer.WGPublicKey == netPeer.WGPublicKey {
+			if peer.WGPublicKey == request.Peer.WGPublicKey {
 				found = true
 			}
 		}
-		// if not add peer to network
+		// if not add peer to network and publish to network topic
 		if !found {
+			addr, err := getNextIP(netToUpdate)
+			if err != nil {
+				slog.Error("could not get ip ", "error", err)
+				msg.Respond([]byte("could not get ip" + err.Error()))
+				return
+			}
+			netPeer := plexus.NetworkPeer{
+				WGPublicKey:      request.Peer.WGPublicKey,
+				PublicListenPort: request.Peer.PublicListenPort,
+				Endpoint:         request.Peer.Endpoint,
+				Address:          addr,
+			}
+			data, err := json.Marshal(&netPeer)
+			if err != nil {
+				slog.Error("marshal new network peer", "error", err)
+			}
 			netToUpdate.Peers = append(netToUpdate.Peers, netPeer)
 			if err := boltdb.Save(netToUpdate, netToUpdate.Name, "networks"); err != nil {
 				slog.Error("save updated network", "error", err)
 				continue
 			}
-		}
-		if err := natsConn.Publish("networks.newPeer."+network, data); err != nil {
-			slog.Error("publish new peer", "error", err)
+			if err := natsConn.Publish("networks.newPeer."+network, data); err != nil {
+				slog.Error("publish new peer", "error", err)
+			}
 		}
 		joinResponse = append(joinResponse, netToUpdate)
 	}
@@ -99,4 +108,30 @@ func joinHandler(msg *nats.Msg) {
 		slog.Error("send response to join", "error", err)
 	}
 
+}
+
+func getNextIP(network plexus.Network) (net.IP, error) {
+	var err error
+	taken := make(map[string]bool)
+	for _, peer := range network.Peers {
+		taken[peer.Address.String()] = true
+	}
+	available := false
+	next := network.Net.FirstAddress()
+	for {
+		log.Println("checking", next.String())
+		_, ok := taken[next.String()]
+		if !ok {
+			available = true
+			break
+		}
+		next, err = network.Net.NextIP(next)
+		if err != nil {
+			break
+		}
+	}
+	if !available {
+		return net.ParseIP("0.0.0.0"), errors.New("no address available")
+	}
+	return next, nil
 }

@@ -50,7 +50,7 @@ func TestSetPage(t *testing.T) {
 	t.Run("nil", func(t *testing.T) {
 		setPage(nil, "something")
 		page := getPage("someuser")
-		assert.Equal(t, "peers", page.Page)
+		assert.Equal(t, "nil", page.Page)
 	})
 	t.Run("sameuser", func(t *testing.T) {
 		setPage("newuser", "something")

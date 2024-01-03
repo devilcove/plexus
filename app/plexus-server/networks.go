@@ -6,8 +6,10 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/netip"
 	"regexp"
 
+	"github.com/c-robinson/iplib"
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
 	"github.com/gin-contrib/sessions"
@@ -24,23 +26,29 @@ func displayAddNetwork(c *gin.Context) {
 
 func addNetwork(c *gin.Context) {
 	var errs error
+	var ok bool
 	network := plexus.Network{}
 	if err := c.Bind(&network); err != nil {
 		processError(c, http.StatusBadRequest, "invalid network data")
 		return
 	}
-	_, cidr, err := net.ParseCIDR(network.AddressString)
-	if err != nil {
+	network.Net = iplib.Net4FromStr(network.AddressString)
+	//if network.Net.IP == nil {
+	//	log.Println("net.ParseCIDR", network.AddressString)
+	//	processError(c, http.StatusBadRequest, "invalid address for network")
+	//	return
+	//}
+	network.Address, ok = netip.AddrFromSlice(network.Net.IP())
+	if !ok {
 		log.Println("net.ParseCIDR", network.AddressString)
-		processError(c, http.StatusBadRequest, err.Error())
+		processError(c, http.StatusBadRequest, "invalid address for network")
 		return
 	}
-	network.Address = *cidr
-	network.AddressString = network.Address.String()
+	network.AddressString = network.Net.String()
 	if !validateNetworkName(network.Name) {
 		errs = errors.Join(errs, errors.New("invalid network name"))
 	}
-	if !validateNetworkAddress(network.Address.IP) {
+	if !network.Address.IsPrivate() {
 		errs = errors.Join(errs, errors.New("network address is not private"))
 	}
 	if errs != nil {
@@ -57,7 +65,7 @@ func addNetwork(c *gin.Context) {
 			processError(c, http.StatusBadRequest, "network name exists")
 			return
 		}
-		if net.Address.IP.Equal(network.Address.IP) {
+		if net.Address == network.Address {
 			processError(c, http.StatusBadRequest, "network CIDR in use by "+net.Name)
 			return
 		}

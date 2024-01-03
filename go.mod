@@ -3,6 +3,7 @@ module github.com/devilcove/plexus
 go 1.21.5
 
 require (
+	github.com/c-robinson/iplib v1.0.8
 	github.com/devilcove/boltdb v0.1.1
 	github.com/gin-contrib/sessions v0.0.5
 	github.com/gin-gonic/gin v1.9.1

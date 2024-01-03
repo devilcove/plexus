@@ -6,8 +6,10 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/netip"
 	"time"
 
+	"github.com/c-robinson/iplib"
 	"github.com/gin-gonic/gin"
 )
 
@@ -37,13 +39,15 @@ type User struct {
 
 type Network struct {
 	Name          string `form:"name"`
-	Address       net.IPNet
+	Net           iplib.Net4
+	Address       netip.Addr
 	AddressString string `form:"addressstring"`
 	Peers         []NetworkPeer
 }
 
 type NetworkPeer struct {
 	WGPublicKey      string
+	Address          net.IP
 	PublicListenPort int
 	Endpoint         string
 }
