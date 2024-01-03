@@ -33,6 +33,7 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 	//TODO :: add users
 	// users := GetUsers()
 	tokensUsers := getTokenUsers()
+	deviceUsers := getDeviceUsers()
 	natsOptions = &server.Options{
 		Nkeys: []*server.NkeyUser{
 			{
@@ -50,6 +51,7 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 		//Users: users
 	}
 	natsOptions.Nkeys = append(natsOptions.Nkeys, tokensUsers...)
+	natsOptions.Nkeys = append(natsOptions.Nkeys, deviceUsers...)
 	natServer, err = server.NewServer(natsOptions)
 	if err != nil {
 		slog.Error("nats server", "error", err)

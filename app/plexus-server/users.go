@@ -3,11 +3,13 @@ package main
 import (
 	"encoding/json"
 	"log/slog"
+	"net/http"
 	"os"
 	"time"
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
+	"github.com/gin-gonic/gin"
 	"go.etcd.io/bbolt"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -70,4 +72,8 @@ func adminExist() bool {
 func hashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 4)
 	return string(bytes), err
+}
+
+func getUsers(c *gin.Context) {
+	c.HTML(http.StatusOK, "users", natsOptions.Nkeys)
 }

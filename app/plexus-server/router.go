@@ -58,15 +58,15 @@ func setupRouter() *gin.Engine {
 		peers.GET("/:id", peerDetails)
 	}
 	//router.GET("/login", displayLogin)
-	//users := router.Group("/users", auth)
-	//{
-	//	users.GET("", getUsers)
-	//	users.GET("current", getUser)
-	//	users.POST("", addUser)
-	//	users.POST(":name", editUser)
-	//	users.DELETE(":name", deleteUser)
-	//	users.GET(":name", getUser)
-	//}
+	users := router.Group("/users", auth)
+	{
+		users.GET("", getUsers)
+		//	users.GET("current", getUser)
+		//	users.POST("", addUser)
+		//	users.POST(":name", editUser)
+		//	users.DELETE(":name", deleteUser)
+		//	users.GET(":name", getUser)
+	}
 	//router.GET("/register", register)
 	//router.POST("/register", regUser)
 	//projects := router.Group("/projects", auth)
