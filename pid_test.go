@@ -3,6 +3,7 @@ package plexus
 import (
 	"errors"
 	"os"
+	"os/user"
 	"strconv"
 	"testing"
 
@@ -63,10 +64,14 @@ func TestWritePID(t *testing.T) {
 	t.Run("stillRunning", func(t *testing.T) {
 		assert.True(t, errors.Is(WritePID(file, os.Getpid()), ErrProcessRunning))
 	})
-	t.Run("unableToRead", func(t *testing.T) {
-		assert.Nil(t, os.Chmod(file, 0333))
-		assert.True(t, errors.Is(WritePID(file, 100), os.ErrPermission))
-	})
+	user, err := user.Current()
+	assert.Nil(t, err)
+	if user.Uid != "0" {
+		t.Run("unableToRead", func(t *testing.T) {
+			assert.Nil(t, os.Chmod(file, 0333))
+			assert.True(t, errors.Is(WritePID(file, 100), os.ErrPermission))
+		})
+	}
 	assert.Nil(t, os.Remove(file))
 
 }
