@@ -69,7 +69,7 @@ func run() {
 	defer conn.Close()
 	wg.Add(2)
 	go checkin(ctx, &wg, conn)
-	go mq(ctx, &wg, conn)
+	go natSubscribe(ctx, &wg, conn)
 	for {
 		select {
 		case <-quit:
@@ -87,7 +87,7 @@ func run() {
 			wg.Add(2)
 			ctx, cancel = context.WithCancel(context.Background())
 			go checkin(ctx, &wg, conn)
-			go mq(ctx, &wg, conn)
+			go natSubscribe(ctx, &wg, conn)
 		case <-pause:
 			log.Println("pause")
 			cancel()
@@ -101,32 +101,40 @@ func run() {
 			wg.Add(2)
 			ctx, cancel = context.WithCancel(context.Background())
 			go checkin(ctx, &wg, conn)
-			go mq(ctx, &wg, conn)
+			go natSubscribe(ctx, &wg, conn)
 		}
 	}
 }
 
-func mq(ctx context.Context, wg *sync.WaitGroup, nc *nats.Conn) {
+func natSubscribe(ctx context.Context, wg *sync.WaitGroup, nc *nats.Conn) {
+	subscriptions := []*nats.Subscription{}
 	log.Println("mq starting")
 	log.Println("config", config)
 	defer wg.Done()
-	sub, err := nc.Subscribe("hello", handleHello)
+	self, err := boltdb.Get[plexus.Device]("self", "devices")
 	if err != nil {
-		log.Println("hello sub", err)
+		slog.Error("unable to read devices", "errror", err)
+	}
+	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	if err != nil {
+		slog.Error("unable to read networks", "error", err)
+	}
+	for _, network := range networks {
+		if self.WGPublicKey == "" {
+			continue
+		}
+		sub, err := nc.Subscribe("networks."+network.Name, networkUpdates)
+		if err != nil {
+			slog.Error("network subcription failed", "error", err)
+			continue
+		}
+		subscriptions = append(subscriptions, sub)
 	}
 	<-ctx.Done()
 	log.Println("mq shutting down")
-	sub.Drain()
-}
-
-//func handleReply(m *nats.Msg) {
-//	fmt.Println("reply handler", string(m.Data))
-//	conn.Publish(m.Reply, "reply handler")
-//}
-
-func handleHello(m *nats.Msg) {
-	fmt.Println("hello subscription", string(m.Data))
-	m.Respond([]byte("hello handler"))
+	for _, sub := range subscriptions {
+		sub.Drain()
+	}
 }
 
 func checkin(ctx context.Context, wg *sync.WaitGroup, nc *nats.Conn) {
