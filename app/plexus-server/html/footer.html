@@ -1,5 +1,9 @@
 {{define "footer"}}
-<footer class="w3-center">
+<footer class="w3-center w3-padding">
+    built with <a href="https://github.com/gin-gonic/" target="_blank">gin</a>
+    <a href="https://nats.io" target="_blank">nats</a>
+    <a href="https://pkg.go.dev/go.etcd.io/bbolt" target="_blank">bbolt</a>
+    and <a href="https://htmx.org" target="_blank">htmx</a><br>
     &copy; 2023 Matthew R Kasun
     <a hx-get="/logout" hx-target="#content" class="w3-circle w3-small w3-theme-d1">Logout</a>
 </footer>
