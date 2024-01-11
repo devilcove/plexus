@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"sync"
 	"syscall"
 
 	"github.com/devilcove/boltdb"
+	"github.com/devilcove/plexus"
 	"github.com/joho/godotenv"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
@@ -33,7 +33,7 @@ func main() {
 	if !ok {
 		verbosity = "INFO"
 	}
-	logger := setLogging(verbosity)
+	logger := plexus.SetLogging(verbosity)
 	home := os.Getenv("HOME")
 	dbfile := os.Getenv("DB_FILE")
 	if dbfile == "" {
@@ -84,41 +84,6 @@ func main() {
 			os.Exit(2)
 		}
 	}
-}
-
-func setLogging(v string) *slog.Logger {
-	logLevel := &slog.LevelVar{}
-	replace := func(groups []string, a slog.Attr) slog.Attr {
-		if a.Key == slog.SourceKey {
-			source, ok := a.Value.Any().(*slog.Source)
-			if ok {
-				source.File = filepath.Base(source.File)
-				source.Function = filepath.Base(source.Function)
-			}
-		}
-		return a
-	}
-
-	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{AddSource: true, ReplaceAttr: replace, Level: logLevel}))
-	//logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{AddSource: true, Level: logLevel}))
-	slog.SetDefault(logger)
-	switch v {
-	case "DEBUG":
-		logLevel.Set(slog.LevelDebug)
-	case "INFO":
-		logLevel.Set(slog.LevelInfo)
-	case "WARN":
-		logLevel.Set(slog.LevelWarn)
-	case "ERROR":
-		logLevel.Set(slog.LevelError)
-	default:
-		logLevel.Set(slog.LevelInfo)
-	}
-	if os.Getenv("DEBUG") == "true" {
-		logLevel.Set(slog.LevelDebug)
-	}
-	slog.Info("Logging level set to", "level", logLevel.Level())
-	return logger
 }
 
 func web(ctx context.Context, wg *sync.WaitGroup, logger *slog.Logger) {

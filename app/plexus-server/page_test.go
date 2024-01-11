@@ -22,7 +22,7 @@ var (
 
 func TestMain(m *testing.M) {
 	_ = boltdb.Initialize("./test.db", []string{"users", "keys", "networks", "peers", "settings", "keypairs"})
-	setLogging("DEBUG")
+	plexus.SetLogging("DEBUG")
 	defer boltdb.Close()
 	//checkDefaultUser()
 	router = setupRouter()

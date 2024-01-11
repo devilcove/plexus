@@ -18,8 +18,10 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 
+	"github.com/devilcove/plexus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -30,7 +32,8 @@ var (
 )
 
 type Config struct {
-	Server string
+	Server    string
+	Verbosity string
 }
 
 // rootCmd represents the base command when called without any subcommands
@@ -63,6 +66,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is /etc/plexus/plexus-agent.yaml)")
 	rootCmd.PersistentFlags().StringP("server", "s", "", "server FQDN eg plexus.example.com")
+	rootCmd.PersistentFlags().StringP("verbosity", "v", "INFO", "logging verbosity")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -75,7 +79,7 @@ func initConfig() {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
-		viper.SetConfigFile("/etc/plexus/plexus-agentyml")
+		viper.SetConfigFile(os.Getenv("HOME") + ".config/plexus-agent/config.yml")
 	}
 
 	viper.BindPFlags(rootCmd.Flags())
@@ -90,5 +94,6 @@ func initConfig() {
 	if err := viper.Unmarshal(&config); err != nil {
 		log.Println("viper.Unmarshal", err)
 	}
-	fmt.Println("config", config)
+	plexus.SetLogging(config.Verbosity)
+	slog.Info("using configuration", "config", config)
 }

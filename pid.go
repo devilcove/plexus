@@ -45,7 +45,9 @@ func WritePID(file string, pid int) error {
 		return err
 	}
 	if old != 0 {
-		return ErrProcessRunning
+		if IsAlive(old) {
+			return ErrProcessRunning
+		}
 	}
 	return os.WriteFile(file, []byte(strconv.Itoa(pid)), 0644)
 }
