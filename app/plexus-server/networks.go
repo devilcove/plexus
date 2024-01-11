@@ -33,11 +33,11 @@ func addNetwork(c *gin.Context) {
 		return
 	}
 	network.Net = iplib.Net4FromStr(network.AddressString)
-	//if network.Net.IP == nil {
-	//	log.Println("net.ParseCIDR", network.AddressString)
-	//	processError(c, http.StatusBadRequest, "invalid address for network")
-	//	return
-	//}
+	if network.Net.IP() == nil {
+		log.Println("net.ParseCIDR", network.AddressString)
+		processError(c, http.StatusBadRequest, "invalid address for network")
+		return
+	}
 	network.Address, ok = netip.AddrFromSlice(network.Net.IP())
 	if !ok {
 		log.Println("net.ParseCIDR", network.AddressString)

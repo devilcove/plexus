@@ -19,7 +19,7 @@ func devicePermissions(id string) *server.Permissions {
 			Allow: []string{"checkin." + id, "update." + id},
 		},
 		Subscribe: &server.SubjectPermission{
-			Allow: []string{"network.>", "_INBOX.>"},
+			Allow: []string{"networks.>", "_INBOX.>"},
 		},
 	}
 }

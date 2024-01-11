@@ -65,11 +65,17 @@ func run() {
 	signal.Notify(unpause, syscall.SIGUSR2)
 	conn, err := connectToServer()
 	cobra.CheckErr(err)
+	slog.Info("connected to broker")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer conn.Close()
-	wg.Add(2)
+	if err := boltdb.Initialize(os.Getenv("HOME")+"/.local/share/plexus/plexus-agent.db", []string{"devices", "networks"}); err != nil {
+		slog.Error("failed to initialize database")
+		return
+	}
+	wg.Add(3)
 	go checkin(ctx, &wg, conn)
 	go natSubscribe(ctx, &wg, conn)
+	go startInterfaces(ctx, &wg)
 	for {
 		select {
 		case <-quit:
@@ -84,10 +90,11 @@ func run() {
 			cancel()
 			wg.Wait()
 			log.Println("go routines stopped by reset")
-			wg.Add(2)
+			wg.Add(3)
 			ctx, cancel = context.WithCancel(context.Background())
 			go checkin(ctx, &wg, conn)
 			go natSubscribe(ctx, &wg, conn)
+			go startInterfaces(ctx, &wg)
 		case <-pause:
 			log.Println("pause")
 			cancel()
@@ -98,10 +105,11 @@ func run() {
 			//cancel in case pause not received earlier
 			cancel()
 			wg.Wait()
-			wg.Add(2)
+			wg.Add(3)
 			ctx, cancel = context.WithCancel(context.Background())
 			go checkin(ctx, &wg, conn)
 			go natSubscribe(ctx, &wg, conn)
+			go startInterfaces(ctx, &wg)
 		}
 	}
 }
@@ -138,17 +146,22 @@ func natSubscribe(ctx context.Context, wg *sync.WaitGroup, nc *nats.Conn) {
 }
 
 func checkin(ctx context.Context, wg *sync.WaitGroup, nc *nats.Conn) {
+	defer wg.Done()
 	log.Println("checking starting")
+	self, err := boltdb.Get[plexus.Device]("self", "devices")
+	if err != nil {
+		slog.Error("get device", "error", err)
+		return
+	}
 	ticker := time.NewTicker(time.Second * 10)
 	defer ticker.Stop()
-	defer wg.Done()
 	for {
 		select {
 		case <-ctx.Done():
 			log.Println("checkin done")
 			return
 		case <-ticker.C:
-			msg, err := nc.Request("login.checkin", []byte("checking"), time.Second)
+			msg, err := nc.Request("checkin."+self.WGPublicKey, []byte("checking"), time.Second)
 			if err != nil {
 				log.Println("error publishing checkin ", err)
 				continue
