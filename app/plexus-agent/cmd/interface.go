@@ -41,6 +41,10 @@ func startInterfaces(ctx context.Context, wg *sync.WaitGroup) {
 	}
 	for i, network := range networks {
 		name := "plexus" + strconv.Itoa(i)
+		if _, err := netlink.LinkByName(name); err == nil {
+			slog.Info("interface exists", "interface", name)
+			continue
+		}
 		mtu := 1420
 		peers := []wgtypes.PeerConfig{}
 		for _, peer := range network.Peers {
