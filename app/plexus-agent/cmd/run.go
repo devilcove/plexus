@@ -195,7 +195,7 @@ func connectToServer() (*nats.Conn, error) {
 		return kp.Sign(nonce)
 	}
 	opts := nats.Options{
-		Url:         "nats://localhost:4222",
+		Url:         "nats://" + config.Server + ":4222",
 		Nkey:        pk,
 		SignatureCB: sign,
 	}
