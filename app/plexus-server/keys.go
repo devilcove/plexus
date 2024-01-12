@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
 	"regexp"
 	"time"
 
@@ -109,8 +110,12 @@ func newValue(name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	url := os.Getenv("PLEXUS_URL")
+	if url == "" {
+		url = "localhost"
+	}
 	keyValue := plexus.KeyValue{
-		URL:     "nats://localhost:4222",
+		URL:     "nats://" + url + ":4222",
 		Seed:    string(seed),
 		KeyName: name,
 	}
