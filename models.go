@@ -13,7 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type Config struct {
+type Settings struct {
 	Theme   string `json:"theme" form:"theme"`
 	Font    string `json:"font" form:"font"`
 	Refresh int    `json:"refresh" form:"refresh"`
@@ -39,6 +39,7 @@ type User struct {
 
 type Network struct {
 	Name          string `form:"name"`
+	ServerURL     string
 	Net           iplib.Net4
 	Address       netip.Addr
 	AddressString string `form:"addressstring"`

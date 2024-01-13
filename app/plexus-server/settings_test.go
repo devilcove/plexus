@@ -56,7 +56,7 @@ func TestSetConfig(t *testing.T) {
 		assert.Contains(t, string(body), "invalid config")
 	})
 	t.Run("validConfig", func(t *testing.T) {
-		config := plexus.Config{
+		config := plexus.Settings{
 			Theme: "red",
 		}
 		payload, err := json.Marshal(&config)

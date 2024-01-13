@@ -11,16 +11,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func config(c *gin.Context) {
+func getSettings(c *gin.Context) {
 	session := sessions.Default(c)
 	page := getPage(session.Get("user"))
 	c.HTML(http.StatusOK, "settings", page)
 }
 
-func setConfig(c *gin.Context) {
+func updateSettings(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get("user").(string)
-	config := plexus.Config{}
+	config := plexus.Settings{}
 	if err := c.Bind(&config); err != nil {
 		log.Println("failed to read config", err)
 		processError(c, http.StatusBadRequest, "invalid config")
