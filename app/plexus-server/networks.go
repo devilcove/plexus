@@ -4,7 +4,6 @@ import (
 	"errors"
 	"log"
 	"log/slog"
-	"net"
 	"net/http"
 	"net/netip"
 	"regexp"
@@ -32,6 +31,7 @@ func addNetwork(c *gin.Context) {
 		processError(c, http.StatusBadRequest, "invalid network data")
 		return
 	}
+	network.ServerURL = config.Server
 	network.Net = iplib.Net4FromStr(network.AddressString)
 	if network.Net.IP() == nil {
 		log.Println("net.ParseCIDR", network.AddressString)
@@ -48,7 +48,7 @@ func addNetwork(c *gin.Context) {
 	if !validateNetworkName(network.Name) {
 		errs = errors.Join(errs, errors.New("invalid network name"))
 	}
-	if !network.Address.IsPrivate() {
+	if !validateNetworkAddress(network.Address) {
 		errs = errors.Join(errs, errors.New("network address is not private"))
 	}
 	if errs != nil {
@@ -131,7 +131,7 @@ func validateNetworkName(name string) bool {
 	return valid.MatchString(name)
 }
 
-func validateNetworkAddress(address net.IP) bool {
+func validateNetworkAddress(address netip.Addr) bool {
 	return address.IsPrivate()
 
 }

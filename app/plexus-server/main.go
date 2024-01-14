@@ -10,8 +10,6 @@ import (
 	"syscall"
 
 	"github.com/devilcove/boltdb"
-	"github.com/devilcove/plexus"
-	"github.com/joho/godotenv"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 )
@@ -26,25 +24,13 @@ var (
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		slog.Warn("Error loading .env file")
-	}
-	verbosity, ok := os.LookupEnv("VERBOSITY")
-	if !ok {
-		verbosity = "INFO"
-	}
-	logger := plexus.SetLogging(verbosity)
-	home := os.Getenv("HOME")
-	dbfile := os.Getenv("DB_FILE")
-	if dbfile == "" {
-		dbfile = home + "/.local/share/plexus/plexus-server.db"
-	}
-	if err := boltdb.Initialize(dbfile, []string{"users", "keys", "networks", "peers", "settings", "keypairs"}); err != nil {
-		slog.Error("database initialization", "error", err)
+
+	logger, err := configureServer()
+	if err != nil {
+		slog.Error("unable to configure server", "error", err)
 		os.Exit(1)
 	}
 	defer boltdb.Close()
-	checkDefaultUser()
 	wg := sync.WaitGroup{}
 	quit := make(chan os.Signal, 1)
 	reset := make(chan os.Signal, 1)

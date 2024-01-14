@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/devilcove/boltdb"
@@ -14,23 +13,15 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func checkDefaultUser() {
+func checkDefaultUser(user, pass string) error {
 	if adminExist() {
 		slog.Debug("admin exists")
-		return
-	}
-	user, ok := os.LookupEnv("PLEXUS_USER")
-	if !ok {
-		user = "admin"
-	}
-	pass, ok := os.LookupEnv("PLEXUS_PASS")
-	if !ok {
-		pass = "password"
+		return nil
 	}
 	password, err := hashPassword(pass)
 	if err != nil {
 		slog.Error("hash error", "error", err)
-		return
+		return err
 	}
 	if err = boltdb.Save(&plexus.User{
 		Username: user,
@@ -39,9 +30,10 @@ func checkDefaultUser() {
 		Updated:  time.Now(),
 	}, user, "users"); err != nil {
 		slog.Error("create default user", "error", err)
-		return
+		return err
 	}
 	slog.Info("default user created")
+	return nil
 }
 
 func adminExist() bool {

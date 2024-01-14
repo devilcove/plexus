@@ -4,7 +4,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/devilcove/boltdb"
@@ -16,7 +15,7 @@ func TestDefaultUser(t *testing.T) {
 	t.Run("noadmim", func(t *testing.T) {
 		err := deleteAllUsers(true)
 		assert.Nil(t, err)
-		checkDefaultUser()
+		checkDefaultUser("admin", "pass")
 		user, err := boltdb.Get[plexus.User]("admin", "users")
 		assert.Nil(t, err)
 		assert.Equal(t, "admin", user.Username)
@@ -25,16 +24,14 @@ func TestDefaultUser(t *testing.T) {
 	t.Run("env", func(t *testing.T) {
 		err := deleteAllUsers(true)
 		assert.Nil(t, err)
-		err = os.Setenv("PLEXUS_USER", "Administrator")
-		assert.Nil(t, err)
-		checkDefaultUser()
+		checkDefaultUser("Administrator", "password")
 		user, err := boltdb.Get[plexus.User]("Administrator", "users")
 		assert.Nil(t, err)
 		assert.Equal(t, "Administrator", user.Username)
 		assert.Equal(t, true, user.IsAdmin)
 	})
 	t.Run("adminexists", func(t *testing.T) {
-		checkDefaultUser()
+		checkDefaultUser("Administator", "password")
 		user, err := boltdb.Get[plexus.User]("Administrator", "users")
 		assert.Nil(t, err)
 		assert.Equal(t, "Administrator", user.Username)
@@ -43,7 +40,7 @@ func TestDefaultUser(t *testing.T) {
 }
 
 func TestAuthFail(t *testing.T) {
-	req, err := http.NewRequest(http.MethodGet, "/config/", nil)
+	req, err := http.NewRequest(http.MethodGet, "/settings/", nil)
 	assert.Nil(t, err)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)

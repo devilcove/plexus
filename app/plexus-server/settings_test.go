@@ -22,7 +22,7 @@ func TestGetConfig(t *testing.T) {
 	cookie, err := testLogin(user)
 	assert.Nil(t, err)
 	assert.NotNil(t, cookie)
-	req, err := http.NewRequest(http.MethodGet, "/config/", nil)
+	req, err := http.NewRequest(http.MethodGet, "/settings/", nil)
 	assert.Nil(t, err)
 	req.AddCookie(cookie)
 	w := httptest.NewRecorder()
@@ -44,7 +44,7 @@ func TestSetConfig(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, cookie)
 	t.Run("noconfig", func(t *testing.T) {
-		req, err := http.NewRequest(http.MethodPost, "/config/", nil)
+		req, err := http.NewRequest(http.MethodPost, "/settings/", nil)
 		assert.Nil(t, err)
 		req.AddCookie(cookie)
 		req.Header.Set("content-type", "application/json")
@@ -61,7 +61,7 @@ func TestSetConfig(t *testing.T) {
 		}
 		payload, err := json.Marshal(&config)
 		assert.Nil(t, err)
-		req, err := http.NewRequest(http.MethodPost, "/config/", bytes.NewBuffer(payload))
+		req, err := http.NewRequest(http.MethodPost, "/settings/", bytes.NewBuffer(payload))
 		assert.Nil(t, err)
 		req.AddCookie(cookie)
 		req.Header.Set("content-type", "application/json")

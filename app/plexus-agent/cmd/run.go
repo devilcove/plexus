@@ -22,6 +22,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -63,19 +64,13 @@ func run() {
 	signal.Notify(reset, syscall.SIGHUP)
 	signal.Notify(pause, syscall.SIGUSR1)
 	signal.Notify(unpause, syscall.SIGUSR2)
-	conn, err := connectToServer()
-	cobra.CheckErr(err)
-	slog.Info("connected to broker")
 	ctx, cancel := context.WithCancel(context.Background())
-	defer conn.Close()
 	if err := boltdb.Initialize(os.Getenv("HOME")+"/.local/share/plexus/plexus-agent.db", []string{"devices", "networks"}); err != nil {
 		slog.Error("failed to initialize database")
 		return
 	}
-	wg.Add(3)
-	go checkin(ctx, &wg, conn)
-	go natSubscribe(ctx, &wg, conn)
-	go startInterfaces(ctx, &wg)
+	wg.Add(1)
+	go natSubscribe(ctx, &wg)
 	for {
 		select {
 		case <-quit:
@@ -90,11 +85,9 @@ func run() {
 			cancel()
 			wg.Wait()
 			log.Println("go routines stopped by reset")
-			wg.Add(3)
+			wg.Add(1)
 			ctx, cancel = context.WithCancel(context.Background())
-			go checkin(ctx, &wg, conn)
-			go natSubscribe(ctx, &wg, conn)
-			go startInterfaces(ctx, &wg)
+			go natSubscribe(ctx, &wg)
 		case <-pause:
 			log.Println("pause")
 			cancel()
@@ -105,17 +98,16 @@ func run() {
 			//cancel in case pause not received earlier
 			cancel()
 			wg.Wait()
-			wg.Add(3)
+			wg.Add(1)
 			ctx, cancel = context.WithCancel(context.Background())
-			go checkin(ctx, &wg, conn)
-			go natSubscribe(ctx, &wg, conn)
-			go startInterfaces(ctx, &wg)
+			go natSubscribe(ctx, &wg)
 		}
 	}
 }
 
-func natSubscribe(ctx context.Context, wg *sync.WaitGroup, nc *nats.Conn) {
+func natSubscribe(ctx context.Context, wg *sync.WaitGroup) {
 	subscriptions := []*nats.Subscription{}
+	servers := []*nats.Conn{}
 	log.Println("mq starting")
 	log.Println("config", config)
 	defer wg.Done()
@@ -127,8 +119,13 @@ func natSubscribe(ctx context.Context, wg *sync.WaitGroup, nc *nats.Conn) {
 	if err != nil {
 		slog.Error("unable to read networks", "error", err)
 	}
-	for _, network := range networks {
+	for i, network := range networks {
 		if self.WGPublicKey == "" {
+			continue
+		}
+		nc, err := connectToServer(self)
+		if err != nil {
+			slog.Error("connect to server", "error", err)
 			continue
 		}
 		sub, err := nc.Subscribe("networks."+network.Name, networkUpdates)
@@ -136,23 +133,29 @@ func natSubscribe(ctx context.Context, wg *sync.WaitGroup, nc *nats.Conn) {
 			slog.Error("network subcription failed", "error", err)
 			continue
 		}
+		if err := startInterface("plexus"+strconv.Itoa(i), self, network); err != nil {
+			slog.Error("interface did not start", "name", "pleuxus.Name"+strconv.Itoa(i), "network", network.Name, "error", err)
+			sub.Drain()
+			continue
+		}
+		wg.Add(1)
+		go checkin(ctx, wg, nc, self)
 		subscriptions = append(subscriptions, sub)
+		servers = append(servers, nc)
 	}
 	<-ctx.Done()
 	log.Println("mq shutting down")
 	for _, sub := range subscriptions {
 		sub.Drain()
 	}
+	for _, nc := range servers {
+		nc.Close()
+	}
 }
 
-func checkin(ctx context.Context, wg *sync.WaitGroup, nc *nats.Conn) {
+func checkin(ctx context.Context, wg *sync.WaitGroup, nc *nats.Conn, self plexus.Device) {
 	defer wg.Done()
 	log.Println("checking starting")
-	self, err := boltdb.Get[plexus.Device]("self", "devices")
-	if err != nil {
-		slog.Error("get device", "error", err)
-		return
-	}
 	ticker := time.NewTicker(time.Second * 10)
 	defer ticker.Stop()
 	for {
@@ -171,26 +174,15 @@ func checkin(ctx context.Context, wg *sync.WaitGroup, nc *nats.Conn) {
 	}
 }
 
-func connectToServer() (*nats.Conn, error) {
-	home := os.Getenv("HOME")
-	dbfile, ok := os.LookupEnv("DB_FILE")
-	if !ok {
-		dbfile = home + "/.local/share/plexus/plexus-agent.db"
-	}
-	err := boltdb.Initialize(dbfile, []string{"devices"})
-	if err != nil {
-		return nil, err
-	}
-	defer boltdb.Close()
-	self, err := boltdb.Get[plexus.Device]("self", "devices")
-	if err != nil {
-		return nil, err
-	}
-
+func connectToServer(self plexus.Device) (*nats.Conn, error) {
 	kp, err := nkeys.FromSeed([]byte(self.Seed))
-	cobra.CheckErr(err)
+	if err != nil {
+		return nil, err
+	}
 	pk, err := kp.PublicKey()
-	cobra.CheckErr(err)
+	if err != nil {
+		return nil, err
+	}
 	sign := func(nonce []byte) ([]byte, error) {
 		return kp.Sign(nonce)
 	}
