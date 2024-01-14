@@ -65,10 +65,6 @@ func run() {
 	signal.Notify(pause, syscall.SIGUSR1)
 	signal.Notify(unpause, syscall.SIGUSR2)
 	ctx, cancel := context.WithCancel(context.Background())
-	if err := boltdb.Initialize(os.Getenv("HOME")+"/.local/share/plexus/plexus-agent.db", []string{"devices", "networks"}); err != nil {
-		slog.Error("failed to initialize database")
-		return
-	}
 	wg.Add(1)
 	go natSubscribe(ctx, &wg)
 	for {
@@ -106,6 +102,10 @@ func run() {
 }
 
 func natSubscribe(ctx context.Context, wg *sync.WaitGroup) {
+	if err := boltdb.Initialize(os.Getenv("HOME")+"/.local/share/plexus/plexus-agent.db", []string{"devices", "networks"}); err != nil {
+		slog.Error("failed to initialize database")
+		return
+	}
 	subscriptions := []*nats.Subscription{}
 	servers := []*nats.Conn{}
 	log.Println("mq starting")
@@ -151,6 +151,7 @@ func natSubscribe(ctx context.Context, wg *sync.WaitGroup) {
 	for _, nc := range servers {
 		nc.Close()
 	}
+	boltdb.Close()
 }
 
 func checkin(ctx context.Context, wg *sync.WaitGroup, nc *nats.Conn, self plexus.Device) {

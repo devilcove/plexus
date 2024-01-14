@@ -45,33 +45,35 @@ var joinCmd = &cobra.Command{
 	Long:  `join a plexus server using token`,
 	Run: func(cmd *cobra.Command, args []string) {
 		token, err := cmd.Flags().GetString("token")
-		cobra.CheckErr(err)
+		checkErr(err)
 		join(token)
 	},
 }
 
 func join(token string) {
 	fmt.Println("join called")
+	// stop daemon if running
+	home, err := os.UserHomeDir()
+	checkErr(err)
+	pid, err := plexus.ReadPID(home + "/.cache/plexus-agent.pid")
+	checkErr(err)
+	if plexus.IsAlive(pid) {
+		unix.Kill(pid, syscall.SIGUSR1)
+		defer unix.Kill(pid, syscall.SIGUSR2)
+	}
 	dbfile, ok := os.LookupEnv("DB_FILE")
 	if !ok {
 		dbfile = os.Getenv("HOME") + "/.local/share/plexus/plexus-agent.db"
 	}
-	err := boltdb.Initialize(dbfile, []string{"devices", "networks"})
-	cobra.CheckErr(err)
-	home, err := os.UserHomeDir()
-	cobra.CheckErr(err)
-	pid, err := plexus.ReadPID(home + "/.cache/plexus-agent.pid")
-	cobra.CheckErr(err)
-	if plexus.IsAlive(pid) {
-		unix.Kill(pid, syscall.SIGUSR1)
-	}
+	err = boltdb.Initialize(dbfile, []string{"devices", "networks"})
+	checkErr(err)
 	device := newDevice()
 	loginKey, err := plexus.DecodeToken(token)
-	cobra.CheckErr(err)
+	checkErr(err)
 	loginKeyPair, err := nkeys.FromSeed([]byte(loginKey.Seed))
-	cobra.CheckErr(err)
+	checkErr(err)
 	loginPublicKey, err := loginKeyPair.PublicKey()
-	cobra.CheckErr(err)
+	checkErr(err)
 	sign := func(nonce []byte) ([]byte, error) {
 		return loginKeyPair.Sign(nonce)
 	}
@@ -86,16 +88,16 @@ func join(token string) {
 	}
 	pretty.Println("join request", request)
 	payload, err := json.Marshal(&request)
-	cobra.CheckErr(err)
+	checkErr(err)
 	log.Println(opts.Nkey)
 	nc, err := opts.Connect()
-	cobra.CheckErr(err)
+	checkErr(err)
 	slog.Info("connected to broker")
 	msg, err := nc.Request("join", payload, time.Second*5)
 	if err != nil {
 		slog.Error("join request", "error", err)
 	}
-	cobra.CheckErr(err)
+	checkErr(err)
 	fmt.Println("response", "reply:", string(msg.Reply), "data:", string(msg.Data))
 	networks := []plexus.Network{}
 	if err := json.Unmarshal(msg.Data, &networks); err != nil {
@@ -132,7 +134,7 @@ func newDevice() plexus.Device {
 		return device
 	}
 	if !errors.Is(err, boltdb.ErrNoResults) {
-		cobra.CheckErr(err)
+		checkErr(err)
 	}
 	peer, privKey, seed := createPeer()
 	device = plexus.Device{
@@ -141,21 +143,21 @@ func newDevice() plexus.Device {
 		WGPrivateKey: privKey.String(),
 	}
 	err = boltdb.Save(device, "self", "devices")
-	cobra.CheckErr(err)
+	checkErr(err)
 	return device
 }
 
 func createPeer() (plexus.Peer, wgtypes.Key, string) {
 	kp, err := nkeys.CreateUser()
-	cobra.CheckErr(err)
+	checkErr(err)
 	seed, err := kp.Seed()
-	cobra.CheckErr(err)
+	checkErr(err)
 	nkey, err := kp.PublicKey()
-	cobra.CheckErr(err)
+	checkErr(err)
 	name, err := os.Hostname()
-	cobra.CheckErr(err)
+	checkErr(err)
 	privKey, err := wgtypes.GeneratePrivateKey()
-	cobra.CheckErr(err)
+	checkErr(err)
 	pubKey := privKey.PublicKey()
 	port := checkPort(51820)
 	stunAddr := getPublicAddPort()
@@ -190,24 +192,24 @@ func checkPort(rangestart int) int {
 
 func getPublicAddPort() (add stun.XORMappedAddress) {
 	stunServer, err := net.ResolveUDPAddr("udp4", "stun1.l.google.com:19302")
-	cobra.CheckErr(err)
+	checkErr(err)
 	local := &net.UDPAddr{
 		IP:   net.ParseIP(""),
 		Port: 51820,
 	}
 	c, err := net.DialUDP("udp4", local, stunServer)
-	cobra.CheckErr(err)
+	checkErr(err)
 
 	conn, err := stun.NewClient(c)
-	cobra.CheckErr(err)
+	checkErr(err)
 	msg := stun.MustBuild(stun.TransactionID, stun.BindingRequest)
 	err = conn.Do(msg, func(res stun.Event) {
-		cobra.CheckErr(res.Error)
+		checkErr(res.Error)
 		err := add.GetFrom(res.Message)
-		cobra.CheckErr(err)
+		checkErr(err)
 	})
-	cobra.CheckErr(err)
+	checkErr(err)
 	err = conn.Close()
-	cobra.CheckErr(err)
+	checkErr(err)
 	return
 }

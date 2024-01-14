@@ -97,3 +97,10 @@ func initConfig() {
 	plexus.SetLogging(config.Verbosity)
 	slog.Info("using configuration", "config", config)
 }
+
+func checkErr(msg interface{}) {
+	if msg != nil {
+		slog.Error("fatal error", "Error:", msg)
+		os.Exit(1)
+	}
+}
