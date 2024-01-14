@@ -49,7 +49,7 @@ func configureServer() (*slog.Logger, error) {
 	config.DatabaseFile = os.Getenv("DB_FILE")
 	if config.DatabaseFile == "" {
 		config.DatabaseFile = home + "/.local/share/plexus/plexus-server.db"
-		if err := os.MkdirAll(home+".local/share/plexus", os.ModePerm); err != nil {
+		if err := os.MkdirAll(home+"/.local/share/plexus", os.ModePerm); err != nil {
 			return logger, err
 		}
 	}
