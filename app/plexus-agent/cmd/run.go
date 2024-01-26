@@ -123,7 +123,7 @@ func natSubscribe(ctx context.Context, wg *sync.WaitGroup) {
 		if self.WGPublicKey == "" {
 			continue
 		}
-		nc, err := connectToServer(self)
+		nc, err := connectToServer(self, network.ServerURL)
 		if err != nil {
 			slog.Error("connect to server", "error", err)
 			continue
@@ -175,7 +175,7 @@ func checkin(ctx context.Context, wg *sync.WaitGroup, nc *nats.Conn, self plexus
 	}
 }
 
-func connectToServer(self plexus.Device) (*nats.Conn, error) {
+func connectToServer(self plexus.Device, server string) (*nats.Conn, error) {
 	kp, err := nkeys.FromSeed([]byte(self.Seed))
 	if err != nil {
 		return nil, err
@@ -188,7 +188,7 @@ func connectToServer(self plexus.Device) (*nats.Conn, error) {
 		return kp.Sign(nonce)
 	}
 	opts := nats.Options{
-		Url:         "nats://" + config.Server + ":4222",
+		Url:         "nats://" + server + ":4222",
 		Nkey:        pk,
 		SignatureCB: sign,
 	}

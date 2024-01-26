@@ -31,7 +31,7 @@ func addNetwork(c *gin.Context) {
 		processError(c, http.StatusBadRequest, "invalid network data")
 		return
 	}
-	network.ServerURL = config.Server
+	network.ServerURL = config.Server.FQDN
 	network.Net = iplib.Net4FromStr(network.AddressString)
 	if network.Net.IP() == nil {
 		log.Println("net.ParseCIDR", network.AddressString)

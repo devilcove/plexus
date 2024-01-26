@@ -9,6 +9,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/caddyserver/certmagic"
 	"github.com/devilcove/boltdb"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
@@ -76,22 +77,32 @@ func web(ctx context.Context, wg *sync.WaitGroup, logger *slog.Logger) {
 	defer wg.Done()
 	slog.Info("Starting web server...")
 	router := setupRouter()
-	port, ok := os.LookupEnv("PORT")
-	if !ok {
-		port = "8080"
-	}
-	server := http.Server{
-		Addr:    ":" + port,
-		Handler: router,
-	}
-	go func() {
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("http", "error", err.Error())
-			webfail <- 1
+	if config.Server.Secure {
+		certmagic.DefaultACME.Agreed = true
+		certmagic.DefaultACME.Email = config.Server.Email
+		certmagic.DefaultACME.CA = certmagic.LetsEncryptProductionCA
+		go func() {
+			if err := certmagic.HTTPS([]string{config.Server.FQDN}, router); err != nil {
+				slog.Error("https", "error", err)
+				webfail <- 1
+			}
+		}()
+		<-ctx.Done()
+		return
+	} else {
+		server := http.Server{
+			Addr:    ":" + config.Server.Port,
+			Handler: router,
 		}
-	}()
-	<-ctx.Done()
-	if err := server.Shutdown(ctx); err != nil {
-		slog.Error("http server shutdown", "error", err.Error())
+		go func() {
+			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				slog.Error("http", "error", err.Error())
+				webfail <- 1
+			}
+		}()
+		<-ctx.Done()
+		if err := server.Shutdown(ctx); err != nil {
+			slog.Error("http server shutdown", "error", err.Error())
+		}
 	}
 }

@@ -2,73 +2,81 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
-	"strings"
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
-	"github.com/joho/godotenv"
+	"github.com/spf13/viper"
 )
 
-type Configuration struct {
-	Admin        string
-	AdminPass    string
-	Verbosity    string
-	Server       string
-	DatabaseFile string
-	Tables       []string
+type configuration struct {
+	Admin     admin
+	Server    plexusServer
+	Verbosity string
+	DB        db
+}
+
+type admin struct {
+	Name string
+	Pass string
+}
+
+type plexusServer struct {
+	FQDN   string
+	Secure bool
+	Port   string
+	Email  string
+}
+
+type db struct {
+	Path   string
+	File   string
+	Tables []string
 }
 
 var (
-	config       Configuration
+	config       configuration
 	ErrServerURL = errors.New("invalid server URL")
 )
 
 func configureServer() (*slog.Logger, error) {
-	ok := false
-	if err := godotenv.Load(); err != nil {
-		slog.Warn("Error loading .env file")
+	viper.SetDefault("admin.name", "admin")
+	viper.SetDefault("admin.pass", "password")
+	viper.SetDefault("verbosity", "INFO")
+	viper.SetDefault("server.fqdn", "localhost")
+	viper.SetDefault("server.secure", "false")
+	viper.SetDefault("server.port", "8080")
+	viper.SetDefault("db.file", "plexus-server.db")
+	viper.SetDefault("db.tables", "[users,keys,networks,peers,settings]")
+	viper.SetDefault("db.path", os.Getenv("HOME")+"/.local/share/plexus/")
+	viper.SetConfigFile(os.Getenv("HOME") + "/.config/plexus-server/config")
+	viper.SetConfigType("yaml")
+	if err := viper.ReadInConfig(); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, err
 	}
-	// get verbosity and setup logging
-	config.Verbosity, ok = os.LookupEnv("VERBOSITY")
-	if !ok {
-		config.Verbosity = "INFO"
-	}
+	viper.SetEnvPrefix("PLEXUS")
+	viper.AutomaticEnv()
+	viper.Unmarshal(&config)
+
 	logger := plexus.SetLogging(config.Verbosity)
-	// set server URL
-	config.Server, ok = os.LookupEnv("PLEXUS_URL")
-	if !ok {
-		config.Server = "nats://localhost:4222"
+	if config.Server.Secure && config.Server.FQDN == "localhost" {
+		return logger, errors.New("secure server requires FQDN")
 	}
-	if !strings.Contains(config.Server, "nats://") {
-		return logger, ErrServerURL
+	if config.Server.Secure && config.Server.Email == "" {
+		return logger, errors.New("email address required")
 	}
 	// initalize database
-	home := os.Getenv("HOME")
-	config.DatabaseFile = os.Getenv("DB_FILE")
-	if config.DatabaseFile == "" {
-		config.DatabaseFile = home + "/.local/share/plexus/plexus-server.db"
-		if err := os.MkdirAll(home+"/.local/share/plexus", os.ModePerm); err != nil {
-			return logger, err
-		}
-	}
-	config.Tables = []string{"users", "keys", "networks", "peers", "settings"}
-	if err := boltdb.Initialize(config.DatabaseFile, config.Tables); err != nil {
+	if err := os.MkdirAll(config.DB.Path, os.ModePerm); err != nil {
 		return logger, err
 	}
-	// check default user exists
-	config.Admin, ok = os.LookupEnv("PLEXUS_USER")
-	if !ok {
-		config.Admin = "admin"
+	if err := boltdb.Initialize(config.DB.Path+config.DB.File, config.DB.Tables); err != nil {
+		return logger, fmt.Errorf("init database %w", err)
 	}
-	config.AdminPass, ok = os.LookupEnv("PLEXUS_PASS")
-	if !ok {
-		config.AdminPass = "password"
-	}
-	if err := checkDefaultUser(config.Admin, config.AdminPass); err != nil {
+	//check default user exists
+	if err := checkDefaultUser(config.Admin.Name, config.Admin.Pass); err != nil {
 		return logger, err
 	}
 	return logger, nil
-
 }
