@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 
@@ -12,28 +13,16 @@ import (
 )
 
 type configuration struct {
-	Admin     admin
-	Server    plexusServer
+	AdminName string
+	AdminPass string
+	FQDN      string
+	Secure    bool
+	Port      string
+	Email     string
 	Verbosity string
-	DB        db
-}
-
-type admin struct {
-	Name string
-	Pass string
-}
-
-type plexusServer struct {
-	FQDN   string
-	Secure bool
-	Port   string
-	Email  string
-}
-
-type db struct {
-	Path   string
-	File   string
-	Tables []string
+	DBPath    string
+	DBFile    string
+	Tables    []string
 }
 
 var (
@@ -42,40 +31,43 @@ var (
 )
 
 func configureServer() (*slog.Logger, error) {
-	viper.SetDefault("admin.name", "admin")
-	viper.SetDefault("admin.pass", "password")
+	viper.SetDefault("adminname", "admin")
+	viper.SetDefault("adminpass", "password")
 	viper.SetDefault("verbosity", "INFO")
-	viper.SetDefault("server.fqdn", "localhost")
-	viper.SetDefault("server.secure", "false")
-	viper.SetDefault("server.port", "8080")
-	viper.SetDefault("db.file", "plexus-server.db")
-	viper.SetDefault("db.tables", "[users,keys,networks,peers,settings]")
-	viper.SetDefault("db.path", os.Getenv("HOME")+"/.local/share/plexus/")
+	viper.SetDefault("fqdn", "localhost")
+	viper.SetDefault("secure", false)
+	viper.SetDefault("port", "8080")
+	viper.SetDefault("email", "")
+	viper.SetDefault("dbfile", "plexus-server.db")
+	viper.SetDefault("tables", []string{"users", "keys", "networks", "peers", "settings"})
+	viper.SetDefault("dbpath", os.Getenv("HOME")+"/.local/share/plexus/")
 	viper.SetConfigFile(os.Getenv("HOME") + "/.config/plexus-server/config")
 	viper.SetConfigType("yaml")
-	if err := viper.ReadInConfig(); err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err := viper.ReadInConfig(); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, err
 	}
 	viper.SetEnvPrefix("PLEXUS")
 	viper.AutomaticEnv()
-	viper.Unmarshal(&config)
-
+	if err := viper.UnmarshalExact(&config); err != nil {
+		return nil, err
+	}
 	logger := plexus.SetLogging(config.Verbosity)
-	if config.Server.Secure && config.Server.FQDN == "localhost" {
+	if config.Secure && config.FQDN == "localhost" {
 		return logger, errors.New("secure server requires FQDN")
 	}
-	if config.Server.Secure && config.Server.Email == "" {
+	if config.Secure && config.Email == "" {
 		return logger, errors.New("email address required")
 	}
 	// initalize database
-	if err := os.MkdirAll(config.DB.Path, os.ModePerm); err != nil {
+	if err := os.MkdirAll(config.DBPath, os.ModePerm); err != nil {
 		return logger, err
 	}
-	if err := boltdb.Initialize(config.DB.Path+config.DB.File, config.DB.Tables); err != nil {
+	slog.Info("init db", "path", config.DBFile, "file", config.DBFile, "tables", config.Tables)
+	if err := boltdb.Initialize(config.DBPath+config.DBFile, config.Tables); err != nil {
 		return logger, fmt.Errorf("init database %w", err)
 	}
 	//check default user exists
-	if err := checkDefaultUser(config.Admin.Name, config.Admin.Pass); err != nil {
+	if err := checkDefaultUser(config.AdminName, config.AdminPass); err != nil {
 		return logger, err
 	}
 	return logger, nil

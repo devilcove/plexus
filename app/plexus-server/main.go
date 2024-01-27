@@ -77,12 +77,12 @@ func web(ctx context.Context, wg *sync.WaitGroup, logger *slog.Logger) {
 	defer wg.Done()
 	slog.Info("Starting web server...")
 	router := setupRouter()
-	if config.Server.Secure {
+	if config.Secure {
 		certmagic.DefaultACME.Agreed = true
-		certmagic.DefaultACME.Email = config.Server.Email
+		certmagic.DefaultACME.Email = config.Email
 		certmagic.DefaultACME.CA = certmagic.LetsEncryptProductionCA
 		go func() {
-			if err := certmagic.HTTPS([]string{config.Server.FQDN}, router); err != nil {
+			if err := certmagic.HTTPS([]string{config.FQDN}, router); err != nil {
 				slog.Error("https", "error", err)
 				webfail <- 1
 			}
@@ -91,7 +91,7 @@ func web(ctx context.Context, wg *sync.WaitGroup, logger *slog.Logger) {
 		return
 	} else {
 		server := http.Server{
-			Addr:    ":" + config.Server.Port,
+			Addr:    ":" + config.Port,
 			Handler: router,
 		}
 		go func() {
