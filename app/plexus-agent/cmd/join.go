@@ -24,6 +24,7 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -156,9 +157,13 @@ func createPeer() (plexus.Peer, wgtypes.Key, string) {
 	checkErr(err)
 	name, err := os.Hostname()
 	checkErr(err)
-	privKey, err := wgtypes.GeneratePrivateKey()
+	privKey, pubKey, err := generateKeys()
+	//privKey, err := wgtypes.GeneratePrivateKey()
 	checkErr(err)
-	pubKey := privKey.PublicKey()
+	if strings.Contains(pubKey.String(), "/") {
+		checkErr("invalid public key" + pubKey.String())
+	}
+	//pubKey := privKey.PublicKey()
 	port := checkPort(51820)
 	stunAddr := getPublicAddPort()
 	peer := plexus.Peer{
@@ -174,6 +179,20 @@ func createPeer() (plexus.Peer, wgtypes.Key, string) {
 	}
 	return peer, privKey, string(seed)
 
+}
+
+// generateKeys generates wgkeys that do not have a / in pubkey
+func generateKeys() (wgtypes.Key, wgtypes.Key, error) {
+	for {
+		priv, err := wgtypes.GenerateKey()
+		if err != nil {
+			return priv, wgtypes.Key{}, err
+		}
+		pub := priv.PublicKey()
+		if !strings.Contains(pub.String(), "/") {
+			return priv, pub, nil
+		}
+	}
 }
 
 func checkPort(rangestart int) int {
