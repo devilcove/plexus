@@ -65,8 +65,11 @@ func run() {
 	signal.Notify(pause, syscall.SIGUSR1)
 	signal.Notify(unpause, syscall.SIGUSR2)
 	ctx, cancel := context.WithCancel(context.Background())
-	wg.Add(1)
-	go natSubscribe(ctx, &wg)
+	if err := boltdb.Initialize(os.Getenv("HOME")+"/.local/share/plexus/plexus-agent.db", []string{"devices", "networks"}); err != nil {
+		slog.Error("failed to initialize database")
+		return
+	}
+	setupSubs(ctx, &wg)
 	for {
 		select {
 		case <-quit:
@@ -81,9 +84,8 @@ func run() {
 			cancel()
 			wg.Wait()
 			log.Println("go routines stopped by reset")
-			wg.Add(1)
 			ctx, cancel = context.WithCancel(context.Background())
-			go natSubscribe(ctx, &wg)
+			setupSubs(ctx, &wg)
 		case <-pause:
 			log.Println("pause")
 			cancel()
@@ -94,63 +96,59 @@ func run() {
 			//cancel in case pause not received earlier
 			cancel()
 			wg.Wait()
-			wg.Add(1)
 			ctx, cancel = context.WithCancel(context.Background())
-			go natSubscribe(ctx, &wg)
+			setupSubs(ctx, &wg)
 		}
 	}
 }
 
-func natSubscribe(ctx context.Context, wg *sync.WaitGroup) {
-	if err := boltdb.Initialize(os.Getenv("HOME")+"/.local/share/plexus/plexus-agent.db", []string{"devices", "networks"}); err != nil {
-		slog.Error("failed to initialize database")
-		return
+func setupSubs(ctx context.Context, wg *sync.WaitGroup) {
+	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	if err != nil {
+		slog.Error("unable to read networks", "error", err)
 	}
-	subscriptions := []*nats.Subscription{}
-	servers := []*nats.Conn{}
+
+	for i, network := range networks {
+		wg.Add(1)
+		go natSubscribe(ctx, wg, network, i)
+	}
+}
+
+func natSubscribe(ctx context.Context, wg *sync.WaitGroup, network plexus.Network, netNum int) {
 	log.Println("mq starting")
 	log.Println("config", config)
 	defer wg.Done()
 	self, err := boltdb.Get[plexus.Device]("self", "devices")
 	if err != nil {
 		slog.Error("unable to read devices", "errror", err)
+		return
 	}
-	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	if self.WGPublicKey == "" {
+		slog.Error("public key not set")
+		return
+	}
+
+	nc, err := connectToServer(self, network.ServerURL)
 	if err != nil {
-		slog.Error("unable to read networks", "error", err)
+		slog.Error("connect to server", "error", err)
+		return
 	}
-	for i, network := range networks {
-		if self.WGPublicKey == "" {
-			continue
-		}
-		nc, err := connectToServer(self, network.ServerURL)
-		if err != nil {
-			slog.Error("connect to server", "error", err)
-			continue
-		}
-		sub, err := nc.Subscribe("networks."+network.Name, networkUpdates)
-		if err != nil {
-			slog.Error("network subcription failed", "error", err)
-			continue
-		}
-		if err := startInterface("plexus"+strconv.Itoa(i), self, network); err != nil {
-			slog.Error("interface did not start", "name", "pleuxus.Name"+strconv.Itoa(i), "network", network.Name, "error", err)
-			sub.Drain()
-			continue
-		}
-		wg.Add(1)
-		go checkin(ctx, wg, nc, self)
-		subscriptions = append(subscriptions, sub)
-		servers = append(servers, nc)
+	sub, err := nc.Subscribe("networks."+network.Name, networkUpdates)
+	if err != nil {
+		slog.Error("network subcription failed", "error", err)
+		return
 	}
+	if err := startInterface("plexus"+strconv.Itoa(netNum), self, network); err != nil {
+		slog.Error("interface did not start", "name", "pleuxus.Name"+strconv.Itoa(netNum), "network", network.Name, "error", err)
+		sub.Drain()
+		return
+	}
+	wg.Add(1)
+	go checkin(ctx, wg, nc, self)
 	<-ctx.Done()
 	log.Println("mq shutting down")
-	for _, sub := range subscriptions {
-		sub.Drain()
-	}
-	for _, nc := range servers {
-		nc.Close()
-	}
+	sub.Drain()
+	nc.Close()
 	boltdb.Close()
 }
 
@@ -165,6 +163,10 @@ func checkin(ctx context.Context, wg *sync.WaitGroup, nc *nats.Conn, self plexus
 			log.Println("checkin done")
 			return
 		case <-ticker.C:
+			if !nc.IsConnected() {
+				log.Println("not connected to nats server, skipping checkin")
+				continue
+			}
 			msg, err := nc.Request("checkin."+self.WGPublicKey, []byte("checking"), time.Second)
 			if err != nil {
 				log.Println("error publishing checkin ", err)
@@ -187,10 +189,22 @@ func connectToServer(self plexus.Device, server string) (*nats.Conn, error) {
 	sign := func(nonce []byte) ([]byte, error) {
 		return kp.Sign(nonce)
 	}
-	opts := nats.Options{
-		Url:         "nats://" + server + ":4222",
-		Nkey:        pk,
-		SignatureCB: sign,
-	}
-	return opts.Connect()
+	opts := []nats.Option{nats.Name("plexus-agent " + self.Name)}
+	opts = append(opts, []nats.Option{
+		nats.MaxReconnects(-1),
+		nats.DisconnectErrHandler(func(c *nats.Conn, err error) {
+			fmt.Println("disonnected from server", err)
+		}),
+		nats.ClosedHandler(func(c *nats.Conn) {
+			fmt.Println("nats connection closed")
+		}),
+		nats.ReconnectHandler(func(c *nats.Conn) {
+			fmt.Println("reconnected to nats server")
+		}),
+		nats.ErrorHandler(func(c *nats.Conn, s *nats.Subscription, err error) {
+			fmt.Println("nats error", s.Subject, err)
+		}),
+		nats.Nkey(pk, sign),
+	}...)
+	return nats.Connect("nats://"+server+":4222", opts...)
 }
