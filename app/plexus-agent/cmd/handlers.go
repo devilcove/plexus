@@ -29,6 +29,11 @@ func networkUpdates(msg *nats.Msg) {
 		slog.Error("unable to read networks", "error", err)
 		return
 	}
+	self, err := boltdb.Get[plexus.Device]("self", "devices")
+	if err != nil {
+		slog.Error("unable to read devices", "error", err)
+		return
+	}
 	update := plexus.NetworkUpdate{}
 	if err := json.Unmarshal(msg.Data, &update); err != nil {
 		slog.Error("unable to unmarshal message", "error", err)
@@ -43,6 +48,14 @@ func networkUpdates(msg *nats.Msg) {
 		}
 	case plexus.DeletePeer:
 		slog.Info("delete peer")
+		if update.Peer.WGPublicKey == self.Peer.WGPublicKey {
+			slog.Info("self delete --> delete network")
+			if err := boltdb.Delete[plexus.Network](network.Name, "networks"); err != nil {
+				slog.Error("delete network", "error", err)
+			}
+			deleteInterface(networkMap[network.Name])
+			return
+		}
 		for i, oldpeer := range network.Peers {
 			if oldpeer.WGPublicKey == update.Peer.WGPublicKey {
 				network.Peers = slices.Delete(network.Peers, i, i)
