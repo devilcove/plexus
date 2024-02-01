@@ -58,7 +58,7 @@ func TestNew(t *testing.T) {
 	err = wg.Up()
 	assert.Nil(t, err)
 	assert.Equal(t, "wireguard", wg.Type())
-	link, err := netlink.LinkByName(wg.name)
+	link, err := netlink.LinkByName(wg.Name)
 	assert.Nil(t, err)
 	assert.Equal(t, link.Attrs().Index, wg.Attrs().Index)
 	routes, err := netlink.RouteGet(net.ParseIP("10.10.10.10"))

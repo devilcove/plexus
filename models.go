@@ -13,6 +13,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	DeletePeer int = iota
+	AddPeer
+	UpdatePeer
+	DeleteNetork
+)
+
 type Settings struct {
 	Theme   string `json:"theme" form:"theme"`
 	Font    string `json:"font" form:"font"`
@@ -48,6 +55,7 @@ type Network struct {
 
 type NetworkPeer struct {
 	WGPublicKey      string
+	HostName         string
 	Address          net.IP
 	PublicListenPort int
 	Endpoint         string
@@ -95,6 +103,11 @@ type ServerClients struct {
 type JoinRequest struct {
 	KeyName string
 	Peer
+}
+
+type NetworkUpdate struct {
+	Type int
+	Peer NetworkPeer
 }
 
 func DecodeToken(token string) (KeyValue, error) {

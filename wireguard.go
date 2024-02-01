@@ -4,61 +4,62 @@ import (
 	"fmt"
 
 	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netlink/nl"
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
-// Wireguard is a netlink compatible representation of wireguard interface
-type Wireguard struct {
-	name    string
-	mtu     int
-	address netlink.Addr
-	config  wgtypes.Config
+// wireguard is a netlink compatible representation of wireguard interface
+type wireguard struct {
+	Name    string
+	MTU     int
+	Address netlink.Addr
+	Config  wgtypes.Config
 }
 
 // Attrs satisfies netlink Link interface
-func (w Wireguard) Attrs() *netlink.LinkAttrs {
+func (w wireguard) Attrs() *netlink.LinkAttrs {
 	attr := netlink.NewLinkAttrs()
-	attr.Name = w.name
-	attr.MTU = w.mtu
-	if link, err := netlink.LinkByName(w.name); err == nil {
+	attr.Name = w.Name
+	attr.MTU = w.MTU
+	if link, err := netlink.LinkByName(w.Name); err == nil {
 		attr.Index = link.Attrs().Index
 	}
 	return &attr
 }
 
 // Type satisfies netlink Link interface
-func (w Wireguard) Type() string {
+func (w wireguard) Type() string {
 	return "wireguard"
 }
 
-// apply apply configuration to wireguard device
-func (w Wireguard) apply() error {
+// Apply apply configuration to wireguard device
+func (w wireguard) Apply() error {
 	wg, err := wgctrl.New()
 	if err != nil {
 		return err
 	}
 	defer wg.Close()
-	return wg.ConfigureDevice(w.name, w.config)
+	return wg.ConfigureDevice(w.Name, w.Config)
 }
 
 // Up brings a wireguard interface up
-func (w Wireguard) Up() error {
+func (w wireguard) Up() error {
 	if err := netlink.LinkAdd(w); err != nil {
 		return fmt.Errorf("link add %v", err)
 	}
-	if err := netlink.AddrAdd(w, &w.address); err != nil {
+	if err := netlink.AddrAdd(w, &w.Address); err != nil {
 		return fmt.Errorf("add address %v", err)
 	}
 	if err := netlink.LinkSetUp(w); err != nil {
 		return fmt.Errorf("link up %v", err)
 	}
-	return w.apply()
+	return w.Apply()
 }
 
 // Down removes a wireguard interface
-func (w Wireguard) Down() error {
-	link, err := netlink.LinkByName(w.name)
+func (w wireguard) Down() error {
+	link, err := netlink.LinkByName(w.Name)
 	if err != nil {
 		return err
 	}
@@ -66,12 +67,59 @@ func (w Wireguard) Down() error {
 }
 
 // New returns a new wireguard interface
-func New(name string, mtu int, address netlink.Addr, config wgtypes.Config) Wireguard {
-	wg := Wireguard{
-		name:    name,
-		mtu:     mtu,
-		address: address,
-		config:  config,
+func New(name string, mtu int, address netlink.Addr, config wgtypes.Config) wireguard {
+	wg := wireguard{
+		Name:    name,
+		MTU:     mtu,
+		Address: address,
+		Config:  config,
 	}
 	return wg
+}
+
+// Get returns an existing wireguard interface
+func Get(name string) (wireguard, error) {
+	empty := wireguard{}
+	link, err := netlink.LinkByName(name)
+	if err != nil {
+		return empty, err
+	}
+	client, err := wgctrl.New()
+	if err != nil {
+		return empty, err
+	}
+	device, err := client.Device(name)
+	if err != nil {
+		return empty, err
+	}
+	addrs, err := netlink.AddrList(link, nl.FAMILY_V4)
+	if err != nil {
+		return empty, err
+	}
+	wg := wireguard{
+		Name:    name,
+		MTU:     link.Attrs().MTU,
+		Address: addrs[0],
+		Config: wgtypes.Config{
+			PrivateKey: &device.PrivateKey,
+			ListenPort: &device.ListenPort,
+			Peers:      convertPeers(device.Peers),
+		},
+	}
+	return wg, nil
+}
+
+func convertPeers(input []wgtypes.Peer) []wgtypes.PeerConfig {
+	output := []wgtypes.PeerConfig{}
+	for _, peer := range input {
+		newpeer := wgtypes.PeerConfig{
+			PublicKey:                   peer.PublicKey,
+			Endpoint:                    peer.Endpoint,
+			PersistentKeepaliveInterval: &peer.PersistentKeepaliveInterval,
+			ReplaceAllowedIPs:           true,
+			AllowedIPs:                  peer.AllowedIPs,
+		}
+		output = append(output, newpeer)
+	}
+	return output
 }

@@ -34,6 +34,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var networkMap map[string]string
+
 // runCmd represents the run command
 var runCmd = &cobra.Command{
 	Use:   "run",
@@ -117,6 +119,7 @@ func setupSubs(ctx context.Context, wg *sync.WaitGroup) {
 func natSubscribe(ctx context.Context, wg *sync.WaitGroup, network plexus.Network, netNum int) {
 	log.Println("mq starting")
 	log.Println("config", config)
+	networkMap = make(map[string]string)
 	defer wg.Done()
 	self, err := boltdb.Get[plexus.Device]("self", "devices")
 	if err != nil {
@@ -138,6 +141,8 @@ func natSubscribe(ctx context.Context, wg *sync.WaitGroup, network plexus.Networ
 		slog.Error("network subcription failed", "error", err)
 		return
 	}
+	iface := "plexus" + strconv.Itoa(netNum)
+	networkMap[network.Name] = iface
 	if err := startInterface("plexus"+strconv.Itoa(netNum), self, network); err != nil {
 		slog.Error("interface did not start", "name", "pleuxus.Name"+strconv.Itoa(netNum), "network", network.Name, "error", err)
 		sub.Drain()
