@@ -67,17 +67,20 @@ func joinHandler(msg *nats.Msg) {
 				msg.Respond([]byte("could not get ip" + err.Error()))
 				return
 			}
-			netPeer := plexus.NetworkPeer{
-				WGPublicKey:      request.Peer.WGPublicKey,
-				PublicListenPort: request.Peer.PublicListenPort,
-				Endpoint:         request.Peer.Endpoint,
-				Address:          addr,
+			update := plexus.NetworkUpdate{
+				Type: plexus.AddPeer,
+				Peer: plexus.NetworkPeer{
+					WGPublicKey:      request.Peer.WGPublicKey,
+					PublicListenPort: request.Peer.PublicListenPort,
+					Endpoint:         request.Peer.Endpoint,
+					Address:          addr,
+				},
 			}
-			data, err := json.Marshal(&netPeer)
+			data, err := json.Marshal(&update)
 			if err != nil {
 				slog.Error("marshal new network peer", "error", err)
 			}
-			netToUpdate.Peers = append(netToUpdate.Peers, netPeer)
+			netToUpdate.Peers = append(netToUpdate.Peers, update.Peer)
 			if err := boltdb.Save(netToUpdate, netToUpdate.Name, "networks"); err != nil {
 				slog.Error("save updated network", "error", err)
 				continue

@@ -56,6 +56,7 @@ func setupRouter() *gin.Engine {
 	{
 		peers.GET("/", displayPeers)
 		peers.GET("/:id", peerDetails)
+		peers.DELETE("/:id", deletePeer)
 	}
 	//router.GET("/login", displayLogin)
 	users := router.Group("/users", auth)

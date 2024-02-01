@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"log/slog"
 	"net/http"
+	"slices"
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
@@ -27,6 +29,51 @@ func peerDetails(c *gin.Context) {
 		return
 	}
 	c.HTML(http.StatusOK, "peerDetails", peer)
+}
+
+func deletePeer(c *gin.Context) {
+	id := c.Param("id")
+	peer, err := boltdb.Get[plexus.Peer](id, "peers")
+	if err != nil {
+		processError(c, http.StatusBadRequest, id+" "+err.Error())
+		return
+	}
+	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	if err != nil {
+		processError(c, http.StatusInternalServerError, "get networks "+err.Error())
+		return
+	}
+	for _, network := range networks {
+		found := false
+		for i, netpeer := range network.Peers {
+			if netpeer.WGPublicKey == peer.WGPublicKey {
+				found = true
+				network.Peers = slices.Delete(network.Peers, i, i+1)
+				update := plexus.NetworkUpdate{
+					Type: plexus.DeletePeer,
+					Peer: netpeer,
+				}
+				bytes, err := json.Marshal(update)
+				if err != nil {
+					slog.Error("marshal peer deletion", "error", err)
+				}
+				slog.Info("publishing network update", "type", update.Type, "network", network.Name)
+				if err := natsConn.Publish("networks."+network.Name, bytes); err != nil {
+					slog.Error("publish net update", "error", err)
+				}
+			}
+		}
+		if found {
+			if err := boltdb.Save(network, network.Name, "networks"); err != nil {
+				slog.Error("save network during peer deletion", "error", err)
+			}
+		}
+	}
+	if err := boltdb.Delete[plexus.Peer](peer.WGPublicKey, "peers"); err != nil {
+		processError(c, http.StatusInternalServerError, "delete peer "+peer.Name+""+err.Error())
+		return
+	}
+	displayPeers(c)
 }
 
 func getDeviceUsers() []*server.NkeyUser {
