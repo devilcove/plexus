@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log/slog"
+	"os"
 	"sync"
 	"time"
 
@@ -30,6 +31,15 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 		brokerfail <- 1
 		return
 	}
+	seed, err := admin.Seed()
+	if err == nil {
+		if err := os.WriteFile("/tmp/seed", seed, os.ModePerm); err != nil {
+			slog.Error("could not save seed", "error", err)
+		}
+	} else {
+		slog.Error("seed", "error", err)
+	}
+
 	//TODO :: add users
 	// users := GetUsers()
 	tokensUsers := getTokenUsers()
