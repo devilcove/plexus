@@ -17,13 +17,22 @@ func TestGetNextIP(t *testing.T) {
 	}
 	peers := []plexus.NetworkPeer{
 		{
-			Address: network.Net.FirstAddress(),
+			Address: net.IPNet{
+				IP:   network.Net.FirstAddress(),
+				Mask: network.Net.Mask(),
+			},
 		},
 		{
-			Address: net.ParseIP("192.168.0.2"),
+			Address: net.IPNet{
+				IP:   net.ParseIP("192.168.0.2"),
+				Mask: network.Net.Mask(),
+			},
 		},
 		{
-			Address: net.ParseIP("192.168.0.4"),
+			Address: net.IPNet{
+				IP:   net.ParseIP("192.168.0.4"),
+				Mask: network.Net.Mask(),
+			},
 		},
 	}
 	network.Peers = peers

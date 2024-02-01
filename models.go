@@ -56,7 +56,7 @@ type Network struct {
 type NetworkPeer struct {
 	WGPublicKey      string
 	HostName         string
-	Address          net.IP
+	Address          net.IPNet
 	PublicListenPort int
 	Endpoint         string
 }

@@ -73,7 +73,10 @@ func joinHandler(msg *nats.Msg) {
 					WGPublicKey:      request.Peer.WGPublicKey,
 					PublicListenPort: request.Peer.PublicListenPort,
 					Endpoint:         request.Peer.Endpoint,
-					Address:          addr,
+					Address: net.IPNet{
+						IP:   addr,
+						Mask: netToUpdate.Net.Mask(),
+					},
 				},
 			}
 			data, err := json.Marshal(&update)

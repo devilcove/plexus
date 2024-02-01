@@ -1,6 +1,7 @@
 **/.env
 app/plexus-server/plexus-server
 app/plexus-agent/plexus-agent
+devops/plexus-update/plexus-update
 coverage.out
 coverage.html
 test.db

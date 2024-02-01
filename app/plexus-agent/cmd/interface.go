@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
-	"slices"
 	"time"
 
 	"github.com/devilcove/plexus"
@@ -40,7 +39,7 @@ func startInterface(name string, self plexus.Device, network plexus.Network) err
 		slog.Info("checking peer", "peer", peer.WGPublicKey, "address", peer.Address, "mask", network.Net.Mask())
 		if peer.WGPublicKey == self.WGPublicKey {
 			add := net.IPNet{
-				IP:   peer.Address,
+				IP:   peer.Address.IP,
 				Mask: network.Net.Mask(),
 			}
 			address.IPNet = &add
@@ -56,7 +55,7 @@ func startInterface(name string, self plexus.Device, network plexus.Network) err
 			ReplaceAllowedIPs: true,
 			AllowedIPs: []net.IPNet{
 				{
-					IP:   peer.Address,
+					IP:   peer.Address.IP,
 					Mask: net.CIDRMask(32, 32),
 				},
 			},
@@ -97,16 +96,12 @@ func addPeertoInterface(name string, peer plexus.NetworkPeer) error {
 		return err
 	}
 	keepalive := time.Second * 20
-	ip := net.IPNet{
-		IP:   peer.Address,
-		Mask: peer.Address.DefaultMask(),
-	}
 	iface.Config.Peers = append(iface.Config.Peers, wgtypes.PeerConfig{
 		PublicKey:                   key,
 		Endpoint:                    endpoint,
 		PersistentKeepaliveInterval: &keepalive,
 		ReplaceAllowedIPs:           true,
-		AllowedIPs:                  []net.IPNet{ip},
+		AllowedIPs:                  []net.IPNet{peer.Address},
 	})
 	return iface.Apply()
 }
@@ -122,7 +117,7 @@ func deletePeerFromInterface(name string, peerToDelete plexus.NetworkPeer) error
 	}
 	for i, peer := range iface.Config.Peers {
 		if peer.PublicKey == key {
-			iface.Config.Peers = slices.Delete(iface.Config.Peers, i, i)
+			iface.Config.Peers[i].Remove = true
 		}
 	}
 	return iface.Apply()
@@ -142,20 +137,16 @@ func replacePeerInInterface(name string, replacement plexus.NetworkPeer) error {
 		return err
 	}
 	keepalive := time.Second * 20
-	ip := net.IPNet{
-		IP:   replacement.Address,
-		Mask: replacement.Address.DefaultMask(),
-	}
 	newPeer := wgtypes.PeerConfig{
 		PublicKey:                   key,
 		Endpoint:                    endpoint,
 		PersistentKeepaliveInterval: &keepalive,
 		ReplaceAllowedIPs:           true,
-		AllowedIPs:                  []net.IPNet{ip},
+		AllowedIPs:                  []net.IPNet{replacement.Address},
 	}
 	for i, peer := range iface.Config.Peers {
 		if peer.PublicKey == key {
-			iface.Config.Peers = slices.Replace(iface.Config.Peers, i, i, newPeer)
+			iface.Config.Peers[i] = newPeer
 		}
 	}
 	return iface.Apply()
