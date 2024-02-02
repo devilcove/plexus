@@ -1,12 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 	"log/slog"
 	"net/http"
 	"net/netip"
 	"regexp"
+	"slices"
 
 	"github.com/c-robinson/iplib"
 	"github.com/devilcove/boltdb"
@@ -134,4 +136,55 @@ func validateNetworkName(name string) bool {
 func validateNetworkAddress(address netip.Addr) bool {
 	return address.IsPrivate()
 
+}
+
+func removePeerFromNetwork(c *gin.Context) {
+	netName := c.Param("id")
+	peerid := c.Param("peer")
+	network, err := boltdb.Get[plexus.Network](netName, "networks")
+	if err != nil {
+		processError(c, http.StatusBadRequest, "invalid network"+err.Error())
+		return
+	}
+	found := false
+	for i, peer := range network.Peers {
+		if peer.WGPublicKey == peerid {
+			found = true
+			payload, err := json.Marshal(peer)
+			if err != nil {
+				slog.Error("marshal peer", "error", err)
+				processError(c, http.StatusInternalServerError, err.Error())
+				return
+			}
+			slog.Info("deleting peer", "peer", peer.WGPublicKey, "network", network.Name)
+			network.Peers = slices.Delete(network.Peers, i, i+1)
+			if err := boltdb.Save(network, network.Name, "networks"); err != nil {
+				slog.Error("save network after peer deletion", "error", err)
+				processError(c, http.StatusInternalServerError, err.Error())
+				return
+			}
+			update := plexus.NetworkUpdate{
+				Type: plexus.DeletePeer,
+				Peer: peer,
+			}
+			payload, err = json.Marshal(&update)
+			if err != nil {
+				slog.Error("marshal network update", "error", err)
+				processError(c, http.StatusInternalServerError, err.Error())
+				return
+			}
+			slog.Info("publishing network update", "topic", "networks."+network.Name)
+			if err := natsConn.Publish("networks."+network.Name, payload); err != nil {
+				slog.Error("pub delete peer", "peer", peerid, "network", netName, "error", err)
+				processError(c, http.StatusInternalServerError, err.Error())
+				return
+			}
+			break
+		}
+	}
+	if !found {
+		processError(c, http.StatusBadRequest, "invalid peer")
+		return
+	}
+	networkDetails(c)
 }
