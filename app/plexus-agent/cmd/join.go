@@ -25,7 +25,6 @@ import (
 	"os"
 	"runtime"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/devilcove/boltdb"
@@ -35,7 +34,6 @@ import (
 	"github.com/nats-io/nkeys"
 	"github.com/pion/stun"
 	"github.com/spf13/cobra"
-	"golang.org/x/sys/unix"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
@@ -54,65 +52,25 @@ var joinCmd = &cobra.Command{
 func join(token string) {
 	fmt.Println("join called")
 	// stop daemon if running
-	home, err := os.UserHomeDir()
-	checkErr(err)
-	pid, err := plexus.ReadPID(home + "/.cache/plexus-agent.pid")
-	checkErr(err)
-	if plexus.IsAlive(pid) {
-		unix.Kill(pid, syscall.SIGUSR1)
-		defer unix.Kill(pid, syscall.SIGUSR2)
+	c, err := net.Dial("unix", "/tmp/unixsock")
+	if errors.Is(err, os.ErrNotExist) {
+		fmt.Println("unable to conect to agent daemon, is daemon running? ... exiting")
+		return
 	}
-	dbfile, ok := os.LookupEnv("DB_FILE")
-	if !ok {
-		dbfile = os.Getenv("HOME") + "/.local/share/plexus/plexus-agent.db"
+	cobra.CheckErr(err)
+	defer func() {
+		err := c.Close()
+		cobra.CheckErr(err)
+	}()
+	msg := plexus.Command{
+		Command: "join",
+		Data:    token,
 	}
-	err = boltdb.Initialize(dbfile, []string{"devices", "networks"})
-	checkErr(err)
-	device := newDevice()
-	loginKey, err := plexus.DecodeToken(token)
-	checkErr(err)
-	loginKeyPair, err := nkeys.FromSeed([]byte(loginKey.Seed))
-	checkErr(err)
-	loginPublicKey, err := loginKeyPair.PublicKey()
-	checkErr(err)
-	sign := func(nonce []byte) ([]byte, error) {
-		return loginKeyPair.Sign(nonce)
-	}
-	request := plexus.JoinRequest{
-		KeyName: loginKey.KeyName,
-		Peer:    device.Peer,
-	}
-	opts := nats.Options{
-		Url:         loginKey.URL,
-		Nkey:        loginPublicKey,
-		SignatureCB: sign,
-	}
-	pretty.Println("join request", request)
-	payload, err := json.Marshal(&request)
-	checkErr(err)
-	log.Println(opts.Nkey)
-	nc, err := opts.Connect()
-	checkErr(err)
-	slog.Info("connected to broker")
-	msg, err := nc.Request("join", payload, time.Second*5)
-	if err != nil {
-		slog.Error("join request", "error", err)
-	}
-	checkErr(err)
-	fmt.Println("response", "reply:", string(msg.Reply), "data:", string(msg.Data))
-	networks := []plexus.Network{}
-	if err := json.Unmarshal(msg.Data, &networks); err != nil {
-		fmt.Println("join unsuccessful", string(msg.Data))
-	} else {
-		for _, network := range networks {
-			if err := boltdb.Save(network, network.Name, "networks"); err != nil {
-				fmt.Println("error saving network", network.Name, err)
-			}
-		}
-	}
-	if plexus.IsAlive(pid) {
-		unix.Kill(pid, syscall.SIGUSR2)
-	}
+	payload, err := json.Marshal(msg)
+	cobra.CheckErr(err)
+	_, err = c.Write(payload)
+	cobra.CheckErr(err)
+	fmt.Println("join data passd to daemon")
 }
 
 func init() {
@@ -231,4 +189,64 @@ func getPublicAddPort() (add stun.XORMappedAddress) {
 	err = conn.Close()
 	checkErr(err)
 	return
+}
+
+func processJoin(command plexus.Command) error {
+	if command.Command != "join" {
+		return errors.New("invalid command")
+	}
+	token := command.Data.(string)
+
+	loginKey, err := plexus.DecodeToken(token)
+	if err != nil {
+		return err
+	}
+	loginKeyPair, err := nkeys.FromSeed([]byte(loginKey.Seed))
+	if err != nil {
+		return err
+	}
+	loginPublicKey, err := loginKeyPair.PublicKey()
+	if err != nil {
+		return err
+	}
+	sign := func(nonce []byte) ([]byte, error) {
+		return loginKeyPair.Sign(nonce)
+	}
+	device := newDevice()
+	request := plexus.JoinRequest{
+		KeyName: loginKey.KeyName,
+		Peer:    device.Peer,
+	}
+	opts := nats.Options{
+		Url:         loginKey.URL,
+		Nkey:        loginPublicKey,
+		SignatureCB: sign,
+	}
+	pretty.Println("join request", request)
+	payload, err := json.Marshal(&request)
+	if err != nil {
+		return err
+	}
+	log.Println(opts.Nkey)
+	nc, err := opts.Connect()
+	if err != nil {
+		return err
+	}
+	slog.Info("connected to broker")
+	msg, err := nc.Request("join", payload, time.Second*5)
+	if err != nil {
+		return err
+	}
+	fmt.Println("response", "reply:", string(msg.Reply), "data:", string(msg.Data))
+	networks := []plexus.Network{}
+	if err := json.Unmarshal(msg.Data, &networks); err != nil {
+		slog.Info("join unsuccessful", "data", string(msg.Data))
+	} else {
+		for _, network := range networks {
+			if err := boltdb.Save(network, network.Name, "networks"); err != nil {
+				slog.Error("error saving network", "name", network.Name, "error", err)
+			}
+		}
+	}
+	return nil
 }

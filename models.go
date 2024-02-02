@@ -110,6 +110,11 @@ type NetworkUpdate struct {
 	Peer NetworkPeer
 }
 
+type Command struct {
+	Command string
+	Data    any
+}
+
 func DecodeToken(token string) (KeyValue, error) {
 	kv := KeyValue{}
 	data, err := base64.StdEncoding.DecodeString(token)

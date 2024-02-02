@@ -67,10 +67,8 @@ func run() {
 	signal.Notify(pause, syscall.SIGUSR1)
 	signal.Notify(unpause, syscall.SIGUSR2)
 	ctx, cancel := context.WithCancel(context.Background())
-	if err := boltdb.Initialize(os.Getenv("HOME")+"/.local/share/plexus/plexus-agent.db", []string{"devices", "networks"}); err != nil {
-		slog.Error("failed to initialize database")
-		return
-	}
+	wg.Add(1)
+	go socketServer(ctx, &wg)
 	setupSubs(ctx, &wg)
 	for {
 		select {
@@ -105,22 +103,15 @@ func run() {
 }
 
 func setupSubs(ctx context.Context, wg *sync.WaitGroup) {
+	networkMap = make(map[string]string)
+	if err := boltdb.Initialize(os.Getenv("HOME")+"/.local/share/plexus/plexus-agent.db", []string{"devices", "networks"}); err != nil {
+		slog.Error("failed to initialize database")
+		return
+	}
 	networks, err := boltdb.GetAll[plexus.Network]("networks")
 	if err != nil {
 		slog.Error("unable to read networks", "error", err)
 	}
-
-	for i, network := range networks {
-		wg.Add(1)
-		go natSubscribe(ctx, wg, network, i)
-	}
-}
-
-func natSubscribe(ctx context.Context, wg *sync.WaitGroup, network plexus.Network, netNum int) {
-	log.Println("mq starting")
-	log.Println("config", config)
-	networkMap = make(map[string]string)
-	defer wg.Done()
 	self, err := boltdb.Get[plexus.Device]("self", "devices")
 	if err != nil {
 		slog.Error("unable to read devices", "errror", err)
@@ -131,30 +122,45 @@ func natSubscribe(ctx context.Context, wg *sync.WaitGroup, network plexus.Networ
 		return
 	}
 
-	nc, err := connectToServer(self, network.ServerURL)
-	if err != nil {
-		slog.Error("connect to server", "error", err)
-		return
+	for i, network := range networks {
+		nc, err := connectToServer(self, network.ServerURL)
+		if err != nil {
+			slog.Error("connect to server", "error", err)
+			return
+		}
+		//start interface
+		iface := "plexus" + strconv.Itoa(i)
+		networkMap[network.Name] = iface
+		if err := startInterface(iface, self, network); err != nil {
+			slog.Error("interface did not start", "name", iface, "network", network.Name, "error", err)
+			return
+		}
+		wg.Add(2)
+		go natSubscribe(ctx, wg, self, network, nc)
+		go checkin(ctx, wg, nc, self)
 	}
+}
+
+func natSubscribe(ctx context.Context, wg *sync.WaitGroup, self plexus.Device, network plexus.Network, nc *nats.Conn) {
+	log.Println("mq starting")
+	log.Println("config", config)
+	defer wg.Done()
+
 	sub, err := nc.Subscribe("networks."+network.Name, networkUpdates)
 	if err != nil {
 		slog.Error("network subcription failed", "error", err)
 		return
 	}
-	iface := "plexus" + strconv.Itoa(netNum)
-	networkMap[network.Name] = iface
-	if err := startInterface("plexus"+strconv.Itoa(netNum), self, network); err != nil {
-		slog.Error("interface did not start", "name", "pleuxus.Name"+strconv.Itoa(netNum), "network", network.Name, "error", err)
-		sub.Drain()
-		return
-	}
-	wg.Add(1)
-	go checkin(ctx, wg, nc, self)
 	<-ctx.Done()
 	log.Println("mq shutting down")
-	sub.Drain()
+	if err := sub.Drain(); err != nil {
+		slog.Error("drain subscriptions", "error", err)
+	}
 	nc.Close()
-	boltdb.Close()
+	if err := boltdb.Close(); err != nil {
+		slog.Error("database close", "error", err)
+	}
+	slog.Info("networks subs exititing", "network", network.Name)
 }
 
 func checkin(ctx context.Context, wg *sync.WaitGroup, nc *nats.Conn, self plexus.Device) {
