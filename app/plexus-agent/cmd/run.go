@@ -63,12 +63,8 @@ func run() {
 	quit := make(chan os.Signal, 1)
 	reset := make(chan os.Signal, 1)
 	restart = make(chan int, 1)
-	pause := make(chan os.Signal, 1)
-	unpause := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, os.Interrupt)
 	signal.Notify(reset, syscall.SIGHUP)
-	signal.Notify(pause, syscall.SIGUSR1)
-	signal.Notify(unpause, syscall.SIGUSR2)
 	ctx, cancel := context.WithCancel(context.Background())
 	wg.Add(1)
 	go socketServer(ctx, &wg)
@@ -99,20 +95,6 @@ func run() {
 			ctx, cancel = context.WithCancel(context.Background())
 			wg.Add(1)
 			go socketServer(ctx, &wg)
-			setupSubs(ctx, &wg)
-		case <-pause:
-			log.Println("pause")
-			cancel()
-			wg.Wait()
-			log.Println("go routines stopped by pause")
-		case <-unpause:
-			log.Println("unpause")
-			//cancel in case pause not received earlier
-			cancel()
-			wg.Wait()
-			wg.Add(1)
-			go socketServer(ctx, &wg)
-			ctx, cancel = context.WithCancel(context.Background())
 			setupSubs(ctx, &wg)
 		}
 	}
