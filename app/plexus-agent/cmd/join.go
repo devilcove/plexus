@@ -24,6 +24,7 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -241,12 +242,20 @@ func processJoin(command plexus.Command) error {
 	networks := []plexus.Network{}
 	if err := json.Unmarshal(msg.Data, &networks); err != nil {
 		slog.Info("join unsuccessful", "data", string(msg.Data))
-	} else {
-		for _, network := range networks {
-			if err := boltdb.Save(network, network.Name, "networks"); err != nil {
-				slog.Error("error saving network", "name", network.Name, "error", err)
-			}
+		return err
+	}
+	existingNetworks, err := boltdb.GetAll[plexus.Network]("networks")
+	if err != nil {
+		return err
+	}
+	offset := len(existingNetworks)
+	for i, network := range networks {
+		network.ListenPort = defaultStart + offset
+		network.Interface = "plexus" + strconv.Itoa(i+offset)
+		if err := boltdb.Save(network, network.Name, "networks"); err != nil {
+			slog.Error("error saving network", "name", network.Name, "error", err)
 		}
 	}
+	restart <- 1
 	return nil
 }

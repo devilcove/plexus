@@ -50,6 +50,8 @@ type Network struct {
 	Net           iplib.Net4
 	Address       netip.Addr
 	AddressString string `form:"addressstring"`
+	ListenPort    int
+	Interface     string
 	Peers         []NetworkPeer
 }
 

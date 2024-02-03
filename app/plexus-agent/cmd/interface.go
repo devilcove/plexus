@@ -1,16 +1,20 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
 	"time"
 
+	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
 	"github.com/kr/pretty"
 	"github.com/vishvananda/netlink"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
+
+const defaultStart = 51820
 
 func deleteInterface(name string) error {
 	link, err := netlink.LinkByName(name)
@@ -20,8 +24,20 @@ func deleteInterface(name string) error {
 	return netlink.LinkDel(link)
 }
 
+func deleteAllInterface() {
+	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	if err != nil {
+		slog.Error("retrieve networks", "error", err)
+	}
+	for _, network := range networks {
+		if err := deleteInterface(network.Interface); err != nil {
+			slog.Error("delete interface", "error", err)
+		}
+	}
+}
+
 // func startInterfaces(ctx context.Context, wg *sync.WaitGroup) {
-func startInterface(name string, self plexus.Device, network plexus.Network) error {
+func startInterface(self plexus.Device, network plexus.Network) error {
 	keepalive := time.Second * 25
 	address := netlink.Addr{}
 	privKey, err := wgtypes.ParseKey(self.WGPrivateKey)
@@ -29,8 +45,8 @@ func startInterface(name string, self plexus.Device, network plexus.Network) err
 		slog.Error("unable to parse private key", "error", err)
 		return err
 	}
-	if _, err := netlink.LinkByName(name); err == nil {
-		slog.Info("interface exists", "interface", name)
+	if _, err := netlink.LinkByName(network.Interface); err == nil {
+		slog.Info("interface exists", "interface", network.Interface)
 		return err
 	}
 	mtu := 1420
@@ -67,16 +83,20 @@ func startInterface(name string, self plexus.Device, network plexus.Network) err
 		}
 		peers = append(peers, wgPeer)
 	}
+	port, err := getFreePort(network.ListenPort)
+	if err != nil {
+		return err
+	}
 	config := wgtypes.Config{
 		PrivateKey:   &privKey,
-		ListenPort:   &self.ListenPort,
+		ListenPort:   &port,
 		ReplacePeers: true,
 		Peers:        peers,
 	}
-	link := plexus.New(name, mtu, address, config)
+	link := plexus.New(network.Interface, mtu, address, config)
 	pretty.Println(link)
 	if err := link.Up(); err != nil {
-		slog.Error("failed initializition interface", "interface", name, "error", err)
+		slog.Error("failed initializition interface", "interface", network.Interface, "error", err)
 		return err
 	}
 	return nil
@@ -150,4 +170,21 @@ func replacePeerInInterface(name string, replacement plexus.NetworkPeer) error {
 		}
 	}
 	return iface.Apply()
+}
+
+func getFreePort(start int) (int, error) {
+	addr := net.UDPAddr{}
+	if start == 0 {
+		start = defaultStart
+	}
+	for x := start; x <= 65535; x++ {
+		addr.Port = x
+		conn, err := net.ListenUDP("udp", &addr)
+		if err != nil {
+			continue
+		}
+		conn.Close()
+		return x, nil
+	}
+	return start, errors.New("no free ports")
 }

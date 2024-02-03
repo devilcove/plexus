@@ -9,6 +9,7 @@ import (
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
+	"github.com/kr/pretty"
 	"github.com/nats-io/nats.go"
 )
 
@@ -47,13 +48,15 @@ func networkUpdates(msg *nats.Msg) {
 			slog.Error("add peer", "error", err)
 		}
 	case plexus.DeletePeer:
-		slog.Info("delete peer")
+		slog.Info("delete peer from network", "peer address", update.Peer.Address, "network", networkName)
 		if update.Peer.WGPublicKey == self.Peer.WGPublicKey {
-			slog.Info("self delete --> delete network")
+			slog.Info("self delete --> delete network", "network", networkName)
 			networkMap[network.Name].Channel <- true
 			if err := boltdb.Delete[plexus.Network](network.Name, "networks"); err != nil {
 				slog.Error("delete network", "error", err)
 			}
+			slog.Info("delete interface", "network", network.Name, "interface", networkMap[network.Name].Interface)
+			pretty.Println(networkMap)
 			deleteInterface(networkMap[network.Name].Interface)
 			return
 		}

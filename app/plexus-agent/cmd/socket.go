@@ -7,7 +7,6 @@ import (
 	"io"
 	"log/slog"
 	"net"
-	"os"
 	"sync"
 
 	"github.com/devilcove/plexus"
@@ -16,9 +15,6 @@ import (
 
 func socketServer(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
-	if err := os.Remove("/tmp/unixsock"); err != nil {
-		slog.Error("remove socket", "error", err)
-	}
 	listener, err := net.Listen("unix", "/tmp/unixsock")
 	if err != nil {
 		slog.Error("opening socket, ...exitiing", "error", err)

@@ -22,7 +22,6 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -34,7 +33,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var networkMap map[string]plexus.NetMap
+var (
+	networkMap map[string]plexus.NetMap
+	restart    chan int
+)
 
 // runCmd represents the run command
 var runCmd = &cobra.Command{
@@ -60,6 +62,7 @@ func run() {
 	wg := sync.WaitGroup{}
 	quit := make(chan os.Signal, 1)
 	reset := make(chan os.Signal, 1)
+	restart = make(chan int, 1)
 	pause := make(chan os.Signal, 1)
 	unpause := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, os.Interrupt)
@@ -74,9 +77,9 @@ func run() {
 		select {
 		case <-quit:
 			log.Println("quit")
+			deleteAllInterface()
 			cancel()
 			wg.Wait()
-			time.Sleep(time.Second)
 			log.Println("go routines stopped")
 			return
 		case <-reset:
@@ -85,6 +88,17 @@ func run() {
 			wg.Wait()
 			log.Println("go routines stopped by reset")
 			ctx, cancel = context.WithCancel(context.Background())
+			wg.Add(1)
+			go socketServer(ctx, &wg)
+			setupSubs(ctx, &wg)
+		case <-restart:
+			log.Println("restart")
+			cancel()
+			wg.Wait()
+			log.Println("go routines stopped by reset")
+			ctx, cancel = context.WithCancel(context.Background())
+			wg.Add(1)
+			go socketServer(ctx, &wg)
 			setupSubs(ctx, &wg)
 		case <-pause:
 			log.Println("pause")
@@ -96,6 +110,8 @@ func run() {
 			//cancel in case pause not received earlier
 			cancel()
 			wg.Wait()
+			wg.Add(1)
+			go socketServer(ctx, &wg)
 			ctx, cancel = context.WithCancel(context.Background())
 			setupSubs(ctx, &wg)
 		}
@@ -103,11 +119,11 @@ func run() {
 }
 
 func setupSubs(ctx context.Context, wg *sync.WaitGroup) {
-	networkMap = make(map[string]plexus.NetMap)
 	if err := boltdb.Initialize(os.Getenv("HOME")+"/.local/share/plexus/plexus-agent.db", []string{"devices", "networks"}); err != nil {
-		slog.Error("failed to initialize database")
+		slog.Error("failed to initialize database", "error", err)
 		return
 	}
+	networkMap = make(map[string]plexus.NetMap)
 	networks, err := boltdb.GetAll[plexus.Network]("networks")
 	if err != nil {
 		slog.Error("unable to read networks", "error", err)
@@ -122,20 +138,20 @@ func setupSubs(ctx context.Context, wg *sync.WaitGroup) {
 		return
 	}
 
-	for i, network := range networks {
+	for _, network := range networks {
 		nc, err := connectToServer(self, network.ServerURL)
 		if err != nil {
 			slog.Error("connect to server", "error", err)
 			return
 		}
 		//start interface
-		iface := "plexus" + strconv.Itoa(i)
+		iface := network.Interface
 		channel := make(chan bool, 1)
 		networkMap[network.Name] = plexus.NetMap{
 			Interface: iface,
 			Channel:   channel,
 		}
-		if err := startInterface(iface, self, network); err != nil {
+		if err := startInterface(self, network); err != nil {
 			slog.Error("interface did not start", "name", iface, "network", network.Name, "error", err)
 			return
 		}
