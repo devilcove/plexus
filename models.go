@@ -115,6 +115,11 @@ type Command struct {
 	Data    any
 }
 
+type NetMap struct {
+	Interface string
+	Channel   chan bool
+}
+
 func DecodeToken(token string) (KeyValue, error) {
 	kv := KeyValue{}
 	data, err := base64.StdEncoding.DecodeString(token)

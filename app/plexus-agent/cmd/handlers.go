@@ -43,24 +43,25 @@ func networkUpdates(msg *nats.Msg) {
 	case plexus.AddPeer:
 		slog.Info("addpeer")
 		network.Peers = append(network.Peers, update.Peer)
-		if err := addPeertoInterface(networkMap[network.Name], update.Peer); err != nil {
+		if err := addPeertoInterface(networkMap[network.Name].Interface, update.Peer); err != nil {
 			slog.Error("add peer", "error", err)
 		}
 	case plexus.DeletePeer:
 		slog.Info("delete peer")
 		if update.Peer.WGPublicKey == self.Peer.WGPublicKey {
 			slog.Info("self delete --> delete network")
+			networkMap[network.Name].Channel <- true
 			if err := boltdb.Delete[plexus.Network](network.Name, "networks"); err != nil {
 				slog.Error("delete network", "error", err)
 			}
-			deleteInterface(networkMap[network.Name])
+			deleteInterface(networkMap[network.Name].Interface)
 			return
 		}
 		for i, oldpeer := range network.Peers {
 			if oldpeer.WGPublicKey == update.Peer.WGPublicKey {
 				network.Peers = slices.Delete(network.Peers, i, i)
 			}
-			if err := deletePeerFromInterface(networkMap[network.Name], update.Peer); err != nil {
+			if err := deletePeerFromInterface(networkMap[network.Name].Interface, update.Peer); err != nil {
 				slog.Error("delete peer", "error", err)
 			}
 		}
@@ -71,15 +72,16 @@ func networkUpdates(msg *nats.Msg) {
 				network.Peers = slices.Replace(network.Peers, i, i+1, update.Peer)
 			}
 		}
-		if err := replacePeerInInterface(networkMap[networkName], update.Peer); err != nil {
+		if err := replacePeerInInterface(networkMap[networkName].Interface, update.Peer); err != nil {
 			slog.Error("replace peer", "error", err)
 		}
 	case plexus.DeleteNetork:
 		slog.Info("delete network")
+		networkMap[network.Name].Channel <- true
 		if err := boltdb.Delete[plexus.Network](network.Name, "networks"); err != nil {
 			slog.Error("delete network", "error", err)
 		}
-		deleteInterface(networkMap[network.Name])
+		deleteInterface(networkMap[network.Name].Interface)
 		return
 	default:
 		slog.Info("invalid network update type")

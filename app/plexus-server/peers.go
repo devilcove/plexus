@@ -73,6 +73,7 @@ func deletePeer(c *gin.Context) {
 		processError(c, http.StatusInternalServerError, "delete peer "+peer.Name+""+err.Error())
 		return
 	}
+	deletePeerFromBroker(peer.PubNkey)
 	displayPeers(c)
 }
 
@@ -91,4 +92,16 @@ func getDeviceUsers() []*server.NkeyUser {
 		devices = append(devices, &device)
 	}
 	return devices
+}
+
+func deletePeerFromBroker(key string) {
+	for i, optionKey := range natsOptions.Nkeys {
+		if optionKey.Nkey == key {
+			natsOptions.Nkeys = slices.Delete(natsOptions.Nkeys, i, i+1)
+			break
+		}
+	}
+	if err := natServer.ReloadOptions(natsOptions); err != nil {
+		slog.Error("delete peer from broker", "error", err)
+	}
 }

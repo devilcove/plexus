@@ -88,7 +88,7 @@ func joinHandler(msg *nats.Msg) {
 				slog.Error("save updated network", "error", err)
 				continue
 			}
-			if err := natsConn.Publish("networks.newPeer."+network, data); err != nil {
+			if err := natsConn.Publish("networks."+network, data); err != nil {
 				slog.Error("publish new peer", "error", err)
 			}
 		}

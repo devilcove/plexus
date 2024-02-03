@@ -34,7 +34,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var networkMap map[string]string
+var networkMap map[string]plexus.NetMap
 
 // runCmd represents the run command
 var runCmd = &cobra.Command{
@@ -103,7 +103,7 @@ func run() {
 }
 
 func setupSubs(ctx context.Context, wg *sync.WaitGroup) {
-	networkMap = make(map[string]string)
+	networkMap = make(map[string]plexus.NetMap)
 	if err := boltdb.Initialize(os.Getenv("HOME")+"/.local/share/plexus/plexus-agent.db", []string{"devices", "networks"}); err != nil {
 		slog.Error("failed to initialize database")
 		return
@@ -130,14 +130,18 @@ func setupSubs(ctx context.Context, wg *sync.WaitGroup) {
 		}
 		//start interface
 		iface := "plexus" + strconv.Itoa(i)
-		networkMap[network.Name] = iface
+		channel := make(chan bool, 1)
+		networkMap[network.Name] = plexus.NetMap{
+			Interface: iface,
+			Channel:   channel,
+		}
 		if err := startInterface(iface, self, network); err != nil {
 			slog.Error("interface did not start", "name", iface, "network", network.Name, "error", err)
 			return
 		}
 		wg.Add(2)
 		go natSubscribe(ctx, wg, self, network, nc)
-		go checkin(ctx, wg, nc, self)
+		go checkin(ctx, wg, nc, self, channel)
 	}
 }
 
@@ -163,7 +167,7 @@ func natSubscribe(ctx context.Context, wg *sync.WaitGroup, self plexus.Device, n
 	slog.Info("networks subs exititing", "network", network.Name)
 }
 
-func checkin(ctx context.Context, wg *sync.WaitGroup, nc *nats.Conn, self plexus.Device) {
+func checkin(ctx context.Context, wg *sync.WaitGroup, nc *nats.Conn, self plexus.Device, end chan bool) {
 	defer wg.Done()
 	log.Println("checking starting")
 	ticker := time.NewTicker(time.Second * 10)
@@ -172,6 +176,10 @@ func checkin(ctx context.Context, wg *sync.WaitGroup, nc *nats.Conn, self plexus
 		select {
 		case <-ctx.Done():
 			log.Println("checkin done")
+			return
+		case <-end:
+			slog.Info("ending checkin")
+			nc.Close()
 			return
 		case <-ticker.C:
 			if !nc.IsConnected() {
@@ -204,16 +212,16 @@ func connectToServer(self plexus.Device, server string) (*nats.Conn, error) {
 	opts = append(opts, []nats.Option{
 		nats.MaxReconnects(-1),
 		nats.DisconnectErrHandler(func(c *nats.Conn, err error) {
-			fmt.Println("disonnected from server", err)
+			slog.Info("disonnected from server", "error", err)
 		}),
 		nats.ClosedHandler(func(c *nats.Conn) {
-			fmt.Println("nats connection closed")
+			slog.Info("nats connection closed")
 		}),
 		nats.ReconnectHandler(func(c *nats.Conn) {
-			fmt.Println("reconnected to nats server")
+			slog.Info("reconnected to nats server")
 		}),
 		nats.ErrorHandler(func(c *nats.Conn, s *nats.Subscription, err error) {
-			fmt.Println("nats error", s.Subject, err)
+			slog.Info("nats error", s.Subject, err)
 		}),
 		nats.Nkey(pk, sign),
 	}...)
