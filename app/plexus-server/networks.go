@@ -150,12 +150,6 @@ func removePeerFromNetwork(c *gin.Context) {
 	for i, peer := range network.Peers {
 		if peer.WGPublicKey == peerid {
 			found = true
-			payload, err := json.Marshal(peer)
-			if err != nil {
-				slog.Error("marshal peer", "error", err)
-				processError(c, http.StatusInternalServerError, err.Error())
-				return
-			}
 			slog.Info("deleting peer", "peer", peer.WGPublicKey, "network", network.Name)
 			network.Peers = slices.Delete(network.Peers, i, i+1)
 			if err := boltdb.Save(network, network.Name, "networks"); err != nil {
@@ -167,7 +161,7 @@ func removePeerFromNetwork(c *gin.Context) {
 				Type: plexus.DeletePeer,
 				Peer: peer,
 			}
-			payload, err = json.Marshal(&update)
+			payload, err := json.Marshal(&update)
 			if err != nil {
 				slog.Error("marshal network update", "error", err)
 				processError(c, http.StatusInternalServerError, err.Error())
