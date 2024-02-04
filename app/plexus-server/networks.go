@@ -5,12 +5,11 @@ import (
 	"errors"
 	"log"
 	"log/slog"
+	"net"
 	"net/http"
-	"net/netip"
 	"regexp"
 	"slices"
 
-	"github.com/c-robinson/iplib"
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
 	"github.com/gin-contrib/sessions"
@@ -27,30 +26,24 @@ func displayAddNetwork(c *gin.Context) {
 
 func addNetwork(c *gin.Context) {
 	var errs error
-	var ok bool
 	network := plexus.Network{}
 	if err := c.Bind(&network); err != nil {
 		processError(c, http.StatusBadRequest, "invalid network data")
 		return
 	}
 	network.ServerURL = config.FQDN
-	network.Net = iplib.Net4FromStr(network.AddressString)
-	if network.Net.IP() == nil {
+	_, cidr, err := net.ParseCIDR(network.AddressString)
+	if err != nil {
 		log.Println("net.ParseCIDR", network.AddressString)
 		processError(c, http.StatusBadRequest, "invalid address for network")
 		return
 	}
-	network.Address, ok = netip.AddrFromSlice(network.Net.IP())
-	if !ok {
-		log.Println("net.ParseCIDR", network.AddressString)
-		processError(c, http.StatusBadRequest, "invalid address for network")
-		return
-	}
+	network.Net = *cidr
 	network.AddressString = network.Net.String()
 	if !validateNetworkName(network.Name) {
 		errs = errors.Join(errs, errors.New("invalid network name"))
 	}
-	if !validateNetworkAddress(network.Address) {
+	if !validateNetworkAddress(network.Net) {
 		errs = errors.Join(errs, errors.New("network address is not private"))
 	}
 	if errs != nil {
@@ -67,12 +60,12 @@ func addNetwork(c *gin.Context) {
 			processError(c, http.StatusBadRequest, "network name exists")
 			return
 		}
-		if net.Address == network.Address {
+		if net.Net.IP.Equal(network.Net.IP) {
 			processError(c, http.StatusBadRequest, "network CIDR in use by "+net.Name)
 			return
 		}
 	}
-	log.Println("network validation complete ... saving network ", network)
+	slog.Info("network validation complete ... saving", "network", network)
 	if err := boltdb.Save(network, network.Name, "networks"); err != nil {
 		processError(c, http.StatusInternalServerError, "unable to save network "+err.Error())
 		return
@@ -133,9 +126,8 @@ func validateNetworkName(name string) bool {
 	return valid.MatchString(name)
 }
 
-func validateNetworkAddress(address netip.Addr) bool {
-	return address.IsPrivate()
-
+func validateNetworkAddress(address net.IPNet) bool {
+	return address.IP.IsPrivate()
 }
 
 func removePeerFromNetwork(c *gin.Context) {

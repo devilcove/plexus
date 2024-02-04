@@ -3,12 +3,13 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"log/slog"
 	"net"
 
+	"github.com/c-robinson/iplib"
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
+	"github.com/kr/pretty"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 )
@@ -67,15 +68,17 @@ func joinHandler(msg *nats.Msg) {
 				msg.Respond([]byte("could not get ip" + err.Error()))
 				return
 			}
+			slog.Debug("setting ip to", "ip", addr)
 			update := plexus.NetworkUpdate{
 				Type: plexus.AddPeer,
 				Peer: plexus.NetworkPeer{
 					WGPublicKey:      request.Peer.WGPublicKey,
+					HostName:         request.Peer.Name,
 					PublicListenPort: request.Peer.PublicListenPort,
 					Endpoint:         request.Peer.Endpoint,
 					Address: net.IPNet{
 						IP:   addr,
-						Mask: netToUpdate.Net.Mask(),
+						Mask: netToUpdate.Net.Mask,
 					},
 				},
 			}
@@ -117,27 +120,29 @@ func joinHandler(msg *nats.Msg) {
 }
 
 func getNextIP(network plexus.Network) (net.IP, error) {
-	var err error
 	taken := make(map[string]bool)
 	for _, peer := range network.Peers {
-		taken[peer.Address.String()] = true
+		taken[peer.Address.IP.String()] = true
 	}
-	available := false
-	next := network.Net.FirstAddress()
+	slog.Debug("getnextIP", "network", network)
+	slog.Debug("getNextIP", "taken", taken)
+	slog.Debug("getNextIP", "net", network.Net)
+	pretty.Println(network.Net)
+	ipnet := iplib.Net4FromStr(network.Net.String())
+	ipToCheck := ipnet.FirstAddress()
+	broadcast := ipnet.BroadcastAddress()
 	for {
-		log.Println("checking", next.String())
-		_, ok := taken[next.String()]
+		slog.Debug("checking", "ip", ipToCheck, "network", network.Net)
+		_, ok := taken[ipToCheck.String()]
 		if !ok {
-			available = true
+			slog.Debug("found available ip", "ip", ipToCheck, "taken", taken)
 			break
 		}
-		next, err = network.Net.NextIP(next)
-		if err != nil {
-			break
+		next := iplib.NextIP(ipToCheck)
+		if next.Equal(broadcast) {
+			return net.IP{}, errors.New("no addresses available")
 		}
+		ipToCheck = next
 	}
-	if !available {
-		return net.ParseIP("0.0.0.0"), errors.New("no address available")
-	}
-	return next, nil
+	return ipToCheck, nil
 }

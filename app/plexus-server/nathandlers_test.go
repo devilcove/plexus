@@ -11,27 +11,28 @@ import (
 )
 
 func TestGetNextIP(t *testing.T) {
-
+	_, cidr, err := net.ParseCIDR("192.168.0.10/24")
+	assert.Nil(t, err)
 	network := plexus.Network{
-		Net: iplib.Net4FromStr("192.168.0.10/24"),
+		Net: *cidr,
 	}
 	peers := []plexus.NetworkPeer{
 		{
 			Address: net.IPNet{
-				IP:   network.Net.FirstAddress(),
-				Mask: network.Net.Mask(),
+				IP:   net.ParseIP("192.168.0.1"),
+				Mask: network.Net.Mask,
 			},
 		},
 		{
 			Address: net.IPNet{
 				IP:   net.ParseIP("192.168.0.2"),
-				Mask: network.Net.Mask(),
+				Mask: network.Net.Mask,
 			},
 		},
 		{
 			Address: net.IPNet{
 				IP:   net.ParseIP("192.168.0.4"),
-				Mask: network.Net.Mask(),
+				Mask: network.Net.Mask,
 			},
 		},
 	}

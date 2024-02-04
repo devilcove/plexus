@@ -52,11 +52,11 @@ func startInterface(self plexus.Device, network plexus.Network) error {
 	mtu := 1420
 	peers := []wgtypes.PeerConfig{}
 	for _, peer := range network.Peers {
-		slog.Info("checking peer", "peer", peer.WGPublicKey, "address", peer.Address, "mask", network.Net.Mask())
+		slog.Info("checking peer", "peer", peer.WGPublicKey, "address", peer.Address, "mask", network.Net.Mask)
 		if peer.WGPublicKey == self.WGPublicKey {
 			add := net.IPNet{
 				IP:   peer.Address.IP,
-				Mask: network.Net.Mask(),
+				Mask: network.Net.Mask,
 			}
 			address.IPNet = &add
 			continue

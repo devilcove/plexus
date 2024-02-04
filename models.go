@@ -6,10 +6,8 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"net/netip"
 	"time"
 
-	"github.com/c-robinson/iplib"
 	"github.com/gin-gonic/gin"
 )
 
@@ -47,8 +45,7 @@ type User struct {
 type Network struct {
 	Name          string `form:"name"`
 	ServerURL     string
-	Net           iplib.Net4
-	Address       netip.Addr
+	Net           net.IPNet
 	AddressString string `form:"addressstring"`
 	ListenPort    int
 	Interface     string
