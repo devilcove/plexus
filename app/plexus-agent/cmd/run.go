@@ -17,6 +17,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"log/slog"
@@ -112,8 +113,12 @@ func setupSubs(ctx context.Context, wg *sync.WaitGroup) {
 	}
 	self, err := boltdb.Get[plexus.Device]("self", "devices")
 	if err != nil {
-		slog.Error("unable to read devices", "errror", err)
-		return
+		if errors.Is(err, boltdb.ErrNoResults) {
+			self = newDevice()
+		} else {
+			slog.Error("unable to read devices", "errror", err)
+			return
+		}
 	}
 	if self.WGPublicKey == "" {
 		slog.Error("public key not set")
