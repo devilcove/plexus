@@ -8,7 +8,7 @@
                 hx-target-error="#error">
                 {{.Name}}</button>{{.AddressString}}
             <button class="w3-button" type="button" hx-delete="networks/{{.Name}}" hx-target="#content"
-                hx-target-error="#error">
+                hx-target-error="#error" hx-confirm="Delete Network?">
                 Delete</button>
         </h2>
         {{end}}
@@ -66,7 +66,8 @@
                         <td>{{.Version}}</td>
                         <td>TBD</td>
                         <td><button class="w3-button w3-theme" type="button" hx-delete="networks/peers/{{$network}}/{{.WGPublicKey}}"
-                                hx-target="#content" hx-target-error="#error">Remove From Network</button></td>
+                                hx-target="#content" hx-target-error="#error"
+                                hx-confirm="Remove Peer from Network?">Remove From Network</button></td>
                     </tr>
                     {{end}}
                 </tbody>

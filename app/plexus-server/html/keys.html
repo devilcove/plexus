@@ -15,25 +15,23 @@
                             <td>Expires</td>
                             <td>Networks</td>
                             <td></td>
-                            <td></td>
                         </tr>
                     </thead>
                     {{range .}}
                     <tbody>
                         <tr>
-                            <td>{{.Name}}</td>
-                            <td>{{.Usage}}</td>
-                            <td>{{.DispExp}}</td>
-                            <td>{{.Networks}}</td>
-                            <td><button class="w3-button" type="button" hx-delete="/keys/{{.Name}}" hx-target="#content"
-                                    hx-target-error="#error">
-                                    Delete</button></td>
-                            <td><button class="w3-button" type="button" 
+                            <td><button class="w3-button w3-theme" type="button" 
                                 onclick='navigator.clipboard.writeText("{{.Value}}").then(() =>{
                                 alert("copied to clipboard");
                                 },()=>{
                                     alert("failed to copy");
-                                });'>Copy</button></td>
+                                });'>{{.Name}}</button></td>
+                            <td>{{.Usage}}</td>
+                            <td>{{.DispExp}}</td>
+                            <td>{{.Networks}}</td>
+                            <td><button class="w3-button w3-theme" type="button" hx-delete="/keys/{{.Name}}" hx-target="#content"
+                                    hx-target-error="#error" hx-confirm="Delete Key?">
+                                    Delete</button></td>
                         </tr>
                         {{end}}
                     </tbody>

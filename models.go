@@ -47,8 +47,8 @@ type Network struct {
 	ServerURL     string
 	Net           net.IPNet
 	AddressString string `form:"addressstring"`
-	ListenPort    int
-	Interface     string
+	ListenPort    int    //only used by agent
+	Interface     string // only used by agent
 	Peers         []NetworkPeer
 }
 
