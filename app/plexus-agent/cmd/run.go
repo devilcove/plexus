@@ -17,7 +17,7 @@ package cmd
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
 	"fmt"
 	"log"
 	"log/slog"
@@ -35,7 +35,9 @@ import (
 )
 
 var (
+	// networkMap containss the interface name and reset channel for networks
 	networkMap map[string]plexus.NetMap
+	serverMap  map[string]*nats.Conn
 	restart    chan int
 )
 
@@ -44,7 +46,7 @@ var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "plexus-agent deamon",
 	Long: `plexus-agent run maintains a connection to 
-a plexus server for network updates.`,
+plexus server(s) for network updates.`,
 
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("run called")
@@ -67,70 +69,107 @@ func run() {
 	signal.Notify(quit, syscall.SIGTERM, os.Interrupt)
 	signal.Notify(reset, syscall.SIGHUP)
 	ctx, cancel := context.WithCancel(context.Background())
-	wg.Add(1)
-	go socketServer(ctx, &wg)
-	setupSubs(ctx, &wg)
-	for {
-		select {
-		case <-quit:
-			log.Println("quit")
-			deleteAllInterface()
-			cancel()
-			wg.Wait()
-			log.Println("go routines stopped")
-			return
-		case <-reset:
-			log.Println("reset")
-			cancel()
-			wg.Wait()
-			log.Println("go routines stopped by reset")
-			ctx, cancel = context.WithCancel(context.Background())
-			wg.Add(1)
-			go socketServer(ctx, &wg)
-			setupSubs(ctx, &wg)
-		case <-restart:
-			log.Println("restart")
-			cancel()
-			wg.Wait()
-			log.Println("go routines stopped by reset")
-			ctx, cancel = context.WithCancel(context.Background())
-			wg.Add(1)
-			go socketServer(ctx, &wg)
-			setupSubs(ctx, &wg)
-		}
-	}
-}
-
-func setupSubs(ctx context.Context, wg *sync.WaitGroup) {
 	if err := boltdb.Initialize(os.Getenv("HOME")+"/.local/share/plexus/plexus-agent.db", []string{"devices", "networks"}); err != nil {
 		slog.Error("failed to initialize database", "error", err)
 		return
 	}
+	self := newDevice()
+	wg.Add(1)
+	slog.Info("starting socket server")
+	go socketServer(ctx, &wg)
+	slog.Info("setup nats")
+	setupNats(self)
+	slog.Info("refresh data from servers")
+	refreshData(self)
+	slog.Info("set up subcriptions")
+	setupSubs(ctx, &wg, self)
+	for {
+		select {
+		case <-quit:
+			slog.Info("quit")
+			deleteAllInterface()
+			cancel()
+			wg.Wait()
+			slog.Info("go routines stopped")
+			return
+		case <-reset:
+			slog.Info("reset")
+			cancel()
+			wg.Wait()
+			slog.Info("go routines stopped by reset")
+			ctx, cancel = context.WithCancel(context.Background())
+			wg.Add(1)
+			go socketServer(ctx, &wg)
+			setupNats(self)
+			refreshData(self)
+			setupSubs(ctx, &wg, self)
+		case <-restart:
+			slog.Info("restart")
+			cancel()
+			wg.Wait()
+			slog.Info("go routines stopped by reset")
+			ctx, cancel = context.WithCancel(context.Background())
+			wg.Add(1)
+			go socketServer(ctx, &wg)
+			setupNats(self)
+			refreshData(self)
+			setupSubs(ctx, &wg, self)
+		}
+	}
+}
+
+func setupNats(self plexus.Device) {
+	serverMap = make(map[string]*nats.Conn)
+	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	if err != nil {
+		slog.Error("unable to read networks", "error", err)
+	}
+	for _, network := range networks {
+		nc, ok := serverMap[network.ServerURL]
+		if !ok || nc == nil {
+			nc, err := connectToServer(self, network.ServerURL)
+			if err != nil {
+				slog.Error("unable to connect to server", "server", network.ServerURL, "error", err)
+			}
+			serverMap[network.ServerURL] = nc
+		}
+	}
+	fmt.Println("servermap", serverMap, "length", len(serverMap))
+}
+
+func refreshData(self plexus.Device) {
+	slog.Info("getting data from servers")
+	for key, nc := range serverMap {
+		slog.Info("procssing server", "server", key)
+		if nc == nil {
+			slog.Error("nil nats connection", "key", key)
+			continue
+		}
+		msg, err := nc.Request("status."+self.WGPublicKey, []byte("helloworld"), time.Second*5)
+		if err != nil {
+			slog.Error("refresh data", "server", key, "error", err)
+			return
+		}
+		slog.Info("refresh data", "msg", msg)
+		var networks []plexus.Network
+		if err := json.Unmarshal(msg.Data, &networks); err != nil {
+			slog.Error("unmarshal data from", "server", key, "error", err)
+		}
+		for _, network := range networks {
+			if err := boltdb.Save(network, network.Name, "networks"); err != nil {
+				slog.Error("save network", "network", network.Name, "error", err)
+			}
+		}
+	}
+}
+
+func setupSubs(ctx context.Context, wg *sync.WaitGroup, self plexus.Device) {
 	networkMap = make(map[string]plexus.NetMap)
 	networks, err := boltdb.GetAll[plexus.Network]("networks")
 	if err != nil {
 		slog.Error("unable to read networks", "error", err)
 	}
-	self, err := boltdb.Get[plexus.Device]("self", "devices")
-	if err != nil {
-		if errors.Is(err, boltdb.ErrNoResults) {
-			self = newDevice()
-		} else {
-			slog.Error("unable to read devices", "errror", err)
-			return
-		}
-	}
-	if self.WGPublicKey == "" {
-		slog.Error("public key not set")
-		return
-	}
-
 	for _, network := range networks {
-		nc, err := connectToServer(self, network.ServerURL)
-		if err != nil {
-			slog.Error("connect to server", "error", err)
-			return
-		}
 		//start interface
 		iface := network.Interface
 		channel := make(chan bool, 1)
@@ -143,8 +182,8 @@ func setupSubs(ctx context.Context, wg *sync.WaitGroup) {
 			return
 		}
 		wg.Add(2)
-		go natSubscribe(ctx, wg, self, network, nc)
-		go checkin(ctx, wg, nc, self, channel)
+		go natSubscribe(ctx, wg, self, network, serverMap[network.ServerURL])
+		go checkin(ctx, wg, serverMap[network.ServerURL], self, channel)
 	}
 }
 
@@ -164,9 +203,6 @@ func natSubscribe(ctx context.Context, wg *sync.WaitGroup, self plexus.Device, n
 		slog.Error("drain subscriptions", "error", err)
 	}
 	nc.Close()
-	if err := boltdb.Close(); err != nil {
-		slog.Error("database close", "error", err)
-	}
 	slog.Info("networks subs exititing", "network", network.Name)
 }
 
@@ -224,7 +260,7 @@ func connectToServer(self plexus.Device, server string) (*nats.Conn, error) {
 			slog.Info("reconnected to nats server")
 		}),
 		nats.ErrorHandler(func(c *nats.Conn, s *nats.Subscription, err error) {
-			slog.Info("nats error", s.Subject, err)
+			slog.Info("nats error", "error", err)
 		}),
 		nats.Nkey(pk, sign),
 	}...)

@@ -6,3 +6,5 @@ coverage.out
 coverage.html
 test.db
 time.db
+**/launch.json
+devops/experiment/*
