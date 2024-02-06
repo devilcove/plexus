@@ -174,3 +174,25 @@ func removePeerFromNetwork(c *gin.Context) {
 	}
 	networkDetails(c)
 }
+
+func getConfig(id string) []byte {
+	response := []plexus.Network{}
+	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	if err != nil {
+		slog.Error("get networks", "error", err)
+		return []byte{}
+	}
+	for _, network := range networks {
+		for _, peer := range network.Peers {
+			if peer.WGPublicKey == id {
+				response = append(response, network)
+			}
+		}
+	}
+	payload, err := json.Marshal(response)
+	if err != nil {
+		slog.Error("marshal", "error", err)
+		return []byte{}
+	}
+	return payload
+}

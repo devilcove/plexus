@@ -164,7 +164,11 @@ func updateHandler(m *nats.Msg) {
 func configHandler(m *nats.Msg) {
 	device := m.Subject[7:]
 	slog.Info("received config request", "device", device)
-	m.Respond([]byte("config ack"))
+	config := getConfig(device)
+	if config == nil {
+		m.Header.Set("error", "empty")
+	}
+	m.Respond(config)
 }
 
 func getTokenUsers() []*server.NkeyUser {

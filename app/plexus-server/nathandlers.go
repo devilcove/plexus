@@ -17,7 +17,7 @@ import (
 func devicePermissions(id string) *server.Permissions {
 	return &server.Permissions{
 		Publish: &server.SubjectPermission{
-			Allow: []string{"checkin." + id, "update." + id},
+			Allow: []string{"checkin." + id, "update." + id, "config." + id},
 		},
 		Subscribe: &server.SubjectPermission{
 			Allow: []string{"networks.>", "_INBOX.>"},
