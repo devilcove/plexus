@@ -102,12 +102,14 @@ func run() {
 			go socketServer(ctx, &wg)
 			setupNats(self)
 			refreshData(self)
+			closeNatsConns()
+			setupNats(self)
 			setupSubs(ctx, &wg, self)
 		case <-restart:
 			slog.Info("restart")
 			cancel()
 			wg.Wait()
-			slog.Info("go routines stopped by reset")
+			slog.Info("go routines stopped by restart")
 			ctx, cancel = context.WithCancel(context.Background())
 			wg.Add(1)
 			go socketServer(ctx, &wg)
@@ -115,6 +117,12 @@ func run() {
 			refreshData(self)
 			setupSubs(ctx, &wg, self)
 		}
+	}
+}
+
+func closeNatsConns() {
+	for _, nc := range serverMap {
+		nc.Close()
 	}
 }
 
@@ -139,13 +147,23 @@ func setupNats(self plexus.Device) {
 
 func refreshData(self plexus.Device) {
 	slog.Info("getting data from servers")
+	//delete existing networks
+	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	if err != nil {
+		slog.Warn("get networks", "error", err)
+	}
+	for _, network := range networks {
+		if err := boltdb.Delete[plexus.Network](network.Name, "networks"); err != nil {
+			slog.Warn("delete network", "network", network.Name, "error", err)
+		}
+	}
 	for key, nc := range serverMap {
 		slog.Info("procssing server", "server", key)
 		if nc == nil {
 			slog.Error("nil nats connection", "key", key)
 			continue
 		}
-		msg, err := nc.Request("status."+self.WGPublicKey, []byte("helloworld"), time.Second*5)
+		msg, err := nc.Request("config."+self.WGPublicKey, []byte("helloworld"), time.Second*5)
 		if err != nil {
 			slog.Error("refresh data", "server", key, "error", err)
 			return
