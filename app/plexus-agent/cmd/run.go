@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -168,12 +169,14 @@ func refreshData(self plexus.Device) {
 			slog.Error("refresh data", "server", key, "error", err)
 			return
 		}
-		slog.Info("refresh data", "msg", msg)
+		slog.Info("refresh data", "msg", string(msg.Data))
 		var networks []plexus.Network
 		if err := json.Unmarshal(msg.Data, &networks); err != nil {
 			slog.Error("unmarshal data from", "server", key, "error", err)
 		}
-		for _, network := range networks {
+		for i, network := range networks {
+			network.Interface = "plexus" + strconv.Itoa(i)
+			network.ListenPort = self.ListenPort
 			if err := boltdb.Save(network, network.Name, "networks"); err != nil {
 				slog.Error("save network", "network", network.Name, "error", err)
 			}

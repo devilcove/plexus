@@ -83,6 +83,7 @@ func initConfig() {
 	}
 
 	viper.BindPFlags(rootCmd.Flags())
+	viper.SetEnvPrefix("PLEXUS")
 	viper.AutomaticEnv() // read in environment variables that match
 	fmt.Println("viper keys", viper.AllKeys())
 
