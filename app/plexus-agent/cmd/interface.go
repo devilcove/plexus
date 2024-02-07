@@ -111,17 +111,21 @@ func addPeertoInterface(name string, peer plexus.NetworkPeer) error {
 	if err != nil {
 		return err
 	}
-	endpoint, err := net.ResolveUDPAddr("udp", peer.Endpoint)
-	if err != nil {
-		return err
-	}
 	keepalive := time.Second * 20
 	iface.Config.Peers = append(iface.Config.Peers, wgtypes.PeerConfig{
-		PublicKey:                   key,
-		Endpoint:                    endpoint,
+		PublicKey: key,
+		Endpoint: &net.UDPAddr{
+			IP:   net.ParseIP(peer.Endpoint),
+			Port: peer.PublicListenPort,
+		},
 		PersistentKeepaliveInterval: &keepalive,
 		ReplaceAllowedIPs:           true,
-		AllowedIPs:                  []net.IPNet{peer.Address},
+		AllowedIPs: []net.IPNet{
+			{
+				IP:   peer.Address.IP,
+				Mask: net.CIDRMask(32, 32),
+			},
+		},
 	})
 	return iface.Apply()
 }
@@ -152,14 +156,13 @@ func replacePeerInInterface(name string, replacement plexus.NetworkPeer) error {
 	if err != nil {
 		return err
 	}
-	endpoint, err := net.ResolveUDPAddr("udp", replacement.Endpoint)
-	if err != nil {
-		return err
-	}
 	keepalive := time.Second * 20
 	newPeer := wgtypes.PeerConfig{
-		PublicKey:                   key,
-		Endpoint:                    endpoint,
+		PublicKey: key,
+		Endpoint: &net.UDPAddr{
+			IP:   net.ParseIP(replacement.Endpoint),
+			Port: replacement.PublicListenPort,
+		},
 		PersistentKeepaliveInterval: &keepalive,
 		ReplaceAllowedIPs:           true,
 		AllowedIPs:                  []net.IPNet{replacement.Address},
