@@ -30,7 +30,7 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "display version information",
 	Long: `display version information
-long flag displays debug.BuildSettings version control key values `,
+	long flag displays debug.BuildSettings version control key values `,
 	Run: func(cmd *cobra.Command, args []string) {
 		long, err := cmd.Flags().GetBool("long")
 		cobra.CheckErr(err)
