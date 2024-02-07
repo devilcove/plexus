@@ -85,18 +85,14 @@ func initConfig() {
 	viper.BindPFlags(rootCmd.Flags())
 	viper.SetEnvPrefix("PLEXUS")
 	viper.AutomaticEnv() // read in environment variables that match
-	fmt.Println("viper keys", viper.AllKeys())
-
-	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
-	fmt.Println("viper keys after reading config file", viper.AllKeys())
 	if err := viper.Unmarshal(&config); err != nil {
 		log.Println("viper.Unmarshal", err)
 	}
 	plexus.SetLogging(config.Verbosity)
-	slog.Info("using configuration", "config", config)
+	slog.Debug("using configuration", "config", config)
 }
 
 func checkErr(msg interface{}) {
