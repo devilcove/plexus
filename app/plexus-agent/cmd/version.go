@@ -28,8 +28,9 @@ const version = "v0.1.0"
 // versionCmd represents the version command
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "display version",
-	Long:  `display version`,
+	Short: "display version information",
+	Long: `display version information
+long flag displays debug.BuildSettings version control key values `,
 	Run: func(cmd *cobra.Command, args []string) {
 		long, err := cmd.Flags().GetBool("long")
 		cobra.CheckErr(err)
