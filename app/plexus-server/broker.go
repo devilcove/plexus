@@ -148,9 +148,21 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 }
 
 func checkinHandler(m *nats.Msg) {
-	device := m.Subject[7:]
+	peerID := m.Subject[7:]
 	//update, err := database.GetDevice(device)
-	slog.Info("received checkin", "device", device)
+	slog.Info("received checkin", "device", peerID)
+	peer, err := boltdb.Get[plexus.Peer](peerID, "peers")
+	if err != nil {
+		slog.Error("peer checkin", "error", err)
+		m.Respond([]byte("error " + err.Error()))
+		return
+	}
+	peer.Updated = time.Now()
+	if err := boltdb.Save(peer, peer.WGPublicKey, "peers"); err != nil {
+		slog.Error("peer checkin save", "error", err)
+		m.Respond([]byte("error " + err.Error()))
+		return
+	}
 	m.Respond([]byte("ack"))
 }
 
