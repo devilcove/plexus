@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -148,7 +149,12 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 }
 
 func checkinHandler(m *nats.Msg) {
-	peerID := m.Subject[7:]
+	parts := strings.Split(m.Subject, ".")
+	if len(parts) < 2 {
+		slog.Error("invalid topic")
+		return
+	}
+	peerID := parts[1]
 	//update, err := database.GetDevice(device)
 	slog.Info("received checkin", "device", peerID)
 	peer, err := boltdb.Get[plexus.Peer](peerID, "peers")

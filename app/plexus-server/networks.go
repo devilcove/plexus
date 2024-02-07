@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"regexp"
 	"slices"
+	"time"
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
@@ -98,6 +99,9 @@ func networkDetails(c *gin.Context) {
 		if err != nil {
 			slog.Error("could not obtains peer for network details", "peer", peer.WGPublicKey, "network", network, "error", err)
 			continue
+		}
+		if time.Since(p.Updated) < time.Second*10 {
+			p.NatsConnected = true
 		}
 		details.Peers = append(details.Peers, p)
 	}

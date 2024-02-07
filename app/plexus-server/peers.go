@@ -5,20 +5,31 @@ import (
 	"log/slog"
 	"net/http"
 	"slices"
+	"time"
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
 	"github.com/gin-gonic/gin"
+	"github.com/kr/pretty"
 	"github.com/nats-io/nats-server/v2/server"
 )
 
 func displayPeers(c *gin.Context) {
+	displayPeers := []plexus.Peer{}
 	peers, err := boltdb.GetAll[plexus.Peer]("peers")
 	if err != nil {
 		processError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	c.HTML(http.StatusOK, "peers", peers)
+	//set Status for display
+	for _, peer := range peers {
+		if time.Since(peer.Updated) < time.Second*10 {
+			peer.NatsConnected = true
+			pretty.Println(peer.NatsConnected)
+		}
+		displayPeers = append(displayPeers, peer)
+	}
+	c.HTML(http.StatusOK, "peers", displayPeers)
 }
 
 func peerDetails(c *gin.Context) {

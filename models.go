@@ -85,6 +85,7 @@ type Peer struct {
 	PublicListenPort int
 	Endpoint         string
 	Updated          time.Time
+	NatsConnected    bool
 	Networks         []string
 }
 
