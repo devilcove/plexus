@@ -33,7 +33,9 @@ var versionCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		long, err := cmd.Flags().GetBool("long")
 		cobra.CheckErr(err)
+		fmt.Print(version)
 		if long {
+			fmt.Print(": ")
 			info, _ := debug.ReadBuildInfo()
 			for _, setting := range info.Settings {
 				if strings.Contains(setting.Key, "vcs") {
@@ -42,7 +44,6 @@ var versionCmd = &cobra.Command{
 			}
 			fmt.Print("\n")
 		}
-		fmt.Println(version)
 	},
 }
 
