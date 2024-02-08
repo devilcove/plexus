@@ -15,7 +15,6 @@
                         <td>Port</td>
                         <td>Version</td>
                         <td>Status</td>
-                        <td>Connectivity</td>
                         <td>Delete</td>
                     </tr>
                 </thead>
@@ -32,7 +31,6 @@
                         {{- else}}
                             <td><i class="fa fa-times-circle w3-red"></i></td>
                         {{- end}}
-                        <td>TBD</td>
                         <td><button class="w3-button w3-theme" type="button" hx-delete="peers/{{.WGPublicKey}}"
                                 hx-target="#content" hx-target-error="#error" 
                                 hx-confirm="Delete Peer?">Delete</button></td>

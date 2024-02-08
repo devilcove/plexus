@@ -1,16 +1,20 @@
 package cmd
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
 	"github.com/kr/pretty"
 	"github.com/vishvananda/netlink"
+	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
@@ -190,4 +194,59 @@ func getFreePort(start int) (int, error) {
 		return x, nil
 	}
 	return start, errors.New("no free ports")
+}
+
+func networkConnectivityStats(ctx context.Context, wg *sync.WaitGroup, self plexus.Device, network plexus.Network) {
+	defer wg.Done()
+	ticker := time.NewTicker(time.Minute * 1)
+	publishConnectivity(self, network)
+	for {
+		select {
+		case <-ctx.Done():
+			ticker.Stop()
+			return
+		case <-ticker.C:
+			publishConnectivity(self, network)
+		}
+	}
+}
+
+func publishConnectivity(self plexus.Device, network plexus.Network) {
+	data := plexus.ConnectivityData{
+		Network: network.Name,
+	}
+	client, err := wgctrl.New()
+	if err != nil {
+		slog.Warn("get client", "error", err)
+		return
+	}
+	devices, err := client.Devices()
+	if err != nil {
+		slog.Warn("get wireguard devices", "error", err)
+		return
+	}
+	for _, device := range devices {
+		if device.Name != network.Interface {
+			continue
+		}
+		goodHandShakes := 0.0
+		for _, peer := range device.Peers {
+			if time.Since(peer.LastHandshakeTime) < time.Minute*3 {
+				goodHandShakes++
+			}
+		}
+		data.Connectivity = goodHandShakes / float64(len(device.Peers))
+		payload, err := json.Marshal(data)
+		if err != nil {
+			slog.Error("json marshal", "error", err)
+			continue
+		}
+		nc, ok := serverMap[network.ServerURL]
+		if !ok {
+			slog.Error("serverMap", "serverURL", network.ServerURL)
+			continue
+		}
+		nc.Publish("connectivity."+self.WGPublicKey, payload)
+		slog.Debug("published connectivity", "data", data)
+	}
 }

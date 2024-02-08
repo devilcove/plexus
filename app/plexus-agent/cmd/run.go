@@ -202,9 +202,10 @@ func setupSubs(ctx context.Context, wg *sync.WaitGroup, self plexus.Device) {
 			slog.Error("interface did not start", "name", iface, "network", network.Name, "error", err)
 			return
 		}
-		wg.Add(2)
+		wg.Add(3)
 		go natSubscribe(ctx, wg, self, network, serverMap[network.ServerURL])
 		go checkin(ctx, wg, serverMap[network.ServerURL], self, channel)
+		go networkConnectivityStats(ctx, wg, self, network)
 	}
 }
 

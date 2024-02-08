@@ -58,6 +58,8 @@ type NetworkPeer struct {
 	Address          net.IPNet
 	PublicListenPort int
 	Endpoint         string
+	NatsConnected    bool
+	Connectivity     float64
 }
 
 type Key struct {
@@ -86,7 +88,6 @@ type Peer struct {
 	Endpoint         string
 	Updated          time.Time
 	NatsConnected    bool
-	Networks         []string
 }
 
 type Device struct {
@@ -118,6 +119,11 @@ type Command struct {
 type NetMap struct {
 	Interface string
 	Channel   chan bool
+}
+
+type ConnectivityData struct {
+	Network      string
+	Connectivity float64
 }
 
 func DecodeToken(token string) (KeyValue, error) {

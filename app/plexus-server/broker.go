@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -104,16 +103,21 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 	if err != nil {
 		slog.Error("subscribe config", "error", err)
 	}
+	connectivitySub, err := natsConn.Subscribe("connectivity.*", connectivityHandler)
+	if err != nil {
+		slog.Error("subscribe connectivity", "error", err)
+	}
+
 	slog.Info("broker started")
 	//wg.Add(1)
 	for {
 		select {
-
 		case <-ctx.Done():
 			joinSub.Drain()
 			checkinSub.Drain()
 			updateSub.Drain()
 			configSub.Drain()
+			connectivitySub.Drain()
 			return
 		case token := <-newDevice:
 			slog.Info("new login device", "device", token)
@@ -146,47 +150,6 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 			pretty.Println(natsOptions.Nkeys)
 		}
 	}
-}
-
-func checkinHandler(m *nats.Msg) {
-	parts := strings.Split(m.Subject, ".")
-	if len(parts) < 2 {
-		slog.Error("invalid topic")
-		return
-	}
-	peerID := parts[1]
-	//update, err := database.GetDevice(device)
-	slog.Info("received checkin", "device", peerID)
-	peer, err := boltdb.Get[plexus.Peer](peerID, "peers")
-	if err != nil {
-		slog.Error("peer checkin", "error", err)
-		m.Respond([]byte("error " + err.Error()))
-		return
-	}
-	peer.Updated = time.Now()
-	if err := boltdb.Save(peer, peer.WGPublicKey, "peers"); err != nil {
-		slog.Error("peer checkin save", "error", err)
-		m.Respond([]byte("error " + err.Error()))
-		return
-	}
-	m.Respond([]byte("ack"))
-}
-
-func updateHandler(m *nats.Msg) {
-	device := m.Subject[7:]
-	//update, err := database.GetDevice(device)
-	slog.Info("received update", "device", device, "update", string(m.Data))
-	m.Respond([]byte("update ack"))
-}
-
-func configHandler(m *nats.Msg) {
-	device := m.Subject[7:]
-	slog.Info("received config request", "device", device)
-	config := getConfig(device)
-	if config == nil {
-		m.Header.Set("error", "empty")
-	}
-	m.Respond(config)
 }
 
 func getTokenUsers() []*server.NkeyUser {

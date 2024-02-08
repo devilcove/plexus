@@ -5,6 +5,8 @@ import (
 	"errors"
 	"log/slog"
 	"net"
+	"strings"
+	"time"
 
 	"github.com/c-robinson/iplib"
 	"github.com/devilcove/boltdb"
@@ -17,7 +19,7 @@ import (
 func devicePermissions(id string) *server.Permissions {
 	return &server.Permissions{
 		Publish: &server.SubjectPermission{
-			Allow: []string{"checkin." + id, "update." + id, "config." + id},
+			Allow: []string{"checkin." + id, "update." + id, "config." + id, "connectivity." + id},
 		},
 		Subscribe: &server.SubjectPermission{
 			Allow: []string{"networks.>", "_INBOX.>"},
@@ -145,4 +147,76 @@ func getNextIP(network plexus.Network) (net.IP, error) {
 		ipToCheck = next
 	}
 	return ipToCheck, nil
+}
+
+// checkinHandler handle messages published to checkin.<ID>
+func checkinHandler(m *nats.Msg) {
+	parts := strings.Split(m.Subject, ".")
+	if len(parts) < 2 {
+		slog.Error("invalid topic")
+		return
+	}
+	peerID := parts[1]
+	//update, err := database.GetDevice(device)
+	slog.Info("received checkin", "device", peerID)
+	peer, err := boltdb.Get[plexus.Peer](peerID, "peers")
+	if err != nil {
+		slog.Error("peer checkin", "error", err)
+		m.Respond([]byte("error " + err.Error()))
+		return
+	}
+	peer.Updated = time.Now()
+	if err := boltdb.Save(peer, peer.WGPublicKey, "peers"); err != nil {
+		slog.Error("peer checkin save", "error", err)
+		m.Respond([]byte("error " + err.Error()))
+		return
+	}
+	m.Respond([]byte("ack"))
+}
+
+// updateHandler handles messages published to update.<ID>
+func updateHandler(m *nats.Msg) {
+	device := m.Subject[7:]
+	//update, err := database.GetDevice(device)
+	slog.Info("received update", "device", device, "update", string(m.Data))
+	m.Respond([]byte("update ack"))
+}
+
+// configHandler handles requests for device configuration ie request published to config.<ID>
+func configHandler(m *nats.Msg) {
+	device := m.Subject[7:]
+	slog.Info("received config request", "device", device)
+	config := getConfig(device)
+	if config == nil {
+		m.Header.Set("error", "empty")
+	}
+	m.Respond(config)
+}
+
+// connectivityHandler handles connectivity stats ie message published to connectivity.<ID>
+func connectivityHandler(m *nats.Msg) {
+	device := m.Subject[13:]
+	slog.Info("received connectivity stats", "device", device)
+	data := plexus.ConnectivityData{}
+	if err := json.Unmarshal(m.Data, &data); err != nil {
+		m.Header.Set("error", "invalid data")
+		m.Respond([]byte("nack"))
+		return
+	}
+	network, err := boltdb.Get[plexus.Network](data.Network, "networks")
+	if err != nil {
+		m.Header.Set("error", "no such network")
+		m.Respond([]byte("nack"))
+		return
+	}
+	updatedPeers := []plexus.NetworkPeer{}
+	for _, peer := range network.Peers {
+		if peer.WGPublicKey == device {
+			peer.Connectivity = data.Connectivity
+		}
+		updatedPeers = append(updatedPeers, peer)
+	}
+	network.Peers = updatedPeers
+	boltdb.Save(network, network.Name, "networks")
+	m.Respond([]byte("ack"))
 }
