@@ -77,18 +77,23 @@ func New(name string, mtu int, address netlink.Addr, config wgtypes.Config) wire
 	return wg
 }
 
-// Get returns an existing wireguard interface
+// GetDevice returns a wireguard device as wgtype.Device
+func GetDevice(name string) (*wgtypes.Device, error) {
+	client, err := wgctrl.New()
+	if err != nil {
+		return nil, err
+	}
+	return client.Device(name)
+}
+
+// Get returns an existing wireguard interface as a plexus.Wireguard
 func Get(name string) (wireguard, error) {
 	empty := wireguard{}
 	link, err := netlink.LinkByName(name)
 	if err != nil {
 		return empty, err
 	}
-	client, err := wgctrl.New()
-	if err != nil {
-		return empty, err
-	}
-	device, err := client.Device(name)
+	device, err := GetDevice(name)
 	if err != nil {
 		return empty, err
 	}

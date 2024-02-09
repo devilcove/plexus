@@ -81,6 +81,22 @@ func handleConnection(ctx context.Context, wg *sync.WaitGroup, conn net.Conn) {
 			if err := processJoin(command); err != nil {
 				slog.Error("process join", "error", err)
 			}
+			conn.Write([]byte("join"))
+		case "status":
+			slog.Debug("status request")
+			status, err := getStatus()
+			if err != nil {
+				slog.Error("getStatus", "error", err)
+				conn.Write([]byte("status error " + err.Error()))
+				return
+			}
+			payload, err := json.Marshal(status)
+			if err != nil {
+				slog.Error("marshal status", "error", err)
+				conn.Write([]byte("status error " + err.Error()))
+				return
+			}
+			conn.Write(payload)
 		default:
 			slog.Warn("unknow command", "command", command.Command)
 		}

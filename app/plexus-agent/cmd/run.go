@@ -167,7 +167,7 @@ func refreshData(self plexus.Device) {
 		msg, err := nc.Request("config."+self.WGPublicKey, []byte("helloworld"), time.Second*5)
 		if err != nil {
 			slog.Error("refresh data", "server", key, "error", err)
-			return
+			continue
 		}
 		slog.Info("refresh data", "msg", string(msg.Data))
 		var networks []plexus.Network

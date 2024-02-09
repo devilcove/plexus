@@ -126,6 +126,11 @@ type ConnectivityData struct {
 	Connectivity float64
 }
 
+type Status struct {
+	Server   string
+	Networks []Network
+}
+
 func DecodeToken(token string) (KeyValue, error) {
 	kv := KeyValue{}
 	data, err := base64.StdEncoding.DecodeString(token)
