@@ -27,9 +27,9 @@
                         <td>{{.PublicListenPort}}</td>
                         <td>{{.Version}}</td>
                         {{if .NatsConnected}}
-                            <td><i class="fa fa-check-circle fa-2x w3-green"></i></td>
+                            <td><img src="images/connect-green.svg" alt="green" height="36"></td>
                         {{- else}}
-                            <td><i class="fa fa-times-circle w3-red"></i></td>
+                            <td><img src="images/connect-red.svg" alt="red" height="36"></td>
                         {{- end}}
                         <td><button class="w3-button w3-theme" type="button" hx-delete="peers/{{.WGPublicKey}}"
                                 hx-target="#content" hx-target-error="#error" 

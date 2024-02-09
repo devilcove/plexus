@@ -62,17 +62,19 @@
                             hx-target="#content" hx-target-error="#error">{{.HostName}}</button></td>
                         <td>{{.Address.IP}}</td>
                         {{if .NatsConnected}}
-                            <td><i class="fa fa-check-circle fa-2x w3-green"></i></td>
+                            <td><img src="images/connect-green.svg" alt="green" height="36"></td>
                         {{- else}}
-                            <td><i class="fa fa-times-circle fa-2x w3-red"></i></td>
+                            <td><img src="images/connect-red.svg" alt="red" height="36"></td>
                         {{- end}}
-                        {{if gt .Connectivity .9 }}
-                            <td><i class="fa fa-check-circle fa-2x w3-green"></i>{{.Connectivity}}</td>
-                        {{- else }}{{ if ge .Connectivity .5}}
-                            <td><i class="fa fa-question-circle fa-2x w3-yellow"></i>{{.Connectivity}}</td>
-                        {{- else}}
-                            <td><i class="fa fa-times-circle w3-red"></i>{{.Connectivity}}</td>
-                        {{- end}}{{end}}
+                        {{if eq .Connectivity 1.0 }}
+                            <td><img src="images/network-green.svg" alt="green" height="36">{{.Connectivity}}</td>
+                        {{else if ge .Connectivity .7}}
+                            <td><img src="images/network-yellow.svg" alt="yellow" height="36">{{.Connectivity}}</td>
+                        {{else if ge .Connectivity .5}}
+                            <td><img src="images/network-orange.svg" alt="orange" height="36">{{.Connectivity}}</td>
+                        {{else}}
+                            <td><img src="images/network-red.svg" alt="red" height="36">{{.Connectivity}}</td>
+                        {{end}}
                         <td><button class="w3-button w3-theme" type="button" hx-delete="networks/peers/{{$network}}/{{.WGPublicKey}}"
                                 hx-target="#content" hx-target-error="#error"
                                 hx-confirm="Remove Peer from Network?">Remove</button></td>
