@@ -41,9 +41,7 @@ func main() {
 	signal.Notify(quit, syscall.SIGTERM, os.Interrupt)
 	signal.Notify(reset, syscall.SIGHUP)
 	ctx, cancel := context.WithCancel(context.Background())
-	wg.Add(2)
-	go web(ctx, &wg, logger)
-	go broker(ctx, &wg)
+	start(ctx, &wg, logger)
 	for {
 		select {
 		case <-quit:
@@ -56,9 +54,7 @@ func main() {
 			cancel()
 			wg.Wait()
 			ctx, cancel = context.WithCancel(context.Background())
-			wg.Add(2)
-			go web(ctx, &wg, logger)
-			go broker(ctx, &wg)
+			start(ctx, &wg, logger)
 		case <-brokerfail:
 			slog.Error("error running broker .... shutting down")
 			cancel()
@@ -71,6 +67,13 @@ func main() {
 			os.Exit(2)
 		}
 	}
+}
+
+func start(ctx context.Context, wg *sync.WaitGroup, logger *slog.Logger) {
+	wg.Add(3)
+	go web(ctx, wg, logger)
+	go broker(ctx, wg)
+	go expireKeys(ctx, wg)
 }
 
 func web(ctx context.Context, wg *sync.WaitGroup, logger *slog.Logger) {

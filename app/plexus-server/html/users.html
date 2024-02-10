@@ -3,24 +3,21 @@
 <div id="content">
     <div class="w3-container w3-center w3-theme-dark w3-padding">
         <div id="error" class="w3-red"></div>
-        <div class="w3-third"><br></div>
-        <div class="w3-third">
-            <h1>Users</h1>
-            <table class="w3-table-all w3-center w3-theme-l3">
-                <tr class="w3-theme-d5 w3-center">
-                    <td>Key</td>
-                    <td>Subscribe</td>
-                    <td>Publish</td>
-                </tr>
-                {{range . }}
-                <tr>
-                    <td>{{.Nkey}}</td>
-                    <td>{{.Permissions.Subscribe.Allow}}</td>
-                    <td>{{.Permissions.Publish.Allow}}</td>
-                </tr>
-                {{end}}
-            </table>
-        </div>
+        <h1>Users</h1>
+        <table class="w3-table-all w3-center w3-theme-l3">
+            <tr class="w3-theme-d5 w3-center">
+                <td>Key</td>
+                <td>Subscribe</td>
+                <td>Publish</td>
+            </tr>
+            {{range . }}
+            <tr>
+                <td>{{.Nkey}}</td>
+                <td>{{.Permissions.Subscribe.Allow}}</td>
+                <td>{{.Permissions.Publish.Allow}}</td>
+            </tr>
+            {{end}}
+        </table>
     </div>
 </div>
 {{end}}

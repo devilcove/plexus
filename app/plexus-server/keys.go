@@ -1,11 +1,16 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"regexp"
+	"slices"
+	"sync"
 	"time"
 
 	"github.com/devilcove/boltdb"
@@ -78,12 +83,13 @@ func displayKeys(c *gin.Context) {
 }
 
 func deleteKey(c *gin.Context) {
-	key := c.Param("id")
-	if err := boltdb.Delete[plexus.Key](key, "keys"); err != nil {
-		if errors.Is(err, boltdb.ErrNoResults) {
-			processError(c, http.StatusBadRequest, "key does not exist")
-			return
-		}
+	keyid := c.Param("id")
+	key, err := boltdb.Get[plexus.Key](keyid, "keys")
+	if err != nil {
+		processError(c, http.StatusBadRequest, "key does not exist")
+		return
+	}
+	if err := removeKey(key); err != nil {
 		processError(c, http.StatusInternalServerError, "delete key "+err.Error())
 		return
 	}
@@ -127,9 +133,7 @@ func decrementKeyUsage(name string) (plexus.Key, error) {
 		return key, err
 	}
 	if key.Usage == 1 {
-		if err := boltdb.Delete[plexus.Key](name, "keys"); err != nil {
-			return key, err
-		}
+		removeKey(key)
 		return key, nil
 	}
 	key.Usage = key.Usage - 1
@@ -137,4 +141,56 @@ func decrementKeyUsage(name string) (plexus.Key, error) {
 		return key, err
 	}
 	return key, nil
+}
+
+func expireKeys(ctx context.Context, wg *sync.WaitGroup) {
+	slog.Debug("key expiry checks starting")
+	defer wg.Done()
+	ticker := time.NewTicker(time.Hour * 6)
+	for {
+		select {
+		case <-ctx.Done():
+			ticker.Stop()
+			return
+		case <-ticker.C:
+			slog.Debug("checking for expired keys")
+			keys, err := boltdb.GetAll[plexus.Key]("keys")
+			if err != nil {
+				slog.Error("get keys", "error", err)
+				continue
+			}
+			for _, key := range keys {
+				if key.Expires.Before(time.Now()) {
+					slog.Debug("key has expired ...deleting", "key", key.Name, "expiry time", key.Expires.Format(time.RFC822))
+					removeKey(key)
+				}
+			}
+		}
+	}
+}
+
+func removeKey(key plexus.Key) error {
+	var errs error
+	if err := boltdb.Delete[plexus.Key](key.Name, "keys"); err != nil {
+		fmt.Println("delete key from db", err)
+		errors.Join(errs, err)
+	}
+	token, err := plexus.DecodeToken(key.Value)
+	if err != nil {
+		errs = errors.Join(errs, err)
+		return errs
+	}
+	pk := createNkeyUser(token.Seed)
+	for i, nkey := range natsOptions.Nkeys {
+		if nkey == nil {
+			continue
+		}
+		if nkey.Nkey == pk.Nkey {
+			natsOptions.Nkeys = slices.Delete(natsOptions.Nkeys, i, i+1)
+		}
+	}
+	if err := natServer.ReloadOptions(natsOptions); err != nil {
+		errs = errors.Join(errs, err)
+	}
+	return errs
 }

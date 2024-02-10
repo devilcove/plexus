@@ -9,7 +9,6 @@ import (
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
-	"github.com/kr/pretty"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nkeys"
@@ -147,7 +146,6 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 				},
 			})
 			natServer.ReloadOptions(natsOptions)
-			pretty.Println(natsOptions.Nkeys)
 		}
 	}
 }

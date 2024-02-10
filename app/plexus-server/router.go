@@ -25,6 +25,9 @@ func setupRouter() *gin.Engine {
 	}
 	store := cookie.NewStore([]byte(secret))
 	session := sessions.Sessions("plexus", store)
+	if config.Verbosity != "DEBUG" {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	router := gin.Default()
 	router.LoadHTMLGlob("html/*.html")
 	router.Static("images", "./images")
@@ -62,7 +65,7 @@ func setupRouter() *gin.Engine {
 	//router.GET("/login", displayLogin)
 	users := router.Group("/users", auth)
 	{
-		users.GET("", getUsers)
+		users.GET("/", getUsers)
 		//	users.GET("current", getUser)
 		//	users.POST("", addUser)
 		//	users.POST(":name", editUser)

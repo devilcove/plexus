@@ -138,7 +138,6 @@ func DecodeToken(token string) (KeyValue, error) {
 		slog.Error("base64 decode", "error", err)
 		return kv, err
 	}
-	slog.Info(string(data))
 	if err := json.Unmarshal(data, &kv); err != nil {
 		slog.Error("token unmarshal", "error", err)
 		return kv, err
