@@ -106,6 +106,10 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 	if err != nil {
 		slog.Error("subscribe connectivity", "error", err)
 	}
+	leaveSub, err := natsConn.Subscribe("leave.*", leaveHandler)
+	if err != nil {
+		slog.Error("subscribe leave", "error", err)
+	}
 
 	slog.Info("broker started")
 	//wg.Add(1)
@@ -117,6 +121,7 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 			updateSub.Drain()
 			configSub.Drain()
 			connectivitySub.Drain()
+			leaveSub.Drain()
 			return
 		case token := <-newDevice:
 			slog.Info("new login device", "device", token)

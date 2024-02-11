@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -229,6 +230,9 @@ func publishConnectivity(self plexus.Device, network plexus.Network) {
 		if device.Name != network.Interface {
 			continue
 		}
+		if len(device.Peers) == 0 {
+			continue
+		}
 		goodHandShakes := 0.0
 		for _, peer := range device.Peers {
 			if time.Since(peer.LastHandshakeTime) < time.Minute*3 {
@@ -249,4 +253,32 @@ func publishConnectivity(self plexus.Device, network plexus.Network) {
 		nc.Publish("connectivity."+self.WGPublicKey, payload)
 		slog.Debug("published connectivity", "data", data)
 	}
+}
+
+func leaveNetwork(name string) error {
+	self, err := boltdb.Get[plexus.Device]("self", "devices")
+	if err != nil {
+		slog.Debug("get self", "error", err)
+		return err
+	}
+	network, err := boltdb.Get[plexus.Network](name, "networks")
+	if err != nil {
+		slog.Debug("get network", "network", name, "error", err)
+		return err
+	}
+	nc, ok := serverMap[network.ServerURL]
+	if !ok {
+		slog.Debug("server map missing entry")
+		return errors.New("nats connection missing")
+	}
+	m, err := nc.Request("leave."+self.WGPublicKey, []byte(name), time.Second*5)
+	if err != nil {
+		slog.Debug("nats request", "error", err)
+		return err
+	}
+	if strings.Contains(string(m.Data), "error") {
+		slog.Debug("error in nats request response", "error", m.Data)
+		return errors.New(string(m.Data))
+	}
+	return nil
 }

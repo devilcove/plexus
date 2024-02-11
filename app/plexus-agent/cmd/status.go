@@ -16,12 +16,7 @@ limitations under the License.
 package cmd
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
-	"net"
-	"os"
 	"strconv"
 	"time"
 
@@ -37,28 +32,12 @@ var statusCmd = &cobra.Command{
 	Long:  `display status`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("status called")
-		c, err := net.Dial("unix", "/tmp/unixsock")
-		if errors.Is(err, os.ErrNotExist) {
-			fmt.Println("unable to connect to agent daemon, is daemon running? ... exiting")
+		networks, err := sendToDaemon[[]plexus.Network](plexus.Command{Command: "status"})
+		cobra.CheckErr(err)
+		if len(networks) == 0 {
+			fmt.Println("no networks")
 			return
 		}
-		cobra.CheckErr(err)
-		defer func() {
-			err := c.Close()
-			cobra.CheckErr(err)
-		}()
-		msg := plexus.Command{Command: "status"}
-		payload, err := json.Marshal(msg)
-		cobra.CheckErr(err)
-		_, err = c.Write(payload)
-		cobra.CheckErr(err)
-		err = c.(*net.UnixConn).CloseWrite()
-		cobra.CheckErr(err)
-		resp, err := io.ReadAll(c)
-		cobra.CheckErr(err)
-		networks := []plexus.Network{}
-		err = json.Unmarshal(resp, &networks)
-		cobra.CheckErr(err)
 		for _, network := range networks {
 			wg, err := plexus.GetDevice(network.Interface)
 			cobra.CheckErr(err)
@@ -84,9 +63,8 @@ var statusCmd = &cobra.Command{
 				fmt.Println("\ttransfer:", wg.Peers[i].ReceiveBytes, "received", wg.Peers[i].TransmitBytes, "sent")
 				fmt.Println("\tkeepalive:", wg.Peers[i].PersistentKeepaliveInterval)
 			}
+			fmt.Println()
 		}
-		//pretty.Println("networks", networks)
-
 	},
 }
 

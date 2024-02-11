@@ -52,26 +52,12 @@ var joinCmd = &cobra.Command{
 
 func join(token string) {
 	fmt.Println("join called")
-	// stop daemon if running
-	c, err := net.Dial("unix", "/tmp/unixsock")
-	if errors.Is(err, os.ErrNotExist) {
-		fmt.Println("unable to conect to agent daemon, is daemon running? ... exiting")
-		return
-	}
-	cobra.CheckErr(err)
-	defer func() {
-		err := c.Close()
-		cobra.CheckErr(err)
-	}()
-	msg := plexus.Command{
+	resp, err := sendToDaemon[string](plexus.Command{
 		Command: "join",
 		Data:    token,
-	}
-	payload, err := json.Marshal(msg)
+	})
 	cobra.CheckErr(err)
-	_, err = c.Write(payload)
-	cobra.CheckErr(err)
-	fmt.Println("join data passd to daemon")
+	fmt.Println(resp)
 }
 
 func init() {

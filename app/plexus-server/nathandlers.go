@@ -3,8 +3,10 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net"
+	"slices"
 	"strings"
 	"time"
 
@@ -19,7 +21,13 @@ import (
 func devicePermissions(id string) *server.Permissions {
 	return &server.Permissions{
 		Publish: &server.SubjectPermission{
-			Allow: []string{"checkin." + id, "update." + id, "config." + id, "connectivity." + id},
+			Allow: []string{
+				"checkin." + id,
+				"update." + id,
+				"config." + id,
+				"connectivity." + id,
+				"leave." + id,
+			},
 		},
 		Subscribe: &server.SubjectPermission{
 			Allow: []string{"networks.>", "_INBOX.>"},
@@ -219,4 +227,51 @@ func connectivityHandler(m *nats.Msg) {
 	network.Peers = updatedPeers
 	boltdb.Save(network, network.Name, "networks")
 	m.Respond([]byte("ack"))
+}
+
+// leaveHandler handles leaving a network
+func leaveHandler(m *nats.Msg) {
+	device := m.Subject[6:]
+	netName := string(m.Data)
+	slog.Debug("leave handler", "peer", device, "network", netName)
+	network, err := boltdb.Get[plexus.Network](netName, "networks")
+	if err != nil {
+		slog.Error("get network to leave", "error", err)
+		m.Respond([]byte("error " + err.Error()))
+		return
+	}
+	found := false
+	for i, peer := range network.Peers {
+		var errs error
+		if peer.WGPublicKey != device {
+			continue
+		}
+		found = true
+		network.Peers = slices.Delete(network.Peers, i, i+1)
+		if err := boltdb.Save(network, network.Name, "networks"); err != nil {
+			errs = errors.Join(errs, err)
+		}
+		update := plexus.NetworkUpdate{
+			Type: plexus.DeletePeer,
+			Peer: peer,
+		}
+		payload, err := json.Marshal(&update)
+		if err != nil {
+			errs = errors.Join(errs, err)
+		}
+		slog.Debug("publishing network update for peer leaving network", "network", netName, "peer", device)
+		if err := natsConn.Publish("networks."+netName, payload); err != nil {
+			errs = errors.Join(errs, err)
+		}
+		if errs != nil {
+			m.Respond([]byte("errors " + errs.Error()))
+			slog.Error("errors removing peer from network", "peer", device, "network", netName, "error(s)", errs)
+		}
+	}
+	if !found {
+		m.Respond([]byte(fmt.Sprintf("error: %s not a part of %s network", device, netName)))
+		slog.Error("peer not found", "peer", device, "network", netName)
+		return
+	}
+	m.Respond([]byte(fmt.Sprintf("%s deleted from %s network", device, netName)))
 }
