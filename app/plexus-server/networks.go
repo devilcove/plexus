@@ -21,6 +21,7 @@ func displayAddNetwork(c *gin.Context) {
 	session := sessions.Default(c)
 	page := getPage(session.Get("user"))
 	page.Page = "addNetwork"
+	session.Save()
 	c.HTML(http.StatusOK, "addNetwork", page)
 
 }
@@ -75,15 +76,18 @@ func addNetwork(c *gin.Context) {
 }
 
 func displayNetworks(c *gin.Context) {
+	session := sessions.Default(c)
 	networks, err := boltdb.GetAll[plexus.Network]("networks")
 	if err != nil {
 		processError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+	session.Save()
 	c.HTML(http.StatusOK, "networks", networks)
 }
 
 func networkDetails(c *gin.Context) {
+	session := sessions.Default(c)
 	details := struct {
 		Name  string
 		Peers []plexus.NetworkPeer
@@ -111,6 +115,7 @@ func networkDetails(c *gin.Context) {
 		slog.Debug("connectivity", "network", network.Name, "peer", peer.HostName, "connectivity", peer.Connectivity)
 	}
 	details.Name = networkName
+	session.Save()
 	c.HTML(http.StatusOK, "networkDetails", details)
 }
 

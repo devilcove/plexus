@@ -107,15 +107,28 @@ func joinHandler(msg *nats.Msg) {
 		}
 		joinResponse = append(joinResponse, netToUpdate)
 	}
-	// add device to broker
-	device := &server.NkeyUser{
-		Nkey:        request.Peer.PubNkey,
-		Permissions: devicePermissions(request.Peer.WGPublicKey),
+	// add device to broker if doesn't exist
+	found := false
+	for _, nkeys := range natsOptions.Nkeys {
+		slog.Debug("checking device nKeys", nkeys.Nkey, request.Peer.PubNkey)
+		if nkeys.Nkey == request.Peer.PubNkey {
+			found = true
+			slog.Debug("found", "found", found)
+			break
+		}
 	}
-	natsOptions.Nkeys = append(natsOptions.Nkeys, device)
-	if err := natServer.ReloadOptions(natsOptions); err != nil {
-		slog.Error("add new device to broker", "error", err)
-		msg.Respond([]byte("failed to add to broker"))
+	if !found {
+		slog.Debug("adding new device", "nkey", request.PubNkey)
+		pretty.Println(natsOptions.Nkeys)
+		device := &server.NkeyUser{
+			Nkey:        request.Peer.PubNkey,
+			Permissions: devicePermissions(request.Peer.WGPublicKey),
+		}
+		natsOptions.Nkeys = append(natsOptions.Nkeys, device)
+		if err := natServer.ReloadOptions(natsOptions); err != nil {
+			slog.Error("add new device to broker", "error", err)
+			msg.Respond([]byte("failed to add to broker"))
+		}
 	}
 	response, err := json.Marshal(joinResponse)
 	if err != nil {
