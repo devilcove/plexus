@@ -1,10 +1,10 @@
-package cmd
+package agent
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"log/slog"
 	"net"
 	"strings"
@@ -19,9 +19,8 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
-const defaultStart = 51820
-
 func deleteInterface(name string) error {
+	slog.Debug("deleting interface", "interface", name)
 	link, err := netlink.LinkByName(name)
 	if err != nil {
 		return fmt.Errorf("interface does not exist %w", err)
@@ -30,10 +29,12 @@ func deleteInterface(name string) error {
 }
 
 func deleteAllInterface() {
+	slog.Debug("deleting all interfaces")
 	networks, err := boltdb.GetAll[plexus.Network]("networks")
 	if err != nil {
 		slog.Error("retrieve networks", "error", err)
 	}
+	log.Printf("%d interfaces to delete", len(networks))
 	for _, network := range networks {
 		if err := deleteInterface(network.Interface); err != nil {
 			slog.Error("delete interface", "error", err)
@@ -240,17 +241,12 @@ func publishConnectivity(self plexus.Device, network plexus.Network) {
 			}
 		}
 		data.Connectivity = goodHandShakes / float64(len(device.Peers))
-		payload, err := json.Marshal(data)
-		if err != nil {
-			slog.Error("json marshal", "error", err)
-			continue
-		}
-		nc, ok := serverMap[network.ServerURL]
+		ec, ok := serverMap[network.ServerURL]
 		if !ok {
 			slog.Error("serverMap", "serverURL", network.ServerURL)
 			continue
 		}
-		nc.Publish("connectivity."+self.WGPublicKey, payload)
+		ec.Publish("connectivity."+self.WGPublicKey, data)
 		slog.Debug("published connectivity", "data", data)
 	}
 }
@@ -266,19 +262,19 @@ func leaveNetwork(name string) error {
 		slog.Debug("get network", "network", name, "error", err)
 		return err
 	}
-	nc, ok := serverMap[network.ServerURL]
+	ec, ok := serverMap[network.ServerURL]
 	if !ok {
 		slog.Debug("server map missing entry")
 		return errors.New("nats connection missing")
 	}
-	m, err := nc.Request("leave."+self.WGPublicKey, []byte(name), time.Second*5)
-	if err != nil {
+	m := ""
+	if err := ec.Request("leave."+self.WGPublicKey, name, m, time.Second*5); err != nil {
 		slog.Debug("nats request", "error", err)
 		return err
 	}
-	if strings.Contains(string(m.Data), "error") {
-		slog.Debug("error in nats request response", "error", m.Data)
-		return errors.New(string(m.Data))
+	if strings.Contains(m, "error") {
+		slog.Debug("error in nats request response", "error", m)
+		return errors.New(m)
 	}
 	return nil
 }

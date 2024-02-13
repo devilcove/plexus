@@ -22,19 +22,15 @@ import (
 	"os"
 
 	"github.com/devilcove/plexus"
+	"github.com/devilcove/plexus/agent"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var (
 	cfgFile string
-	config  Config
+	config  agent.Configuration
 )
-
-type Config struct {
-	Server    string
-	Verbosity string
-}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -91,6 +87,7 @@ func initConfig() {
 	if err := viper.Unmarshal(&config); err != nil {
 		log.Println("viper.Unmarshal", err)
 	}
+	agent.Config = config
 	plexus.SetLogging(config.Verbosity)
 	slog.Debug("using configuration", "config", config)
 }

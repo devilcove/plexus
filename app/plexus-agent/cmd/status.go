@@ -17,11 +17,12 @@ package cmd
 
 import (
 	"fmt"
+	"log/slog"
 	"strconv"
 	"time"
 
-	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
+	"github.com/devilcove/plexus/agent"
 	"github.com/spf13/cobra"
 )
 
@@ -32,15 +33,20 @@ var statusCmd = &cobra.Command{
 	Long:  `display status`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("status called")
-		networks, err := sendToDaemon[[]plexus.Network](plexus.Command{Command: "status"})
+		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
+		networks := []plexus.Network{}
+		cobra.CheckErr(ec.Request("status", nil, &networks, time.Second*5))
 		if len(networks) == 0 {
 			fmt.Println("no networks")
 			return
 		}
 		for _, network := range networks {
 			wg, err := plexus.GetDevice(network.Interface)
-			cobra.CheckErr(err)
+			if err != nil {
+				slog.Error("get wg device", "interface", network.Interface, "error", err)
+				continue
+			}
 			fmt.Println("interface:", network.Interface)
 			fmt.Println("\tnetwork name:", network.Name)
 			fmt.Println("\tserver: ", network.ServerURL)
@@ -80,8 +86,4 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// statusCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-}
-
-func getStatus() ([]plexus.Network, error) {
-	return boltdb.GetAll[plexus.Network]("networks")
 }

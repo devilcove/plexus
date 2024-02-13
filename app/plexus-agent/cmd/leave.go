@@ -17,8 +17,10 @@ package cmd
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/devilcove/plexus"
+	"github.com/devilcove/plexus/agent"
 	"github.com/spf13/cobra"
 )
 
@@ -30,12 +32,15 @@ var leaveCmd = &cobra.Command{
 	Long:  "leave network",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("leave called")
-		resp, err := sendToDaemon[string](plexus.Command{
-			Command: "leave",
-			Data:    args[0],
-		})
+		var response plexus.LeaveResponse
+		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
-		fmt.Println(resp)
+		cobra.CheckErr(ec.Request("leave", plexus.LeaveRequest{
+			Network: args[0],
+		}, &response, time.Second*5))
+		fmt.Println(response)
+		//cobra.CheckErr(ec.Flush())
+		ec.Close()
 	},
 }
 

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/nats-io/nats.go"
 )
 
 const (
@@ -106,6 +107,19 @@ type JoinRequest struct {
 	Peer
 }
 
+type LevelRequest struct {
+	Level string
+}
+
+type LeaveResponse struct {
+	Error   bool
+	Message string
+}
+
+type LeaveRequest struct {
+	Network string
+}
+
 type NetworkUpdate struct {
 	Type int
 	Peer NetworkPeer
@@ -116,9 +130,14 @@ type Command struct {
 	Data    any
 }
 
+type JoinCommand struct {
+	Token string
+}
+
 type NetMap struct {
-	Interface string
-	Channel   chan bool
+	Interface    string
+	Channel      chan bool
+	Subscription *nats.Subscription
 }
 
 type ConnectivityData struct {

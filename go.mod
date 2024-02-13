@@ -1,6 +1,6 @@
 module github.com/devilcove/plexus
 
-go 1.21.5
+go 1.22.0
 
 require (
 	github.com/c-robinson/iplib v1.0.8

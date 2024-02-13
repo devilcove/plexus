@@ -1,4 +1,4 @@
-package cmd
+package agent
 
 import (
 	"encoding/json"
@@ -9,7 +9,6 @@ import (
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
-	"github.com/kr/pretty"
 	"github.com/nats-io/nats.go"
 )
 
@@ -56,7 +55,6 @@ func networkUpdates(msg *nats.Msg) {
 				slog.Error("delete network", "error", err)
 			}
 			slog.Info("delete interface", "network", network.Name, "interface", networkMap[network.Name].Interface)
-			pretty.Println(networkMap)
 			deleteInterface(networkMap[network.Name].Interface)
 			return
 		}
