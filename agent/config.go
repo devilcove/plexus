@@ -1,11 +1,17 @@
 package agent
 
 import (
+	"time"
+
 	"github.com/devilcove/plexus"
 	"github.com/nats-io/nats.go"
 )
 
-const defaultStart = 51820
+const (
+	defaultWGPort    = 51820
+	defaultKeepalive = time.Second * 20
+	NatsTimeout      = time.Second * 5
+)
 
 var (
 	Config   Configuration

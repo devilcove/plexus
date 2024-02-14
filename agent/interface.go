@@ -44,7 +44,7 @@ func deleteAllInterface() {
 
 // func startInterfaces(ctx context.Context, wg *sync.WaitGroup) {
 func startInterface(self plexus.Device, network plexus.Network) error {
-	keepalive := time.Second * 25
+	keepalive := defaultKeepalive
 	address := netlink.Addr{}
 	privKey, err := wgtypes.ParseKey(self.WGPrivateKey)
 	if err != nil {
@@ -117,7 +117,7 @@ func addPeertoInterface(name string, peer plexus.NetworkPeer) error {
 	if err != nil {
 		return err
 	}
-	keepalive := time.Second * 20
+	keepalive := defaultKeepalive
 	iface.Config.Peers = append(iface.Config.Peers, wgtypes.PeerConfig{
 		PublicKey: key,
 		Endpoint: &net.UDPAddr{
@@ -162,7 +162,7 @@ func replacePeerInInterface(name string, replacement plexus.NetworkPeer) error {
 	if err != nil {
 		return err
 	}
-	keepalive := time.Second * 20
+	keepalive := defaultKeepalive
 	newPeer := wgtypes.PeerConfig{
 		PublicKey: key,
 		Endpoint: &net.UDPAddr{
@@ -184,7 +184,7 @@ func replacePeerInInterface(name string, replacement plexus.NetworkPeer) error {
 func getFreePort(start int) (int, error) {
 	addr := net.UDPAddr{}
 	if start == 0 {
-		start = defaultStart
+		start = defaultWGPort
 	}
 	for x := start; x <= 65535; x++ {
 		addr.Port = x
@@ -268,7 +268,7 @@ func leaveNetwork(name string) error {
 		return errors.New("nats connection missing")
 	}
 	m := ""
-	if err := ec.Request("leave."+self.WGPublicKey, name, m, time.Second*5); err != nil {
+	if err := ec.Request("leave."+self.WGPublicKey, name, m, NatsTimeout); err != nil {
 		slog.Debug("nats request", "error", err)
 		return err
 	}

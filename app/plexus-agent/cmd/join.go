@@ -17,7 +17,6 @@ package cmd
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/devilcove/plexus"
 	"github.com/devilcove/plexus/agent"
@@ -40,7 +39,7 @@ var joinCmd = &cobra.Command{
 		})
 		cobra.CheckErr(err)
 		networks := []plexus.Network{}
-		cobra.CheckErr(ec.Request("status", nil, &networks, time.Second))
+		cobra.CheckErr(ec.Request("status", nil, &networks, agent.NatsTimeout))
 		fmt.Println(networks)
 	},
 }

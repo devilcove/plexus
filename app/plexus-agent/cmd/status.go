@@ -36,7 +36,7 @@ var statusCmd = &cobra.Command{
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
 		networks := []plexus.Network{}
-		cobra.CheckErr(ec.Request("status", nil, &networks, time.Second*5))
+		cobra.CheckErr(ec.Request("status", nil, &networks, agent.NatsTimeout))
 		if len(networks) == 0 {
 			fmt.Println("no networks")
 			return

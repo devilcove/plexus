@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
@@ -24,7 +23,7 @@ func startAgentNatsServer(ctx context.Context, wg *sync.WaitGroup) {
 	}
 	go ns.Start()
 	defer ns.Shutdown()
-	if !ns.ReadyForConnections(3 * time.Second) {
+	if !ns.ReadyForConnections(NatsTimeout) {
 		slog.Error("nats not ready for connections")
 		panic("not ready for connections")
 	}
@@ -160,7 +159,7 @@ func processLeave(net string) (string, error) {
 	if !ok {
 		return "", errors.New("network not mapped to server")
 	}
-	msg, err := conn.Conn.Request("leave."+self.WGPublicKey, []byte(network.Name), time.Second*5)
+	msg, err := conn.Conn.Request("leave."+self.WGPublicKey, []byte(network.Name), NatsTimeout)
 	if err != nil {
 		return "", err
 	}

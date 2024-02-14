@@ -56,7 +56,7 @@ func processJoin(request *plexus.JoinCommand) error {
 		return err
 	}
 	networks := []plexus.Network{}
-	if err := ec.Request("join", joinRequest, &networks, time.Second*5); err != nil {
+	if err := ec.Request("join", joinRequest, &networks, NatsTimeout); err != nil {
 		return err
 	}
 	existingNetworks, err := boltdb.GetAll[plexus.Network]("networks")
@@ -65,7 +65,7 @@ func processJoin(request *plexus.JoinCommand) error {
 	}
 	offset := len(existingNetworks)
 	for i, network := range networks {
-		network.ListenPort = defaultStart + offset
+		network.ListenPort = defaultWGPort + offset
 		network.Interface = "plexus" + strconv.Itoa(i+offset)
 		if err := boltdb.Save(network, network.Name, "networks"); err != nil {
 			slog.Error("error saving network", "name", network.Name, "error", err)

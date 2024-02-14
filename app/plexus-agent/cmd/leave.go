@@ -17,7 +17,6 @@ package cmd
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/devilcove/plexus"
 	"github.com/devilcove/plexus/agent"
@@ -37,7 +36,7 @@ var leaveCmd = &cobra.Command{
 		cobra.CheckErr(err)
 		cobra.CheckErr(ec.Request("leave", plexus.LeaveRequest{
 			Network: args[0],
-		}, &response, time.Second*5))
+		}, &response, agent.NatsTimeout))
 		fmt.Println(response)
 		//cobra.CheckErr(ec.Flush())
 		ec.Close()

@@ -109,7 +109,7 @@ func refreshData(self plexus.Device) {
 			continue
 		}
 		var networks []plexus.Network
-		if err := ec.Request("config."+self.WGPublicKey, "helloworld", &networks, time.Second*5); err != nil {
+		if err := ec.Request("config."+self.WGPublicKey, "helloworld", &networks, NatsTimeout); err != nil {
 			slog.Error("refresh data", "server", key, "error", err)
 			continue
 		}
@@ -211,7 +211,7 @@ func checkin() {
 			slog.Debug("not connected to server broker .... skipping checkin", "server", server)
 			continue
 		}
-		msg, err := ec.Conn.Request("checkin."+self.WGPublicKey, []byte("checking"), time.Second)
+		msg, err := ec.Conn.Request("checkin."+self.WGPublicKey, []byte("checking"), NatsTimeout)
 		if err != nil {
 			slog.Error("error publishing checkin ", "error", err)
 			continue
