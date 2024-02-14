@@ -85,8 +85,19 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 		slog.Error("nats connect", "error", err)
 		brokerfail <- 1
 	}
+	encodedConn, err = nats.NewEncodedConn(natsConn, nats.JSON_ENCODER)
+	if err != nil {
+		slog.Error("nats encoded connect", "error", err)
+		brokerfail <- 1
+	}
 	// join handler
-	joinSub, err := natsConn.Subscribe("join", joinHandler)
+	joinSub, err := encodedConn.Subscribe("join", func(subj, reply string, request *plexus.JoinRequest) {
+		response := joinHandler(request)
+		slog.Debug("publish join reply", "response", response)
+		if err := encodedConn.Publish(reply, response); err != nil {
+			slog.Error("join", "error", err)
+		}
+	})
 	if err != nil {
 		slog.Error("subscribe join", "error", err)
 	}
@@ -94,7 +105,13 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 	if err != nil {
 		slog.Error("subscribe checkin", "error", err)
 	}
-	updateSub, err := natsConn.Subscribe("update.*", updateHandler)
+	updateSub, err := encodedConn.Subscribe("update.*", func(subj, reply string, request *plexus.NetworkRequest) {
+		response := processUpdate(request)
+		slog.Debug("pubish update rely", "respone", response)
+		if err := encodedConn.Publish(reply, response); err != nil {
+			slog.Error("update", "error", err)
+		}
+	})
 	if err != nil {
 		slog.Error("subscribe update", "error", err)
 	}

@@ -17,6 +17,7 @@ const (
 	AddPeer
 	UpdatePeer
 	DeleteNetork
+	ConnectToNetwork
 )
 
 type Settings struct {
@@ -50,6 +51,7 @@ type Network struct {
 	AddressString string `form:"addressstring"`
 	ListenPort    int    //only used by agent
 	Interface     string // only used by agent
+	Connected     bool
 	Peers         []NetworkPeer
 }
 
@@ -115,9 +117,20 @@ type LeaveResponse struct {
 	Error   bool
 	Message string
 }
+type NetworkResponse struct {
+	Error   bool
+	Message string
+}
 
 type LeaveRequest struct {
 	Network string
+}
+
+type NetworkRequest struct {
+	Network string
+	Server  string
+	Peer    Peer
+	Action  int
 }
 
 type NetworkUpdate struct {

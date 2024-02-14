@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"errors"
 	"time"
 
 	"github.com/devilcove/plexus"
@@ -13,6 +14,7 @@ const (
 	NatsTimeout         = time.Second * 5
 	checkinTime         = time.Minute * 1
 	connectivityTimeout = time.Minute * 3
+	networkNotMapped    = "network not mapped to server"
 )
 
 var (
@@ -22,6 +24,9 @@ var (
 	// networkMap containss the interface name and reset channel for networks
 	networkMap map[string]plexus.NetMap
 	serverMap  map[string]*nats.EncodedConn
+	//errors
+	ErrNetNotMapped = errors.New("network not mapped to server")
+	ErrConnected    = errors.New("network connected")
 )
 
 type Configuration struct {

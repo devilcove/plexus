@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -54,16 +53,16 @@ func startAgentNatsServer(ctx context.Context, wg *sync.WaitGroup) {
 			slog.Error("status response", "error", err)
 		}
 	})
-	ec.Subscribe("leave", func(subject, reply string, data plexus.LeaveRequest) {
-		response := plexus.LeaveResponse{}
-		var err error
-		response.Message, err = processLeave(data.Network)
-		if err != nil {
-			response.Error = true
-			response.Message = err.Error()
-		}
+	ec.Subscribe("leave", func(subject, reply string, data plexus.NetworkRequest) {
+		response := processLeave(data)
 		if err := ec.Publish(reply, response); err != nil {
 			slog.Error("pub response to leave request", "error", err)
+		}
+	})
+	ec.Subscribe("connect", func(sub, reply string, data plexus.NetworkRequest) {
+		response := processConnect(data)
+		if err := ec.Publish(reply, response); err != nil {
+			slog.Error("pub response to connect request", "error", err)
 		}
 	})
 	defer ec.Close()
@@ -145,24 +144,65 @@ func connectToServers(self plexus.Device) {
 	fmt.Println("networkmap", networkMap)
 }
 
-func processLeave(net string) (string, error) {
-	slog.Debug("leave", "network", net)
-	network, err := boltdb.Get[plexus.Network](net, "networks")
+func processLeave(request plexus.NetworkRequest) plexus.NetworkResponse {
+	slog.Debug("leave", "network", request.Network)
+	response := plexus.NetworkResponse{}
+	errResponse := plexus.NetworkResponse{Error: true}
+	network, err := boltdb.Get[plexus.Network](request.Network, "networks")
 	if err != nil {
-		return "", err
+		slog.Debug(err.Error())
+		errResponse.Message = err.Error()
+		return errResponse
 	}
 	self, err := boltdb.Get[plexus.Device]("self", "devices")
 	if err != nil {
-		return "", err
+		slog.Debug(err.Error())
+		errResponse.Message = err.Error()
+		return errResponse
 	}
 	conn, ok := serverMap[network.ServerURL]
 	if !ok {
-		return "", errors.New("network not mapped to server")
+		slog.Debug(err.Error())
+		errResponse.Message = networkNotMapped
+		return errResponse
 	}
-	msg, err := conn.Conn.Request("leave."+self.WGPublicKey, []byte(network.Name), NatsTimeout)
-	if err != nil {
-		return "", err
+	if err := conn.Request("leave."+self.WGPublicKey, request, &response, NatsTimeout); err != nil {
+		slog.Debug(err.Error())
+		errResponse.Message = err.Error()
+		return errResponse
 	}
 	slog.Debug("leave complete")
-	return string(msg.Data), nil
+	return response
+}
+
+func processConnect(request plexus.NetworkRequest) plexus.NetworkResponse {
+	slog.Debug("connect", "network", request.Network, "server", request.Server)
+	response := plexus.NetworkResponse{}
+	errResponse := plexus.NetworkResponse{Error: true}
+	_, err := boltdb.Get[plexus.Network](request.Network, "networks")
+	if err == nil {
+		slog.Debug(err.Error())
+		errResponse.Message = "already connected to network"
+		return errResponse
+	}
+	self, err := boltdb.Get[plexus.Device]("self", "devices")
+	if err != nil {
+		slog.Debug(err.Error())
+		errResponse.Message = err.Error()
+		return errResponse
+	}
+	serverEC, err := connectToServer(self, request.Server)
+	if err != nil {
+		slog.Debug(err.Error())
+		errResponse.Message = err.Error()
+		return errResponse
+	}
+	request.Peer = self.Peer
+	if err := serverEC.Request("update."+self.WGPublicKey, request, &response, NatsTimeout); err != nil {
+		slog.Debug(err.Error())
+		errResponse.Message = err.Error()
+		return errResponse
+	}
+	serverEC.Close()
+	return response
 }

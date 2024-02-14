@@ -35,111 +35,109 @@ func devicePermissions(id string) *server.Permissions {
 	}
 }
 
-func joinHandler(msg *nats.Msg) {
-	request := plexus.JoinRequest{}
-	if err := json.Unmarshal(msg.Data, &request); err != nil {
-		slog.Error("unable to decode join data", "error", err)
-		msg.Respond([]byte("unable to decode join data"))
-		return
-	}
-	slog.Info("join request", "request", request)
-	// decrement (and delete if necessary) usage remaining on key
+func joinHandler(request *plexus.JoinRequest) plexus.NetworkResponse {
+	slog.Debug("join request", "request", request)
+	errResp := plexus.NetworkResponse{Error: true}
 	key, err := decrementKeyUsage(request.KeyName)
 	if err != nil {
 		slog.Error("key update", "error", err)
-		msg.Respond([]byte("invalid key"))
-		return
-	}
-	// save new peer(device)
-	if err := boltdb.Save(request.Peer, request.Peer.WGPublicKey, "peers"); err != nil {
-		slog.Error("unable to save new peer", "error", err)
-		msg.Respond([]byte("failed to save peer" + err.Error()))
-		return
-	}
-	joinResponse := []plexus.Network{}
-	for _, network := range key.Networks {
-		netToUpdate, err := boltdb.Get[plexus.Network](network, "networks")
-		if err != nil {
-			slog.Error("retrieve network", "error", err)
-			continue
-		}
-		// check if peer is already part of network
-		found := false
-		for _, peer := range netToUpdate.Peers {
-			if peer.WGPublicKey == request.Peer.WGPublicKey {
-				found = true
-			}
-		}
-		// if not add peer to network and publish to network topic
-		if !found {
-			addr, err := getNextIP(netToUpdate)
-			if err != nil {
-				slog.Error("could not get ip ", "error", err)
-				msg.Respond([]byte("could not get ip" + err.Error()))
-				return
-			}
-			slog.Debug("setting ip to", "ip", addr)
-			update := plexus.NetworkUpdate{
-				Type: plexus.AddPeer,
-				Peer: plexus.NetworkPeer{
-					WGPublicKey:      request.Peer.WGPublicKey,
-					HostName:         request.Peer.Name,
-					PublicListenPort: request.Peer.PublicListenPort,
-					Endpoint:         request.Peer.Endpoint,
-					Address: net.IPNet{
-						IP:   addr,
-						Mask: netToUpdate.Net.Mask,
-					},
-				},
-			}
-			data, err := json.Marshal(&update)
-			if err != nil {
-				slog.Error("marshal new network peer", "error", err)
-			}
-			netToUpdate.Peers = append(netToUpdate.Peers, update.Peer)
-			if err := boltdb.Save(netToUpdate, netToUpdate.Name, "networks"); err != nil {
-				slog.Error("save updated network", "error", err)
-				continue
-			}
-			if err := natsConn.Publish("networks."+network, data); err != nil {
-				slog.Error("publish new peer", "error", err)
-			}
-		}
-		joinResponse = append(joinResponse, netToUpdate)
-	}
-	// add device to broker if doesn't exist
-	found := false
-	for _, nkeys := range natsOptions.Nkeys {
-		slog.Debug("checking device nKeys", nkeys.Nkey, request.Peer.PubNkey)
-		if nkeys.Nkey == request.Peer.PubNkey {
-			found = true
-			slog.Debug("found", "found", found)
-			break
-		}
-	}
-	if !found {
-		slog.Debug("adding new device", "nkey", request.PubNkey)
-		pretty.Println(natsOptions.Nkeys)
-		device := &server.NkeyUser{
-			Nkey:        request.Peer.PubNkey,
-			Permissions: devicePermissions(request.Peer.WGPublicKey),
-		}
-		natsOptions.Nkeys = append(natsOptions.Nkeys, device)
-		if err := natServer.ReloadOptions(natsOptions); err != nil {
-			slog.Error("add new device to broker", "error", err)
-			msg.Respond([]byte("failed to add to broker"))
-		}
-	}
-	response, err := json.Marshal(joinResponse)
-	if err != nil {
-		slog.Error("marshal response to new peer", "error", err)
-		msg.Respond([]byte("failed to create valid response"))
-		return
-	}
-	if err := msg.Respond(response); err != nil {
-		slog.Error("send response to join", "error", err)
+		errResp.Message = "key error " + err.Error()
+		return errResp
 	}
 
+	if err := saveNewPeer(request.Peer); err != nil {
+		slog.Debug(err.Error())
+		errResp.Message = err.Error()
+		return errResp
+	}
+	if err != addNKeyUser(request.Peer) {
+		errResp.Message = err.Error()
+		slog.Debug(errResp.Message)
+		return errResp
+	}
+	for _, network := range key.Networks {
+		if err := addPeerToNetwork(request.Peer, network); err != nil {
+			errResp.Message = err.Error()
+			slog.Debug(errResp.Message)
+			return errResp
+		}
+	}
+	return plexus.NetworkResponse{
+		Message: fmt.Sprintf("joined network(s) successfully %v", key.Networks),
+	}
+}
+
+func saveNewPeer(peer plexus.Peer) error {
+	if _, err := boltdb.Get[plexus.Peer](peer.WGPublicKey, "peers"); err == nil {
+		return errors.New("peer exists")
+	}
+	// save new peer(device)
+	if err := boltdb.Save(peer, peer.WGPublicKey, "peers"); err != nil {
+		slog.Debug("unable to save new peer", "error", err)
+		return err
+	}
+	return nil
+}
+
+func addNKeyUser(peer plexus.Peer) error {
+	for _, nkeys := range natsOptions.Nkeys {
+		slog.Debug("checking device nKeys", nkeys.Nkey, peer.PubNkey)
+		if nkeys.Nkey == peer.PubNkey {
+			slog.Error("nkey user exist")
+			return nil
+		}
+	}
+	device := &server.NkeyUser{
+		Nkey:        peer.PubNkey,
+		Permissions: devicePermissions(peer.WGPublicKey),
+	}
+	natsOptions.Nkeys = append(natsOptions.Nkeys, device)
+	if err := natServer.ReloadOptions(natsOptions); err != nil {
+		return err
+	}
+	return nil
+}
+
+func addPeerToNetwork(peer plexus.Peer, network string) error {
+	netToUpdate, err := boltdb.Get[plexus.Network](network, "networks")
+	if err != nil {
+		return err
+	}
+	// check if peer is already part of network
+	for _, existing := range netToUpdate.Peers {
+		if existing.WGPublicKey == peer.WGPublicKey {
+			return fmt.Errorf("peer exists in network %s", network)
+		}
+	}
+	addr, err := getNextIP(netToUpdate)
+	if err != nil {
+		return fmt.Errorf("unable to get ip for peer %s %s %v", peer.WGPublicKey, network, err)
+	}
+	slog.Debug("setting ip to", "ip", addr)
+	update := plexus.NetworkUpdate{
+		Type: plexus.AddPeer,
+		Peer: plexus.NetworkPeer{
+			WGPublicKey:      peer.WGPublicKey,
+			HostName:         peer.Name,
+			PublicListenPort: peer.PublicListenPort,
+			Endpoint:         peer.Endpoint,
+			Address: net.IPNet{
+				IP:   addr,
+				Mask: netToUpdate.Net.Mask,
+			},
+		},
+	}
+	netToUpdate.Peers = append(netToUpdate.Peers, update.Peer)
+	if err := boltdb.Save(netToUpdate, netToUpdate.Name, "networks"); err != nil {
+		slog.Error("save updated network", "error", err)
+		return err
+	}
+	slog.Debug("publish network update", "network", network, "update", update)
+	if err := encodedConn.Publish("networks."+network, update); err != nil {
+		slog.Error("publish new peer", "error", err)
+		return err
+	}
+	return nil
 }
 
 func getNextIP(network plexus.Network) (net.IP, error) {
@@ -193,14 +191,6 @@ func checkinHandler(m *nats.Msg) {
 		return
 	}
 	m.Respond([]byte("ack"))
-}
-
-// updateHandler handles messages published to update.<ID>
-func updateHandler(m *nats.Msg) {
-	device := m.Subject[7:]
-	//update, err := database.GetDevice(device)
-	slog.Info("received update", "device", device, "update", string(m.Data))
-	m.Respond([]byte("update ack"))
 }
 
 // configHandler handles requests for device configuration ie request published to config.<ID>
@@ -287,4 +277,38 @@ func leaveHandler(m *nats.Msg) {
 		return
 	}
 	m.Respond([]byte(fmt.Sprintf("%s deleted from %s network", device, netName)))
+}
+
+func processUpdate(request *plexus.NetworkRequest) plexus.NetworkResponse {
+	switch request.Action {
+	case plexus.ConnectToNetwork:
+		return connectToNetwork(request)
+	default:
+		return plexus.NetworkResponse{
+			Error:   true,
+			Message: "invalid request action",
+		}
+	}
+}
+
+func connectToNetwork(request *plexus.NetworkRequest) plexus.NetworkResponse {
+	errResponse := plexus.NetworkResponse{Error: true}
+	_, err := boltdb.Get[plexus.Peer](request.Peer.WGPublicKey, "peers")
+	if errors.Is(err, boltdb.ErrNoResults) {
+		if err := saveNewPeer(request.Peer); err != nil {
+			errResponse.Message = err.Error()
+			return errResponse
+		}
+		if err := addNKeyUser(request.Peer); err != nil {
+			errResponse.Message = err.Error()
+			return errResponse
+		}
+	}
+	if err := addPeerToNetwork(request.Peer, request.Network); err != nil {
+		errResponse.Message = err.Error()
+		return errResponse
+	}
+	return plexus.NetworkResponse{
+		Message: fmt.Sprintf("%s added to network %s", request.Peer.WGPublicKey, request.Network),
+	}
 }

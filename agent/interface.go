@@ -6,7 +6,6 @@ import (
 	"log"
 	"log/slog"
 	"net"
-	"strings"
 	"time"
 
 	"github.com/devilcove/boltdb"
@@ -239,32 +238,4 @@ func publishConnectivity(self plexus.Device) {
 			slog.Debug("published connectivity", "data", data)
 		}
 	}
-}
-
-func leaveNetwork(name string) error {
-	self, err := boltdb.Get[plexus.Device]("self", "devices")
-	if err != nil {
-		slog.Debug("get self", "error", err)
-		return err
-	}
-	network, err := boltdb.Get[plexus.Network](name, "networks")
-	if err != nil {
-		slog.Debug("get network", "network", name, "error", err)
-		return err
-	}
-	ec, ok := serverMap[network.ServerURL]
-	if !ok {
-		slog.Debug("server map missing entry")
-		return errors.New("nats connection missing")
-	}
-	m := ""
-	if err := ec.Request("leave."+self.WGPublicKey, name, m, NatsTimeout); err != nil {
-		slog.Debug("nats request", "error", err)
-		return err
-	}
-	if strings.Contains(m, "error") {
-		slog.Debug("error in nats request response", "error", m)
-		return errors.New(m)
-	}
-	return nil
 }

@@ -22,6 +22,7 @@ var (
 	natServer   *server.Server
 	natsOptions *server.Options
 	natsConn    *nats.Conn
+	encodedConn *nats.EncodedConn
 )
 
 func main() {
