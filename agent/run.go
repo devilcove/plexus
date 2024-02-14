@@ -49,10 +49,12 @@ func Run() {
 	//refreshData(self)
 	//slog.Info("set up subcriptions")
 	//setupSubs(ctx, &wg, self)
+	checkinTicker := time.NewTicker(time.Minute * 1)
 	for {
 		select {
 		case <-quit:
 			slog.Info("quit")
+			checkinTicker.Stop()
 			deleteAllInterface()
 			cancel()
 			wg.Wait()
@@ -82,6 +84,8 @@ func Run() {
 			connectToServers(self)
 			//refreshData(self)
 			//setupSubs(ctx, &wg, self)
+		case <-checkinTicker.C:
+			checkin()
 		}
 	}
 }

@@ -80,11 +80,9 @@ func startAgentNatsServer(ctx context.Context, wg *sync.WaitGroup) {
 	if _, err := ec.BindRecvChan("loglevel", loglevelCh); err != nil {
 		slog.Error("bind channel", "error", err)
 	}
-	checkinTicker := time.NewTicker(time.Minute * 1)
 	for {
 		select {
 		case <-ctx.Done():
-			checkinTicker.Stop()
 			return
 		case msg := <-generalCh:
 			slog.Debug("recieved", "msg", msg)
@@ -97,8 +95,6 @@ func startAgentNatsServer(ctx context.Context, wg *sync.WaitGroup) {
 			newLevel := strings.ToUpper(level.Level)
 			slog.Info("loglevel change", "level", newLevel)
 			plexus.SetLogging(newLevel)
-		case <-checkinTicker.C:
-			checkin()
 		}
 	}
 
