@@ -23,7 +23,7 @@ func displayPeers(c *gin.Context) {
 	}
 	//set Status for display
 	for _, peer := range peers {
-		if time.Since(peer.Updated) < time.Second*10 {
+		if time.Since(peer.Updated) < connectedTime {
 			peer.NatsConnected = true
 			pretty.Println(peer.NatsConnected)
 		}

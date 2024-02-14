@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
@@ -28,6 +29,8 @@ type configuration struct {
 var (
 	config       configuration
 	ErrServerURL = errors.New("invalid server URL")
+	//timers
+	connectedTime = time.Second * 30
 )
 
 func configureServer() (*slog.Logger, error) {
