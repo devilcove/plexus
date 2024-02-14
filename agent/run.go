@@ -49,7 +49,7 @@ func Run() {
 	//refreshData(self)
 	//slog.Info("set up subcriptions")
 	//setupSubs(ctx, &wg, self)
-	checkinTicker := time.NewTicker(time.Minute * 1)
+	checkinTicker := time.NewTicker(checkinTime)
 	for {
 		select {
 		case <-quit:
@@ -85,7 +85,8 @@ func Run() {
 			//refreshData(self)
 			//setupSubs(ctx, &wg, self)
 		case <-checkinTicker.C:
-			checkin()
+			wg.Add(1)
+			checkin(&wg)
 		}
 	}
 }
@@ -142,9 +143,8 @@ func setupSubs(ctx context.Context, wg *sync.WaitGroup, self plexus.Device) {
 			slog.Error("interface did not start", "name", iface, "network", network.Name, "error", err)
 			return
 		}
-		wg.Add(2)
+		wg.Add(1)
 		go natSubscribe(ctx, wg, self, network, serverMap[network.ServerURL])
-		go networkConnectivityStats(ctx, wg, self, network)
 	}
 }
 
@@ -200,7 +200,8 @@ func natSubscribe(ctx context.Context, wg *sync.WaitGroup, self plexus.Device, n
 	slog.Info("networks subs exititing", "network", network.Name)
 }
 
-func checkin() {
+func checkin(wg *sync.WaitGroup) {
+	defer wg.Done()
 	self, err := boltdb.Get[plexus.Device]("self", "devices")
 	if err != nil {
 		slog.Error("get device", "error", err)
@@ -218,6 +219,7 @@ func checkin() {
 		}
 		log.Println("checkin response from server", server, string(msg.Data))
 	}
+	publishConnectivity(self)
 }
 
 func closeServerConnections() {

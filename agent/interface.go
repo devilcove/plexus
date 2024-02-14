@@ -1,14 +1,12 @@
 package agent
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log"
 	"log/slog"
 	"net"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/devilcove/boltdb"
@@ -198,24 +196,11 @@ func getFreePort(start int) (int, error) {
 	return start, errors.New("no free ports")
 }
 
-func networkConnectivityStats(ctx context.Context, wg *sync.WaitGroup, self plexus.Device, network plexus.Network) {
-	defer wg.Done()
-	ticker := time.NewTicker(time.Minute * 1)
-	publishConnectivity(self, network)
-	for {
-		select {
-		case <-ctx.Done():
-			ticker.Stop()
-			return
-		case <-ticker.C:
-			publishConnectivity(self, network)
-		}
-	}
-}
-
-func publishConnectivity(self plexus.Device, network plexus.Network) {
-	data := plexus.ConnectivityData{
-		Network: network.Name,
+func publishConnectivity(self plexus.Device) {
+	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	if err != nil {
+		slog.Error("get networks", "error", err)
+		return
 	}
 	client, err := wgctrl.New()
 	if err != nil {
@@ -227,27 +212,32 @@ func publishConnectivity(self plexus.Device, network plexus.Network) {
 		slog.Warn("get wireguard devices", "error", err)
 		return
 	}
-	for _, device := range devices {
-		if device.Name != network.Interface {
-			continue
+	for _, network := range networks {
+		data := plexus.ConnectivityData{
+			Network: network.Name,
 		}
-		if len(device.Peers) == 0 {
-			continue
-		}
-		goodHandShakes := 0.0
-		for _, peer := range device.Peers {
-			if time.Since(peer.LastHandshakeTime) < time.Minute*3 {
-				goodHandShakes++
+		for _, device := range devices {
+			if device.Name != network.Interface {
+				continue
 			}
+			if len(device.Peers) == 0 {
+				continue
+			}
+			goodHandShakes := 0.0
+			for _, peer := range device.Peers {
+				if time.Since(peer.LastHandshakeTime) < connectivityTimeout {
+					goodHandShakes++
+				}
+			}
+			data.Connectivity = goodHandShakes / float64(len(device.Peers))
+			ec, ok := serverMap[network.ServerURL]
+			if !ok {
+				slog.Error("serverMap", "serverURL", network.ServerURL)
+				continue
+			}
+			ec.Publish("connectivity."+self.WGPublicKey, data)
+			slog.Debug("published connectivity", "data", data)
 		}
-		data.Connectivity = goodHandShakes / float64(len(device.Peers))
-		ec, ok := serverMap[network.ServerURL]
-		if !ok {
-			slog.Error("serverMap", "serverURL", network.ServerURL)
-			continue
-		}
-		ec.Publish("connectivity."+self.WGPublicKey, data)
-		slog.Debug("published connectivity", "data", data)
 	}
 }
 

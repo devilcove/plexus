@@ -8,9 +8,11 @@ import (
 )
 
 const (
-	defaultWGPort    = 51820
-	defaultKeepalive = time.Second * 20
-	NatsTimeout      = time.Second * 5
+	defaultWGPort       = 51820
+	defaultKeepalive    = time.Second * 20
+	NatsTimeout         = time.Second * 5
+	checkinTime         = time.Minute * 1
+	connectivityTimeout = time.Minute * 3
 )
 
 var (
