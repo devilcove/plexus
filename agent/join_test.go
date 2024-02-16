@@ -1,4 +1,4 @@
-package cmd
+package agent
 
 import (
 	"net"
@@ -55,12 +55,16 @@ func TestNewDevice(t *testing.T) {
 	hostname, err := os.Hostname()
 	assert.Nil(t, err)
 	t.Run("newDevice", func(t *testing.T) {
-		device = newDevice()
+		device, err = newDevice()
+		assert.Nil(t, err)
 		assert.Equal(t, hostname, device.Name)
 	})
 	t.Run("existingDevice", func(t *testing.T) {
-		newDevice := newDevice()
-		assert.Equal(t, device.Seed, newDevice.Seed)
+		device, err = newDevice()
+		assert.Nil(t, err)
+		new, err := newDevice()
+		assert.Nil(t, err)
+		assert.Equal(t, device.Seed, new.Seed)
 	})
 	err = boltdb.Close()
 	assert.Nil(t, err)

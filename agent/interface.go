@@ -6,6 +6,7 @@ import (
 	"log"
 	"log/slog"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/devilcove/boltdb"
@@ -22,19 +23,38 @@ func deleteInterface(name string) error {
 	if err != nil {
 		return fmt.Errorf("interface does not exist %w", err)
 	}
+	log.Println(link.Attrs().Name, link.Attrs().Index)
 	return netlink.LinkDel(link)
 }
 
-func deleteAllInterface() {
+func deleteAllInterface(wg *sync.WaitGroup) error {
+	defer wg.Done()
 	slog.Debug("deleting all interfaces")
 	networks, err := boltdb.GetAll[plexus.Network]("networks")
 	if err != nil {
 		slog.Error("retrieve networks", "error", err)
+		return err
 	}
 	log.Printf("%d interfaces to delete", len(networks))
 	for _, network := range networks {
 		if err := deleteInterface(network.Interface); err != nil {
 			slog.Error("delete interface", "error", err)
+			return err
+		}
+	}
+	return nil
+}
+
+func startAllInterfaces(self plexus.Device) {
+	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	if err != nil {
+		slog.Error("get networks", "error", err)
+		return
+	}
+	for _, network := range networks {
+		slog.Debug("starting interface", "interface", network.Interface, "network", network.Name, "server", network.ServerURL)
+		if err := startInterface(self, network); err != nil {
+			slog.Error("start interface", "network", network.Name, "interface", network.Interface, "error", err)
 		}
 	}
 }
@@ -192,7 +212,7 @@ func getFreePort(start int) (int, error) {
 		conn.Close()
 		return x, nil
 	}
-	return start, errors.New("no free ports")
+	return 0, errors.New("no free ports")
 }
 
 func publishConnectivity(self plexus.Device) {

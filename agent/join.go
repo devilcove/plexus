@@ -6,7 +6,6 @@ import (
 	"net"
 	"os"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
 
@@ -55,23 +54,17 @@ func processJoin(request *plexus.JoinCommand) error {
 	if err != nil {
 		return err
 	}
-	networks := []plexus.Network{}
-	if err := ec.Request("join", joinRequest, &networks, NatsTimeout); err != nil {
+	resp := plexus.NetworkResponse{}
+	if err := ec.Request("join", joinRequest, &resp, NatsTimeout); err != nil {
 		return err
 	}
-	existingNetworks, err := boltdb.GetAll[plexus.Network]("networks")
+	self, err := boltdb.Get[plexus.Device]("self", "devices")
 	if err != nil {
-		return err
+		slog.Error("get self", "error", err)
 	}
-	offset := len(existingNetworks)
-	for i, network := range networks {
-		network.ListenPort = defaultWGPort + offset
-		network.Interface = "plexus" + strconv.Itoa(i+offset)
-		if err := boltdb.Save(network, network.Name, "networks"); err != nil {
-			slog.Error("error saving network", "name", network.Name, "error", err)
-		}
-	}
-	restart <- struct{}{}
+	addNewNetworks(self, resp.Networks)
+	// reset nats connection
+	connectToServers(self)
 	return nil
 }
 

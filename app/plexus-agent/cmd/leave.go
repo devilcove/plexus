@@ -34,10 +34,14 @@ var leaveCmd = &cobra.Command{
 		var response plexus.LeaveResponse
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
-		cobra.CheckErr(ec.Request("leave", plexus.LeaveRequest{
+		cobra.CheckErr(ec.Request("update", plexus.UpdateRequest{
 			Network: args[0],
+			Action:  plexus.LeaveNetwork,
 		}, &response, agent.NatsTimeout))
-		fmt.Println(response)
+		if response.Error {
+			fmt.Println("errors were encounterd")
+		}
+		fmt.Println(response.Message)
 		//cobra.CheckErr(ec.Flush())
 		ec.Close()
 	},

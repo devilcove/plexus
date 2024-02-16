@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -53,14 +55,17 @@ func startAgentNatsServer(ctx context.Context, wg *sync.WaitGroup) {
 			slog.Error("status response", "error", err)
 		}
 	})
-	ec.Subscribe("leave", func(subject, reply string, data plexus.NetworkRequest) {
-		response := processLeave(data)
-		if err := ec.Publish(reply, response); err != nil {
-			slog.Error("pub response to leave request", "error", err)
+	ec.Subscribe("update", func(sub, reply string, data plexus.UpdateRequest) {
+		response := plexus.NetworkResponse{}
+		switch data.Action {
+		case plexus.ConnectToNetwork:
+			response = processConnect(data)
+		case plexus.LeaveNetwork:
+			response = processLeave(data)
+		default:
+			response.Error = true
+			response.Message = "invalid request"
 		}
-	})
-	ec.Subscribe("connect", func(sub, reply string, data plexus.NetworkRequest) {
-		response := processConnect(data)
 		if err := ec.Publish(reply, response); err != nil {
 			slog.Error("pub response to connect request", "error", err)
 		}
@@ -123,14 +128,12 @@ func connectToServers(self plexus.Device) {
 		ec, err := connectToServer(self, network.ServerURL)
 		if err != nil {
 			slog.Error("unable to connect to server", "server", network.ServerURL, "error", err)
+			continue
 		}
 		serverMap[network.ServerURL] = ec
 		iface := network.Interface
 		channel := make(chan bool, 1)
-		if err := startInterface(self, network); err != nil {
-			slog.Error("start interface", "name", iface, "network", network, "error", err)
-		}
-		sub, err := ec.Subscribe("networks."+network.Name, networkUpdates)
+		sub, err := ec.Subscribe("networks.>", networkUpdates)
 		if err != nil {
 			slog.Error("network subscription failed", "error", err)
 		}
@@ -144,7 +147,7 @@ func connectToServers(self plexus.Device) {
 	fmt.Println("networkmap", networkMap)
 }
 
-func processLeave(request plexus.NetworkRequest) plexus.NetworkResponse {
+func processLeave(request plexus.UpdateRequest) plexus.NetworkResponse {
 	slog.Debug("leave", "network", request.Network)
 	response := plexus.NetworkResponse{}
 	errResponse := plexus.NetworkResponse{Error: true}
@@ -175,7 +178,7 @@ func processLeave(request plexus.NetworkRequest) plexus.NetworkResponse {
 	return response
 }
 
-func processConnect(request plexus.NetworkRequest) plexus.NetworkResponse {
+func processConnect(request plexus.UpdateRequest) plexus.NetworkResponse {
 	slog.Debug("connect", "network", request.Network, "server", request.Server)
 	response := plexus.NetworkResponse{}
 	errResponse := plexus.NetworkResponse{Error: true}
@@ -204,5 +207,38 @@ func processConnect(request plexus.NetworkRequest) plexus.NetworkResponse {
 		return errResponse
 	}
 	serverEC.Close()
+	addNewNetworks(self, response.Networks)
+	connectToServers(self)
 	return response
+}
+
+func addNewNetworks(self plexus.Device, networks []plexus.Network) {
+	existingNetworks, err := boltdb.GetAll[plexus.Network]("networks")
+	if err != nil {
+		slog.Error("get existing networks", "error", err)
+	}
+	takenInterfaces := []int{}
+	for _, existing := range existingNetworks {
+		takenInterfaces = append(takenInterfaces, existing.InterfaceSuffix)
+	}
+	for _, network := range networks {
+		network.ListenPort, err = getFreePort(defaultWGPort)
+		if err != nil {
+			slog.Debug(err.Error())
+		}
+		for i := range maxNetworks {
+			if !slices.Contains(takenInterfaces, i) {
+				network.InterfaceSuffix = i
+				network.Interface = "plexus" + strconv.Itoa(i)
+				takenInterfaces = append(takenInterfaces, i)
+				break
+			}
+		}
+		if err := boltdb.Save(network, network.Name, "networks"); err != nil {
+			slog.Error("error saving network", "name", network.Name, "error", err)
+		}
+		if err := startInterface(self, network); err != nil {
+			slog.Error("start new interface", "error", err)
+		}
+	}
 }

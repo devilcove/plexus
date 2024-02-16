@@ -35,12 +35,15 @@ var connectCmd = &cobra.Command{
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
 		defer ec.Close()
-		cobra.CheckErr(ec.Request("connect", plexus.NetworkRequest{
+		cobra.CheckErr(ec.Request("update", plexus.UpdateRequest{
 			Network: args[0],
 			Server:  args[1],
 			Action:  plexus.ConnectToNetwork,
 		}, &response, agent.NatsTimeout))
-		fmt.Println(response)
+		if response.Error {
+			fmt.Println("errors were encountered")
+		}
+		fmt.Println(response.Message)
 	},
 }
 

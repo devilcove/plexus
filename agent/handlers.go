@@ -1,29 +1,21 @@
 package agent
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"slices"
-	"strings"
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
-	"github.com/nats-io/nats.go"
 )
 
-func networkUpdates(msg *nats.Msg) {
-	parts := strings.Split(msg.Subject, ".")
-	if len(parts) < 2 {
-		slog.Error("invalid msg subject", "subject", msg.Subject)
-		return
-	}
-	networkName := parts[1]
-	slog.Info("network update for", "network", networkName, "msg", string(msg.Data))
+func networkUpdates(subject string, update plexus.NetworkUpdate) {
+	networkName := subject[8:]
+	slog.Info("network update for", "network", networkName, "msg", update)
 	network, err := boltdb.Get[plexus.Network](networkName, "networks")
 	if err != nil {
 		if errors.Is(err, boltdb.ErrNoResults) {
-			slog.Info("received update for invalid network")
+			slog.Info("received update for invalid network", "network", network)
 			return
 		}
 		slog.Error("unable to read networks", "error", err)
@@ -32,11 +24,6 @@ func networkUpdates(msg *nats.Msg) {
 	self, err := boltdb.Get[plexus.Device]("self", "devices")
 	if err != nil {
 		slog.Error("unable to read devices", "error", err)
-		return
-	}
-	update := plexus.NetworkUpdate{}
-	if err := json.Unmarshal(msg.Data, &update); err != nil {
-		slog.Error("unable to unmarshal message", "error", err)
 		return
 	}
 	switch update.Type {

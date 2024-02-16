@@ -18,6 +18,7 @@ const (
 	UpdatePeer
 	DeleteNetork
 	ConnectToNetwork
+	LeaveNetwork
 )
 
 type Settings struct {
@@ -45,14 +46,15 @@ type User struct {
 }
 
 type Network struct {
-	Name          string `form:"name"`
-	ServerURL     string
-	Net           net.IPNet
-	AddressString string `form:"addressstring"`
-	ListenPort    int    //only used by agent
-	Interface     string // only used by agent
-	Connected     bool
-	Peers         []NetworkPeer
+	Name            string `form:"name"`
+	ServerURL       string
+	Net             net.IPNet
+	AddressString   string `form:"addressstring"`
+	ListenPort      int    //only used by agent
+	Interface       string // only used by agent
+	InterfaceSuffix int    // only used by agent
+	Connected       bool
+	Peers           []NetworkPeer
 }
 
 type NetworkPeer struct {
@@ -105,7 +107,8 @@ type ServerClients struct {
 }
 
 type JoinRequest struct {
-	KeyName string
+	KeyName string //used by join
+	Network string //used by connect
 	Peer
 }
 
@@ -118,15 +121,16 @@ type LeaveResponse struct {
 	Message string
 }
 type NetworkResponse struct {
-	Error   bool
-	Message string
+	Error    bool
+	Message  string
+	Networks []Network
 }
 
 type LeaveRequest struct {
 	Network string
 }
 
-type NetworkRequest struct {
+type UpdateRequest struct {
 	Network string
 	Server  string
 	Peer    Peer

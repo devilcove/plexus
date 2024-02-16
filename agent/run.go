@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -23,25 +24,27 @@ func Run() {
 	if err := plexus.WritePID(os.Getenv("HOME")+"/.cache/plexus-agent.pid", os.Getpid()); err != nil {
 		slog.Error("failed to write pid to file", "error", err)
 	}
-	wg := sync.WaitGroup{}
-	quit := make(chan os.Signal, 1)
-	reset := make(chan os.Signal, 1)
-	restart = make(chan struct{}, 1)
-	natsfail = make(chan struct{}, 1)
-	signal.Notify(quit, syscall.SIGTERM, os.Interrupt)
-	signal.Notify(reset, syscall.SIGHUP)
-	ctx, cancel := context.WithCancel(context.Background())
 	if err := boltdb.Initialize(os.Getenv("HOME")+"/.local/share/plexus/plexus-agent.db", []string{"devices", "networks"}); err != nil {
 		slog.Error("failed to initialize database", "error", err)
 		return
 	}
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	fmt.Println(deleteAllInterface(&wg))
+	quit := make(chan os.Signal, 1)
+	reset := make(chan os.Signal, 1)
+	restart = make(chan struct{}, 1)
+	natsfail = make(chan struct{}, 1)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+	//signal.Notify(quit, syscall.SIGTERM)
+	signal.Notify(reset, syscall.SIGHUP)
+	ctx, cancel := context.WithCancel(context.Background())
 	self, err := newDevice()
 	if err != nil {
 		slog.Error("new device", "error", err)
 	}
+	startAllInterfaces(self)
 	wg.Add(1)
-	slog.Info("starting socket server")
-	//go socketServer(ctx, &wg)
 	go startAgentNatsServer(ctx, &wg)
 	slog.Info("setup nats")
 	connectToServers(self)
@@ -50,16 +53,17 @@ func Run() {
 	//slog.Info("set up subcriptions")
 	//setupSubs(ctx, &wg, self)
 	checkinTicker := time.NewTicker(checkinTime)
+	serverTicker := time.NewTicker(serverCheckTime)
 	for {
 		select {
 		case <-quit:
 			slog.Info("quit")
 			checkinTicker.Stop()
-			deleteAllInterface()
+			serverTicker.Stop()
 			cancel()
 			wg.Wait()
 			slog.Info("go routines stopped")
-			return
+			os.Exit(1)
 		case <-reset:
 			slog.Info("reset")
 			cancel()
@@ -87,6 +91,10 @@ func Run() {
 		case <-checkinTicker.C:
 			wg.Add(1)
 			checkin(&wg)
+		case <-serverTicker.C:
+			slog.Debug("refreshing server connection")
+			closeServerConnections()
+			connectToServers(self)
 		}
 	}
 }

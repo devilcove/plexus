@@ -105,7 +105,7 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 	if err != nil {
 		slog.Error("subscribe checkin", "error", err)
 	}
-	updateSub, err := encodedConn.Subscribe("update.*", func(subj, reply string, request *plexus.NetworkRequest) {
+	updateSub, err := encodedConn.Subscribe("update.*", func(subj, reply string, request *plexus.UpdateRequest) {
 		response := processUpdate(request)
 		slog.Debug("pubish update rely", "respone", response)
 		if err := encodedConn.Publish(reply, response); err != nil {
