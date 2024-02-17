@@ -84,6 +84,9 @@ func deletePeer(c *gin.Context) {
 		processError(c, http.StatusInternalServerError, "delete peer "+peer.Name+""+err.Error())
 		return
 	}
+	if err := encodedConn.Publish(peer.WGPublicKey+".delete", plexus.DeviceUpdate{Type: 1}); err != nil {
+		slog.Error("publish peer deletion", "error", err)
+	}
 	deletePeerFromBroker(peer.PubNkey)
 	displayPeers(c)
 }

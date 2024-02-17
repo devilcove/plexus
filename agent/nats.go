@@ -146,14 +146,26 @@ func connectToServers() {
 			slog.Error("network server not in list of servers", "network server", "network.ServerURL", "servers", self.Servers)
 			continue
 		}
-		sub, err := ec.Subscribe("networks.>", networkUpdates)
+		updates, err := ec.Subscribe("networks.>", networkUpdates)
 		if err != nil {
 			slog.Error("network subscription failed", "error", err)
 		}
+		self, err := ec.Subscribe(self.WGPublicKey+".>", func(subject string, data *plexus.DeviceUpdate) {
+			if subject[45:] == "delete" {
+				delete(serverMap, network.ServerURL)
+				ec.Close()
+				deleteServer(network.ServerURL)
+			} else {
+				slog.Error("invalid subject", "subj", subject[45:])
+			}
+		})
+		if err != nil {
+			slog.Error("device subscription failed", "error", err)
+		}
 		networkMap[network.Name] = plexus.NetMap{
-			Interface:    iface,
-			Channel:      channel,
-			Subscription: sub,
+			Interface:     iface,
+			Channel:       channel,
+			Subscriptions: []*nats.Subscription{updates, self},
 		}
 	}
 	fmt.Println("servermap", serverMap, "length", len(serverMap))

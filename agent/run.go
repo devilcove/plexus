@@ -181,7 +181,11 @@ func connectToServer(self plexus.Device, server string) (*nats.EncodedConn, erro
 			slog.Info("reconnected to nats server")
 		}),
 		nats.ErrorHandler(func(c *nats.Conn, s *nats.Subscription, err error) {
-			slog.Info("nats error", "error", err)
+			if s != nil {
+				slog.Info("nats error", "subject", s.Subject, "error", err)
+			} else {
+				slog.Info("nats error", "error", err)
+			}
 		}),
 		nats.Nkey(pk, sign),
 	}...)
@@ -233,8 +237,10 @@ func checkin(wg *sync.WaitGroup) {
 func closeServerConnections() {
 	for _, ec := range serverMap {
 		for _, network := range networkMap {
-			if err := network.Subscription.Drain(); err != nil {
-				slog.Error("drain subscription", "sub", network.Subscription.Subject, "error", err)
+			for _, sub := range network.Subscriptions {
+				if err := sub.Drain(); err != nil {
+					slog.Error("drain subscription", "sub", sub.Subject, "error", err)
+				}
 			}
 		}
 		ec.Close()

@@ -143,6 +143,10 @@ type NetworkUpdate struct {
 	Peer NetworkPeer
 }
 
+type DeviceUpdate struct {
+	Type int
+}
+
 type Command struct {
 	Command string
 	Data    any
@@ -153,9 +157,9 @@ type JoinCommand struct {
 }
 
 type NetMap struct {
-	Interface    string
-	Channel      chan bool
-	Subscription *nats.Subscription
+	Interface     string
+	Channel       chan bool
+	Subscriptions []*nats.Subscription
 }
 
 type ConnectivityData struct {

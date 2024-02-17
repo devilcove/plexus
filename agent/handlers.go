@@ -9,6 +9,22 @@ import (
 	"github.com/devilcove/plexus"
 )
 
+func deleteServer(server string) {
+	self, err := boltdb.Get[plexus.Device]("self", "devices")
+	if err != nil {
+		slog.Error("unable to read device", "error", err)
+		return
+	}
+	for i, serv := range self.Servers {
+		if serv == server {
+			self.Servers = slices.Delete(self.Servers, i, i+1)
+		}
+	}
+	if err := boltdb.Save(self, "self", "devices"); err != nil {
+		slog.Error("save device", "error", err)
+	}
+}
+
 func networkUpdates(subject string, update plexus.NetworkUpdate) {
 	networkName := subject[9:]
 	slog.Info("network update for", "network", networkName, "msg", update)
