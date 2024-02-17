@@ -47,7 +47,7 @@ func Run() {
 	wg.Add(1)
 	go startAgentNatsServer(ctx, &wg)
 	slog.Info("setup nats")
-	connectToServers(self)
+	connectToServers()
 	//slog.Info("refresh data from servers")
 	//refreshData(self)
 	//slog.Info("set up subcriptions")
@@ -72,10 +72,10 @@ func Run() {
 			ctx, cancel = context.WithCancel(context.Background())
 			wg.Add(1)
 			go startAgentNatsServer(ctx, &wg)
-			connectToServers(self)
+			connectToServers()
 			//refreshData(self)
 			closeServerConnections()
-			connectToServers(self)
+			connectToServers()
 			//setupSubs(ctx, &wg, self)
 		case <-restart:
 			slog.Info("restart")
@@ -85,7 +85,7 @@ func Run() {
 			ctx, cancel = context.WithCancel(context.Background())
 			wg.Add(1)
 			go startAgentNatsServer(ctx, &wg)
-			connectToServers(self)
+			connectToServers()
 			//refreshData(self)
 			//setupSubs(ctx, &wg, self)
 		case <-checkinTicker.C:
@@ -94,7 +94,7 @@ func Run() {
 		case <-serverTicker.C:
 			slog.Debug("refreshing server connection")
 			closeServerConnections()
-			connectToServers(self)
+			connectToServers()
 		}
 	}
 }

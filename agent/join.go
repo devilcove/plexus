@@ -64,7 +64,7 @@ func processJoin(request *plexus.JoinCommand) error {
 	}
 	addNewNetworks(self, resp.Networks)
 	// reset nats connection
-	connectToServers(self)
+	connectToServers()
 	return nil
 }
 

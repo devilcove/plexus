@@ -117,14 +117,20 @@ func ConnectToAgentBroker() (*nats.EncodedConn, error) {
 	return ec, nil
 }
 
-func connectToServers(self plexus.Device) {
+func connectToServers() {
 	serverMap = make(map[string]*nats.EncodedConn)
 	networkMap = make(map[string]plexus.NetMap)
+	self, err := boltdb.Get[plexus.Device]("self", "devices")
+	if err != nil {
+		slog.Error("unable to read device", "error", err)
+		return
+	}
 	networks, err := boltdb.GetAll[plexus.Network]("networks")
 	if err != nil {
 		slog.Error("unable to read networks", "error", err)
 	}
 	for _, server := range self.Servers {
+		slog.Debug("connecting to server", "server", server)
 		ec, err := connectToServer(self, server)
 		if err != nil {
 			slog.Error("connect to server", "server", server, "error", err)
@@ -216,7 +222,7 @@ func processConnect(request plexus.UpdateRequest) plexus.NetworkResponse {
 	}
 	serverEC.Close()
 	addNewNetworks(self, response.Networks)
-	connectToServers(self)
+	connectToServers()
 	return response
 }
 
@@ -246,10 +252,13 @@ func addNewNetworks(self plexus.Device, networks []plexus.Network) {
 			slog.Error("error saving network", "name", network.Name, "error", err)
 		}
 		if !slices.Contains(self.Servers, network.ServerURL) {
+			slog.Debug("adding new server", "server", network.ServerURL)
 			self.Servers = append(self.Servers, network.ServerURL)
-			if err := boltdb.Update(self, "self", "devices"); err != nil {
+			if err := boltdb.Save(self, "self", "devices"); err != nil {
 				slog.Error("update device with new server", "error", err)
 			}
+		} else {
+			slog.Debug("server already exists in server list", "server", network.ServerURL, "list", self.Servers)
 		}
 		if err := startInterface(self, network); err != nil {
 			slog.Error("start new interface", "error", err)
