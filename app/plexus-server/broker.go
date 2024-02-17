@@ -123,7 +123,13 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 	if err != nil {
 		slog.Error("subscribe connectivity", "error", err)
 	}
-	leaveSub, err := natsConn.Subscribe("leave.*", leaveHandler)
+	leaveSub, err := encodedConn.Subscribe("leave.*", func(subj, reply string, request *plexus.UpdateRequest) {
+		response := processLeave(request)
+		slog.Debug("publish leave reply", "response", response)
+		if err := encodedConn.Publish(reply, response); err != nil {
+			slog.Error("leave reply", "error", err)
+		}
+	})
 	if err != nil {
 		slog.Error("subscribe leave", "error", err)
 	}

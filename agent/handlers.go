@@ -10,7 +10,7 @@ import (
 )
 
 func networkUpdates(subject string, update plexus.NetworkUpdate) {
-	networkName := subject[8:]
+	networkName := subject[9:]
 	slog.Info("network update for", "network", networkName, "msg", update)
 	network, err := boltdb.Get[plexus.Network](networkName, "networks")
 	if err != nil {

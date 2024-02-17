@@ -163,9 +163,10 @@ func processLeave(request plexus.UpdateRequest) plexus.NetworkResponse {
 		errResponse.Message = err.Error()
 		return errResponse
 	}
+	request.Peer.WGPublicKey = self.WGPublicKey
 	conn, ok := serverMap[network.ServerURL]
 	if !ok {
-		slog.Debug(err.Error())
+		slog.Debug(networkNotMapped)
 		errResponse.Message = networkNotMapped
 		return errResponse
 	}

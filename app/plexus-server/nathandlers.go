@@ -237,51 +237,47 @@ func connectivityHandler(m *nats.Msg) {
 	m.Respond([]byte("ack"))
 }
 
-// leaveHandler handles leaving a network
-func leaveHandler(m *nats.Msg) {
-	device := m.Subject[6:]
-	netName := string(m.Data)
-	slog.Debug("leave handler", "peer", device, "network", netName)
-	network, err := boltdb.Get[plexus.Network](netName, "networks")
+// processLeave handles leaving a network
+func processLeave(request *plexus.UpdateRequest) plexus.NetworkResponse {
+	errResponse := plexus.NetworkResponse{Error: true}
+	response := plexus.NetworkResponse{}
+	slog.Debug("leave handler", "peer", request.Peer.WGPublicKey, "network", request.Network)
+	network, err := boltdb.Get[plexus.Network](request.Network, "networks")
 	if err != nil {
 		slog.Error("get network to leave", "error", err)
-		m.Respond([]byte("error " + err.Error()))
-		return
+		errResponse.Message = err.Error()
+		return errResponse
 	}
 	found := false
 	for i, peer := range network.Peers {
-		var errs error
-		if peer.WGPublicKey != device {
+		if peer.WGPublicKey != request.Peer.WGPublicKey {
 			continue
 		}
 		found = true
 		network.Peers = slices.Delete(network.Peers, i, i+1)
 		if err := boltdb.Save(network, network.Name, "networks"); err != nil {
-			errs = errors.Join(errs, err)
+			slog.Error("save delete peer", "error", err)
+			errResponse.Message = err.Error()
+			return errResponse
 		}
 		update := plexus.NetworkUpdate{
 			Type: plexus.DeletePeer,
 			Peer: peer,
 		}
-		payload, err := json.Marshal(&update)
-		if err != nil {
-			errs = errors.Join(errs, err)
-		}
-		slog.Debug("publishing network update for peer leaving network", "network", netName, "peer", device)
-		if err := natsConn.Publish("networks."+netName, payload); err != nil {
-			errs = errors.Join(errs, err)
-		}
-		if errs != nil {
-			m.Respond([]byte("errors " + errs.Error()))
-			slog.Error("errors removing peer from network", "peer", device, "network", netName, "error(s)", errs)
+		slog.Debug("publishing network update for peer leaving network", "network", request.Network, "peer", request.Peer.WGPublicKey)
+		if err := encodedConn.Publish("networks."+request.Network, update); err != nil {
+			slog.Error("publish network update", "error", err)
+			errResponse.Message = err.Error()
+			return errResponse
 		}
 	}
 	if !found {
-		m.Respond([]byte(fmt.Sprintf("error: %s not a part of %s network", device, netName)))
-		slog.Error("peer not found", "peer", device, "network", netName)
-		return
+		slog.Error("peer not found", "peer", request.Peer.WGPublicKey, "network", request.Network)
+		errResponse.Message = fmt.Sprintf("error: %s not a part of %s network", request.Peer.WGPublicKey, request.Network)
+		return errResponse
 	}
-	m.Respond([]byte(fmt.Sprintf("%s deleted from %s network", device, netName)))
+	response.Message = fmt.Sprintf("%s deleted from %s network", request.Peer.WGPublicKey, request.Network)
+	return response
 }
 
 func processUpdate(request *plexus.UpdateRequest) plexus.NetworkResponse {
