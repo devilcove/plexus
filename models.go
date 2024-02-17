@@ -99,6 +99,7 @@ type Device struct {
 	Peer
 	WGPrivateKey string
 	Seed         string
+	Servers      []string
 }
 
 type ServerClients struct {

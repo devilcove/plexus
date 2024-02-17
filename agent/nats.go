@@ -124,15 +124,22 @@ func connectToServers(self plexus.Device) {
 	if err != nil {
 		slog.Error("unable to read networks", "error", err)
 	}
-	for _, network := range networks {
-		ec, err := connectToServer(self, network.ServerURL)
+	for _, server := range self.Servers {
+		ec, err := connectToServer(self, server)
 		if err != nil {
-			slog.Error("unable to connect to server", "server", network.ServerURL, "error", err)
+			slog.Error("connect to server", "server", server, "error", err)
 			continue
 		}
-		serverMap[network.ServerURL] = ec
+		serverMap[server] = ec
+	}
+	for _, network := range networks {
 		iface := network.Interface
 		channel := make(chan bool, 1)
+		ec, ok := serverMap[network.ServerURL]
+		if !ok {
+			slog.Error("network server not in list of servers", "network server", "network.ServerURL", "servers", self.Servers)
+			continue
+		}
 		sub, err := ec.Subscribe("networks.>", networkUpdates)
 		if err != nil {
 			slog.Error("network subscription failed", "error", err)
@@ -237,6 +244,12 @@ func addNewNetworks(self plexus.Device, networks []plexus.Network) {
 		}
 		if err := boltdb.Save(network, network.Name, "networks"); err != nil {
 			slog.Error("error saving network", "name", network.Name, "error", err)
+		}
+		if !slices.Contains(self.Servers, network.ServerURL) {
+			self.Servers = append(self.Servers, network.ServerURL)
+			if err := boltdb.Update(self, "self", "devices"); err != nil {
+				slog.Error("update device with new server", "error", err)
+			}
 		}
 		if err := startInterface(self, network); err != nil {
 			slog.Error("start new interface", "error", err)
