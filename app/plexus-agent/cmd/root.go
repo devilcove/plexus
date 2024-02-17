@@ -20,6 +20,7 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"runtime/debug"
 
 	"github.com/devilcove/plexus"
 	"github.com/devilcove/plexus/agent"
@@ -90,6 +91,7 @@ func initConfig() {
 	agent.Config = config
 	plexus.SetLogging(config.Verbosity)
 	slog.Debug("using configuration", "config", config)
+	debug.SetTraceback("single")
 }
 
 func checkErr(msg interface{}) {
