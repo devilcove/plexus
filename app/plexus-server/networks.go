@@ -86,11 +86,45 @@ func displayNetworks(c *gin.Context) {
 	c.HTML(http.StatusOK, "networks", networks)
 }
 
+func getAvailablePeers(network plexus.Network) []plexus.Peer {
+	allPeers, err := boltdb.GetAll[plexus.Peer]("peers")
+	if err != nil {
+		slog.Error("get peers", "error", err)
+		return allPeers
+	}
+	peers := allPeers
+	for _, peer := range allPeers {
+		for i, netPeer := range network.Peers {
+			if peer.WGPublicKey == netPeer.WGPublicKey {
+				peers = slices.Delete(allPeers, i, i+1)
+			}
+		}
+	}
+	return peers
+}
+
+func networkAddPeer(c *gin.Context) {
+	network := c.Param("id")
+	peerID := c.Param("peer")
+	slog.Debug("adding peer to network", "peer", peerID, "network", network)
+	peer, err := boltdb.Get[plexus.Peer](peerID, "peers")
+	if err != nil {
+		processError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if _, err := addPeerToNetwork(peer, network); err != nil {
+		processError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	networkDetails(c)
+}
+
 func networkDetails(c *gin.Context) {
 	session := sessions.Default(c)
 	details := struct {
-		Name  string
-		Peers []plexus.NetworkPeer
+		Name           string
+		Peers          []plexus.NetworkPeer
+		AvailablePeers []plexus.Peer
 	}{}
 	networkName := c.Param("id")
 	network, err := boltdb.Get[plexus.Network](networkName, "networks")
@@ -115,6 +149,7 @@ func networkDetails(c *gin.Context) {
 		slog.Debug("connectivity", "network", network.Name, "peer", peer.HostName, "connectivity", peer.Connectivity)
 	}
 	details.Name = networkName
+	details.AvailablePeers = getAvailablePeers(network)
 	session.Save()
 	c.HTML(http.StatusOK, "networkDetails", details)
 }

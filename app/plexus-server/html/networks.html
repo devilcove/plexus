@@ -42,6 +42,10 @@
         <div id="error" class="w3-red"></div>
         <h1>Network: {{.Name}}</h1>
         {{$network:=.Name}}
+    <button type="button" class="w3-bar-item w3-button"
+        onclick="document.getElementById('addPeerToNetwork').style.display='block'">
+        <i class="fa fa-plus-circle w3-xxxlarge"></i>
+        Add Existing Peer</button>
         <h2>Peers</h2>
         <div class="w3-third"><br></div>
         <div class="w3-third">
@@ -84,4 +88,33 @@
             </table>
         </div>
     </div>
+    {{template "addPeerToNetwork" .}}
+{{end}}
+
+{{define "addPeerToNetwork"}}
+<!-- [html-validate-disable no-inline-style]-->
+<div id="addPeerToNetwork" class="w3-modal">
+    <div class="w3-modal-content w3-card-4 w3-animate-zoom w3-padding" style="width:50%">
+        <div class="w3-container w3-center w3-theme-dark">
+            {{$network:=.Name}}
+            <h3>Add Peer to Network {{.Name}}</h3>
+            <div class="w3-row">
+                <div class="w3-col m3">Name</div>
+                <div class="w3-col m3">Port</div>
+                <div class="w3-col m3">Endpoint</div>
+            </div>
+            {{range .AvailablePeers}}
+            <div class="w3-row">
+                <div class="w3-col m3"><button class="w3-button w3-theme" type="button"
+                    hx-post="/networks/addPeer/{{$network}}/{{.WGPublicKey}}" 
+                    hx-target="#content" hx-target-error="#error">{{.Name}}</button></div>
+                <div class="w3-col m3">{{.PublicListenPort}}</div>
+                <div class="w3-col m3">{{.Endpoint}}</div>
+            </div>
+            {{end}}
+            <br><br>
+            <button type="submit" class="w3-button w3-block w3-padding" onclick="document.getElementById('addPeerToNetwork').style.display='none'">Close</button>
+        </div>
+    </div>
+</div>
 {{end}}

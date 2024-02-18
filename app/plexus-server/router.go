@@ -51,6 +51,7 @@ func setupRouter() *gin.Engine {
 		networks.POST("/add", addNetwork)
 		networks.GET("/", displayNetworks)
 		networks.GET("/:id", networkDetails)
+		networks.POST("/addPeer/:id/:peer", networkAddPeer)
 		networks.DELETE("/:id", deleteNetwork)
 		networks.DELETE("/peers/:id/:peer", removePeerFromNetwork)
 	}
