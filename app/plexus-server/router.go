@@ -14,8 +14,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-//go:embed: images/favicon.ico
-var icon embed.FS
+//go:embed: images/*
+var f embed.FS
 
 func setupRouter() *gin.Engine {
 	//gin.SetMode(gin.ReleaseMode)
@@ -32,8 +32,13 @@ func setupRouter() *gin.Engine {
 	router.LoadHTMLGlob("html/*.html")
 	router.Static("images", "./images")
 	router.Static("assets", "./assets")
-	//router.StaticFS("favicon.ico", http.FS(icon))
-	router.StaticFile("favicon.ico", "./images/favicon.ico")
+	router.StaticFile("favicon.ico", "./images/icon.svg")
+
+	//router.GET("/images/*filepath", func(c *gin.Context) {
+	//fmt.Println(c.Request.URL.Path)
+	//c.FileFromFS(c.Request.URL.Path, http.FS(f))
+	//c.File(c.Request.URL.Path)
+	//})
 	//router.SetHTMLTemplate(template.Must(template.New("").Parse("html/*")))
 	_ = router.SetTrustedProxies(nil)
 	router.Use(gin.Recovery(), session)
