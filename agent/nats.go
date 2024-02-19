@@ -51,7 +51,15 @@ func startAgentNatsServer(ctx context.Context, wg *sync.WaitGroup) {
 		if err != nil {
 			slog.Error("get networks", "error", err)
 		}
-		if err := ec.Publish(reply, networks); err != nil {
+		self, err := boltdb.Get[plexus.Device]("self", "devices")
+		if err != nil {
+			slog.Error("get device", "error", err)
+		}
+		status := plexus.StatusResponse{
+			Servers:  self.Servers,
+			Networks: networks,
+		}
+		if err := ec.Publish(reply, status); err != nil {
 			slog.Error("status response", "error", err)
 		}
 	})

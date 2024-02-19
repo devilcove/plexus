@@ -65,6 +65,9 @@ type NetworkPeer struct {
 	Endpoint         string
 	NatsConnected    bool
 	Connectivity     float64
+	IsRelay          bool
+	RelayedPeers     []string
+	IsRelayed        bool
 }
 
 type Key struct {
@@ -167,8 +170,8 @@ type ConnectivityData struct {
 	Connectivity float64
 }
 
-type Status struct {
-	Server   string
+type StatusResponse struct {
+	Servers  []string
 	Networks []Network
 }
 

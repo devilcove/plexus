@@ -32,26 +32,34 @@ var statusCmd = &cobra.Command{
 	Short: "display status",
 	Long:  `display status`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("status called")
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
-		networks := []plexus.Network{}
-		cobra.CheckErr(ec.Request("status", nil, &networks, agent.NatsTimeout))
-		if len(networks) == 0 {
+		status := plexus.StatusResponse{}
+		//networks := []plexus.Network{}
+		cobra.CheckErr(ec.Request("status", nil, &status, agent.NatsTimeout))
+		if len(status.Servers) == 0 {
+			fmt.Println("not connect to any servers")
+			return
+		}
+		fmt.Println("Servers")
+		for _, server := range status.Servers {
+			fmt.Println("\t", server)
+		}
+		if len(status.Networks) == 0 {
 			fmt.Println("no networks")
 			return
 		}
-		for _, network := range networks {
+		for _, network := range status.Networks {
 			wg, err := plexus.GetDevice(network.Interface)
 			if err != nil {
 				slog.Error("get wg device", "interface", network.Interface, "error", err)
 				continue
 			}
 			fmt.Println("interface:", network.Interface)
-			fmt.Println("\tnetwork name:", network.Name)
-			fmt.Println("\tserver: ", network.ServerURL)
-			fmt.Println("\tpublic key:", wg.PrivateKey.PublicKey())
-			fmt.Println("\tlisten port:", wg.ListenPort)
+			fmt.Println("\t network name:", network.Name)
+			fmt.Println("\t server: ", network.ServerURL)
+			fmt.Println("\t public key:", wg.PrivateKey.PublicKey())
+			fmt.Println("\t listen port:", wg.ListenPort)
 			fmt.Println()
 			for i, peer := range network.Peers {
 				if peer.WGPublicKey == wg.PrivateKey.PublicKey().String() {
