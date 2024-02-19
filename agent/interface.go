@@ -6,12 +6,12 @@ import (
 	"log"
 	"log/slog"
 	"net"
+	"slices"
 	"sync"
 	"time"
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
-	"github.com/kr/pretty"
 	"github.com/vishvananda/netlink"
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
@@ -84,20 +84,26 @@ func startInterface(self plexus.Device, network plexus.Network) error {
 			address.IPNet = &add
 			continue
 		}
+		if peer.IsRelayed {
+			continue
+		}
 		pubKey, err := wgtypes.ParseKey(peer.WGPublicKey)
 		if err != nil {
 			slog.Error("unable to parse public key", "key", peer.WGPublicKey, "error", err)
 			continue
 		}
+		allowed := []net.IPNet{}
+		if peer.IsRelay {
+			allowed = getAllowedIPs(peer, network.Peers)
+		}
+		allowed = append(allowed, net.IPNet{
+			IP:   peer.Address.IP,
+			Mask: net.CIDRMask(32, 32),
+		})
 		wgPeer := wgtypes.PeerConfig{
 			PublicKey:         pubKey,
 			ReplaceAllowedIPs: true,
-			AllowedIPs: []net.IPNet{
-				{
-					IP:   peer.Address.IP,
-					Mask: net.CIDRMask(32, 32),
-				},
-			},
+			AllowedIPs:        allowed,
 			Endpoint: &net.UDPAddr{
 				IP:   net.ParseIP(peer.Endpoint),
 				Port: peer.PublicListenPort,
@@ -117,7 +123,6 @@ func startInterface(self plexus.Device, network plexus.Network) error {
 		Peers:        peers,
 	}
 	link := plexus.New(network.Interface, mtu, address, config)
-	pretty.Println(link)
 	if err := link.Up(); err != nil {
 		slog.Error("failed initializition interface", "interface", network.Interface, "error", err)
 		return err
@@ -258,4 +263,16 @@ func publishConnectivity(self plexus.Device) {
 			slog.Debug("published connectivity", "data", data)
 		}
 	}
+}
+
+func getAllowedIPs(relay plexus.NetworkPeer, peers []plexus.NetworkPeer) []net.IPNet {
+	allowed := []net.IPNet{}
+	for _, peer := range peers {
+		if peer.IsRelayed {
+			if slices.Contains(relay.RelayedPeers, peer.WGPublicKey) {
+				allowed = append(allowed, peer.Address)
+			}
+		}
+	}
+	return allowed
 }

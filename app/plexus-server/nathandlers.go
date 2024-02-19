@@ -13,7 +13,6 @@ import (
 	"github.com/c-robinson/iplib"
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
-	"github.com/kr/pretty"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 )
@@ -30,7 +29,7 @@ func devicePermissions(id string) *server.Permissions {
 			},
 		},
 		Subscribe: &server.SubjectPermission{
-			Allow: []string{"networks.>", id + ".>", "_INBOX.>"},
+			Allow: []string{"networks.>", id, "_INBOX.>"},
 		},
 	}
 }
@@ -137,6 +136,14 @@ func addPeerToNetwork(peer plexus.Peer, network string) (plexus.Network, error) 
 		slog.Error("save updated network", "error", err)
 		return netToUpdate, err
 	}
+	slog.Debug("publish device update", "name", peer.Name)
+	if err := encodedConn.Publish(peer.WGPublicKey, plexus.DeviceUpdate{
+		Type:    plexus.ConnectToNetwork,
+		Network: netToUpdate,
+	}); err != nil {
+		slog.Error("publish device update", "peer", peer.Name, "error", err)
+		return netToUpdate, err
+	}
 	slog.Debug("publish network update", "network", network, "update", update)
 	if err := encodedConn.Publish("networks."+network, update); err != nil {
 		slog.Error("publish new peer", "error", err)
@@ -153,7 +160,6 @@ func getNextIP(network plexus.Network) (net.IP, error) {
 	slog.Debug("getnextIP", "network", network)
 	slog.Debug("getNextIP", "taken", taken)
 	slog.Debug("getNextIP", "net", network.Net)
-	pretty.Println(network.Net)
 	ipnet := iplib.Net4FromStr(network.Net.String())
 	ipToCheck := ipnet.FirstAddress()
 	broadcast := ipnet.BroadcastAddress()

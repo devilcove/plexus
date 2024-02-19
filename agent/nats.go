@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"slices"
 	"strconv"
@@ -49,7 +48,7 @@ func startAgentNatsServer(ctx context.Context, wg *sync.WaitGroup) {
 
 func subcribe(ec *nats.EncodedConn) {
 	ec.Conn.Subscribe(">", func(msg *nats.Msg) {
-		fmt.Println("recieved msg on ", msg.Subject, "topic ", string(msg.Data))
+		slog.Debug("received nats message", "subject", msg.Subject, "data", string(msg.Data))
 	})
 	ec.Subscribe("status", func(subject, reply string, data any) {
 		slog.Debug("status request received")
@@ -140,13 +139,19 @@ func connectToServers() {
 		if err != nil {
 			slog.Error("network subscription failed", "error", err)
 		}
-		self, err := ec.Subscribe(self.WGPublicKey+".>", func(subject string, data *plexus.DeviceUpdate) {
-			if subject[45:] == "delete" {
+		self, err := ec.Subscribe(self.WGPublicKey, func(subject string, data *plexus.DeviceUpdate) {
+			slog.Info("device update", "command", data.Type.String())
+			switch data.Type {
+			case plexus.LeaveServer:
 				delete(serverMap, network.ServerURL)
 				ec.Close()
 				deleteServer(network.ServerURL)
-			} else {
-				slog.Error("invalid subject", "subj", subject[45:])
+			case plexus.ConnectToNetwork:
+				if err := connectToNetwork(data.Network); err != nil {
+					slog.Error("connect to network", "error", err)
+				}
+			default:
+				slog.Error("invalid subject", "subj", data.Type)
 			}
 		})
 		if err != nil {
@@ -158,8 +163,8 @@ func connectToServers() {
 			Subscriptions: []*nats.Subscription{updates, self},
 		}
 	}
-	fmt.Println("servermap", serverMap, "length", len(serverMap))
-	fmt.Println("networkmap", networkMap)
+	slog.Debug("server connection", "servermap", serverMap,
+		"length", len(serverMap), "networkmap", networkMap)
 }
 
 func processLeave(request plexus.UpdateRequest) plexus.NetworkResponse {
@@ -226,6 +231,17 @@ func processConnect(request plexus.UpdateRequest) plexus.NetworkResponse {
 	addNewNetworks(self, response.Networks)
 	connectToServers()
 	return response
+}
+
+func connectToNetwork(network plexus.Network) error {
+	self, err := boltdb.Get[plexus.Device]("self", "devices")
+	if err != nil {
+		return err
+	}
+	networks := []plexus.Network{network}
+	addNewNetworks(self, networks)
+	connectToServers()
+	return nil
 }
 
 func addNewNetworks(self plexus.Device, networks []plexus.Network) {

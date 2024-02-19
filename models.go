@@ -1,5 +1,7 @@
 package plexus
 
+//go:generate stringer -type delim
+
 import (
 	"encoding/base64"
 	"encoding/json"
@@ -12,13 +14,16 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
+type Command int
+
 const (
-	DeletePeer int = iota
+	DeletePeer Command = iota
 	AddPeer
 	UpdatePeer
 	DeleteNetork
 	ConnectToNetwork
 	LeaveNetwork
+	LeaveServer
 )
 
 type Settings struct {
@@ -138,22 +143,23 @@ type UpdateRequest struct {
 	Network string
 	Server  string
 	Peer    Peer
-	Action  int
+	Action  Command
 }
 
 type NetworkUpdate struct {
-	Type int
+	Type Command
 	Peer NetworkPeer
 }
 
 type DeviceUpdate struct {
-	Type int
+	Type    Command
+	Network Network
 }
 
-type Command struct {
-	Command string
-	Data    any
-}
+//type Command struct {
+//Command string
+//Data    any
+//}
 
 type JoinCommand struct {
 	Token string

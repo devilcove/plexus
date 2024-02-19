@@ -10,7 +10,6 @@ import (
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
 	"github.com/gin-gonic/gin"
-	"github.com/kr/pretty"
 	"github.com/nats-io/nats-server/v2/server"
 )
 
@@ -25,7 +24,6 @@ func displayPeers(c *gin.Context) {
 	for _, peer := range peers {
 		if time.Since(peer.Updated) < connectedTime {
 			peer.NatsConnected = true
-			pretty.Println(peer.NatsConnected)
 		}
 		displayPeers = append(displayPeers, peer)
 	}
@@ -84,7 +82,7 @@ func deletePeer(c *gin.Context) {
 		processError(c, http.StatusInternalServerError, "delete peer "+peer.Name+""+err.Error())
 		return
 	}
-	if err := encodedConn.Publish(peer.WGPublicKey+".delete", plexus.DeviceUpdate{Type: 1}); err != nil {
+	if err := encodedConn.Publish(peer.WGPublicKey, plexus.DeviceUpdate{Type: plexus.LeaveServer}); err != nil {
 		slog.Error("publish peer deletion", "error", err)
 	}
 	deletePeerFromBroker(peer.PubNkey)

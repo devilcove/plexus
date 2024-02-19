@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"regexp"
@@ -172,7 +171,7 @@ func expireKeys(ctx context.Context, wg *sync.WaitGroup) {
 func removeKey(key plexus.Key) error {
 	var errs error
 	if err := boltdb.Delete[plexus.Key](key.Name, "keys"); err != nil {
-		fmt.Println("delete key from db", err)
+		slog.Error("delete key from db", "error", err)
 		errors.Join(errs, err)
 	}
 	token, err := plexus.DecodeToken(key.Value)
