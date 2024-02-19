@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -99,63 +98,6 @@ func Run() {
 	}
 }
 
-func refreshData(self plexus.Device) {
-	slog.Info("getting data from servers")
-	//delete existing networks
-	networks, err := boltdb.GetAll[plexus.Network]("networks")
-	if err != nil {
-		slog.Warn("get networks", "error", err)
-	}
-	for _, network := range networks {
-		if err := boltdb.Delete[plexus.Network](network.Name, "networks"); err != nil {
-			slog.Warn("delete network", "network", network.Name, "error", err)
-		}
-	}
-	for key, ec := range serverMap {
-		slog.Info("procssing server", "server", key)
-		if ec == nil {
-			slog.Error("nil nats connection", "key", key)
-			continue
-		}
-		var networks []plexus.Network
-		if err := ec.Request("config."+self.WGPublicKey, "helloworld", &networks, NatsTimeout); err != nil {
-			slog.Error("refresh data", "server", key, "error", err)
-			continue
-		}
-		slog.Info("refresh data", "msg", networks)
-		for i, network := range networks {
-			network.Interface = "plexus" + strconv.Itoa(i)
-			network.ListenPort = self.ListenPort
-			if err := boltdb.Save(network, network.Name, "networks"); err != nil {
-				slog.Error("save network", "network", network.Name, "error", err)
-			}
-		}
-	}
-}
-
-func setupSubs(ctx context.Context, wg *sync.WaitGroup, self plexus.Device) {
-	networkMap = make(map[string]plexus.NetMap)
-	networks, err := boltdb.GetAll[plexus.Network]("networks")
-	if err != nil {
-		slog.Error("unable to read networks", "error", err)
-	}
-	for _, network := range networks {
-		//start interface
-		iface := network.Interface
-		channel := make(chan bool, 1)
-		networkMap[network.Name] = plexus.NetMap{
-			Interface: iface,
-			Channel:   channel,
-		}
-		if err := startInterface(self, network); err != nil {
-			slog.Error("interface did not start", "name", iface, "network", network.Name, "error", err)
-			return
-		}
-		wg.Add(1)
-		go natSubscribe(ctx, wg, self, network, serverMap[network.ServerURL])
-	}
-}
-
 func connectToServer(self plexus.Device, server string) (*nats.EncodedConn, error) {
 	kp, err := nkeys.FromSeed([]byte(self.Seed))
 	if err != nil {
@@ -194,22 +136,6 @@ func connectToServer(self plexus.Device, server string) (*nats.EncodedConn, erro
 		return nil, err
 	}
 	return nats.NewEncodedConn(nc, nats.JSON_ENCODER)
-}
-
-func natSubscribe(ctx context.Context, wg *sync.WaitGroup, self plexus.Device, network plexus.Network, ec *nats.EncodedConn) {
-	defer wg.Done()
-	sub, err := ec.Subscribe("networks."+network.Name, networkUpdates)
-	if err != nil {
-		slog.Error("network subcription failed", "error", err)
-		return
-	}
-	<-ctx.Done()
-	log.Println("mq shutting down")
-	if err := sub.Drain(); err != nil {
-		slog.Error("drain subscriptions", "error", err)
-	}
-	ec.Close()
-	slog.Info("networks subs exititing", "network", network.Name)
 }
 
 func checkin(wg *sync.WaitGroup) {

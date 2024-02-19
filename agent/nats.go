@@ -42,7 +42,13 @@ func startAgentNatsServer(ctx context.Context, wg *sync.WaitGroup) {
 		natsfail <- struct{}{}
 		return
 	}
-	nc.Subscribe(">", func(msg *nats.Msg) {
+	defer ec.Close()
+	subcribe(ec)
+	<-ctx.Done()
+}
+
+func subcribe(ec *nats.EncodedConn) {
+	ec.Conn.Subscribe(">", func(msg *nats.Msg) {
 		fmt.Println("recieved msg on ", msg.Subject, "topic ", string(msg.Data))
 	})
 	ec.Subscribe("status", func(subject, reply string, data any) {
@@ -78,37 +84,13 @@ func startAgentNatsServer(ctx context.Context, wg *sync.WaitGroup) {
 			slog.Error("pub response to connect request", "error", err)
 		}
 	})
-	defer ec.Close()
-	generalCh := make(chan *nats.Msg, 64)
-	if _, err := nc.ChanSubscribe(">", generalCh); err != nil {
-		slog.Error("channel sub", "error", err)
-	}
-	ackCh := make(chan *string)
-	ec.BindSendChan("ack", ackCh)
-	joinCh := make(chan *plexus.JoinCommand)
-	ec.BindRecvChan("join", joinCh)
-	loglevelCh := make(chan *plexus.LevelRequest)
-	if _, err := ec.BindRecvChan("loglevel", loglevelCh); err != nil {
-		slog.Error("bind channel", "error", err)
-	}
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case msg := <-generalCh:
-			slog.Debug("recieved", "msg", msg)
-		case request := <-joinCh:
-			slog.Debug("join request received", "request", request)
-			if err := processJoin(request); err != nil {
-				slog.Error("join", "error", err)
-			}
-		case level := <-loglevelCh:
-			newLevel := strings.ToUpper(level.Level)
-			slog.Info("loglevel change", "level", newLevel)
-			plexus.SetLogging(newLevel)
-		}
-	}
+	ec.Subscribe("join", processJoin)
+	ec.Subscribe("loglevel", func(level *plexus.LevelRequest) {
+		newLevel := strings.ToUpper(level.Level)
+		slog.Info("loglevel change", "level", newLevel)
+		plexus.SetLogging(newLevel)
 
+	})
 }
 
 func ConnectToAgentBroker() (*nats.EncodedConn, error) {
