@@ -28,6 +28,7 @@ type Page struct {
 	Refresh     int
 	DefaultDate string
 	Networks    []string
+	Data        any
 }
 
 func init() {
@@ -43,7 +44,7 @@ func displayMain(c *gin.Context) {
 	if loggedin == nil {
 		page.NeedsLogin = true
 	}
-	slog.Debug("display main page", "user", user, "page", page.Page)
+	slog.Debug("display main page", "user", user, "page", page)
 	c.HTML(http.StatusOK, "layout", page)
 }
 
@@ -66,13 +67,13 @@ func login(c *gin.Context) {
 	session.Set("loggedin", true)
 	session.Set("user", user.Username)
 	session.Set("admin", user.IsAdmin)
-	session.Set("page", "peers")
+	session.Set("page", "networks")
 	session.Options(sessions.Options{MaxAge: sessionAge, Secure: false, SameSite: http.SameSiteLaxMode})
 	_ = session.Save()
 	slog.Info("login", "user", user.Username)
 	page := getPage(user.Username)
 	page.NeedsLogin = false
-	page.Page = "peers"
+	page.Page = "networks"
 	c.HTML(http.StatusOK, "content", page)
 }
 
@@ -107,14 +108,24 @@ func logout(c *gin.Context) {
 }
 
 func initialize() Page {
+	networks := []string{}
+	allNetworks, err := boltdb.GetAll[plexus.Network]("networks")
+	if err != nil {
+		slog.Error("get networks during page init", "error", err)
+	}
+	for _, network := range allNetworks {
+		networks = append(networks, network.Name)
+
+	}
 	return Page{
 		Version:     "v0.1.0",
-		Theme:       "indigo",
-		Font:        "Roboto",
+		Theme:       "black",
+		Font:        "PT Sans",
 		Refresh:     5,
 		DefaultDate: time.Now().Local().Format("2006-01-02"),
-		Page:        "nil",
-		Networks:    []string{},
+		Page:        "networks",
+		Networks:    networks,
+		Data:        allNetworks,
 	}
 }
 
@@ -128,6 +139,7 @@ func getPage(user any) Page {
 		if err != nil {
 			slog.Error("get networks", "error", err)
 		}
+		page.Networks = []string{}
 		for _, net := range networks {
 			page.Networks = append(page.Networks, net.Name)
 		}

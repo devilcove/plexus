@@ -77,13 +77,16 @@ func addNetwork(c *gin.Context) {
 
 func displayNetworks(c *gin.Context) {
 	session := sessions.Default(c)
+	user := session.Get("user")
+	page := getPage(user)
 	networks, err := boltdb.GetAll[plexus.Network]("networks")
 	if err != nil {
 		processError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+	page.Data = networks
 	session.Save()
-	c.HTML(http.StatusOK, "networks", networks)
+	c.HTML(http.StatusOK, "networks", page)
 }
 
 func getAvailablePeers(network plexus.Network) []plexus.Peer {

@@ -37,12 +37,11 @@
     </style>
 </head>
 
-<body class="w3-theme-l3" id="main">
+<body class="w3-theme-dark" id="main">
     <div hx-ext="response-targets">
+        {{template "header"}}
         {{template "about" . }}
-        {{template "navbar" .}}
         {{template "content" .}}
-        {{template "footer" .}}
     </div>
 </body>
 
