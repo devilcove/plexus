@@ -44,6 +44,12 @@ func displayMain(c *gin.Context) {
 	if loggedin == nil {
 		page.NeedsLogin = true
 	}
+	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	if err != nil {
+		slog.Error("get networks for main display", "error", err)
+	}
+	page.Data = networks
+	page.Page = "networks"
 	slog.Debug("display main page", "user", user, "page", page)
 	c.HTML(http.StatusOK, "layout", page)
 }

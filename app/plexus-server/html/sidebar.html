@@ -1,11 +1,18 @@
 {{define "sidebar"}}
+<!-- allow button inside <a> tag-->
+    <!-- [html-validate-disable element-permitted-content]-->
 <!-- Icon Bar (Sidebar - hidden on small screens) -->
-<nav class="w3-sidebar w3-bar-block w3-small w3-hide-small w3-theme-dark">
+<nav class="sidebar w3-sidebar w3-bar-block w3-hide-small w3-theme-dark">
     <div class="w3-dropdown-hover">
-    <button type="button" class="w3-button w3-theme-dark"
+    <!--
+        <button type="button" class="w3-button w3-theme-dark"
         hx-get="/networks/" hx-target="#content" hx-target-error="#error">
-        <i class="fa fa-cloud w3-large"></i>
+        <i class="fa fa-network-wired w3-large"></i>
         Networks</button>
+    -->
+    <a href="/"><button type="button" class="w3-button w3-theme-dark">
+        <i class="fa fa-network-wired w3-large"></i>
+    Networks</button></a>
     <div class="w3-dropdown-content w3-bar-block">
         {{range .}}
         <button type="button" class="w3-bar-item w3-button w3-right w3-theme-light" 
@@ -15,19 +22,19 @@
         {{end}}
     </div>
     </div>
-    <button type="button" class="w3-bar-item w3-button w3-padding-large w3-theme-dark" hx-get="/peers"
+    <button type="button" class="w3-bar-item w3-button w3-padding-large w3-theme-dark" hx-get="/peers/"
         hx-target="#content" hx-target-error="#error">
         <i class="fa fa-desktop w3-large"></i>
         Peers</button>
-    <button type="button" class="w3-bar-item w3-button w3-padding-large w3-theme-dark" hx-get="/keys"
+    <button type="button" class="w3-bar-item w3-button w3-padding-large w3-theme-dark" hx-get="/keys/"
         hx-target="#content" hx-target-error="#error">
         <i class="fa fa-key w3-large"></i>
         Keys</button>
-    <button type="button" class="w3-bar-item w3-button w3-padding-large w3-theme-dark" hx-get="/users"
+    <button type="button" class="w3-bar-item w3-button w3-padding-large w3-theme-dark" hx-get="/users/"
         hx-target="#content" hx-target-error="#error">
         <i class="fa fa-user w3-large"></i>
         Users</button>
-    <button type="button" class="w3-bar-item w3-button w3-padding-large w3-theme-dark" hx-get="/settings"
+    <button type="button" class="w3-bar-item w3-button w3-padding-large w3-theme-dark" hx-get="/settings/"
         hx-target="#content" hx-target-error="#error">
         <i class="fa fa-cog w3-large"></i>
         Setttings</button>
@@ -49,14 +56,4 @@
             hx-target="#home" hx-swap="outerHTML">CONTACT</button>
     </div>
 </div>
-<script>
-    function display(id) {
-        var x = document.getElementById(id);
-        if (x.className.indexOf("w3-show") == -1) {
-            x.className += " w3-show";
-        } else { 
-            x.className = x.className.replace(" w3-show", "");
-        }
-    }
-</script>
 {{end}}

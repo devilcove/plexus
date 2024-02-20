@@ -1,11 +1,15 @@
 {{define "keys"}}
 <!-- [html-validate-disable no-dup-id]-->
-<div id="content" hx-get="/keys/" hx-trigger="every 1m">
+<div hx-get="/keys/" hx-target="#content" hx-trigger="every 1m">
     <div class="w3-container w3-center w3-theme-dark w3-padding">
         <div id="error" class="w3-red"></div>
         <div class="w3-row">
-            <div class="w3-third"><br></div>
-            <div class="w3-third">
+                <div class="w3-bar w3-theme-d5 w3-center">
+                    <button class="w3-button" type="button" hx-get="/keys/add" hx-target="#content"
+                        hx-target-errors="#error">
+                        <i class="fa fa-key"></i>
+                        Create New Key</button>
+                </div>
                 <h1>Plexus Keys</h1>
                 <table class="w3-table w3-bordered w3-theme-l3">
                     <thead>
@@ -36,20 +40,14 @@
                         {{end}}
                     </tbody>
                 </table>
-                <h3>
-                    <button class="w3-button" type="button" hx-get="/keys/add" hx-target="#content"
-                        hx-target-errors="#error">
-                        Create New Key</button>
-                </h3>
             </div>
-        </div>
     </div>
 </div>
 {{end}}
 
 {{define "addKey"}}
 <div id="content">
-    <div class="w3-container w3-center w3-theme-dark">
+    <div class="w3-container w3-theme-dark">
         <div id="error" class="w3-red"></div>
         <h1>Create Key</h1>
         <form hx-post="/keys/add" hx-target="#content" hx-target-errors="#error">

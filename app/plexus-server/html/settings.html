@@ -1,54 +1,51 @@
 {{define "settings"}}
 <div id="content">
     <div class="w3-row">
-        <div class="w3-third"><br></div>
-        <div class="w3-third">
-            <h1>Configuration</h1>
-            <form action="/settings" method="post">
-                <p><label>Theme</label>
-                    <select name="theme">
-                        <option>indigo</option>
-                        <option>red</option>
-                        <option>pink</option>
-                        <option>purple</option>
-                        <option>blue</option>
-                        <option>cyan</option>
-                        <option>teal</option>
-                        <option>khaki</option>
-                        <option>blue-grey</option>
-                        <option>grey</option>
-                        <option>black</option>
-                    </select>
-                </p>
-                <p><label>Font&nbsp;&nbsp;</label>
-                    <select name="font">
-                        <option>Roboto</option>
-                        <option>Montserrat</option>
-                        <option>Lato</option>
-                        <option>Ubuntu</option>
-                        <option>Tangerine</option>
-                    </select>
-                </p>
-                <p><label>Refresh Rate (minutes)</label>
-                    <select name="refresh">
-                        <option>1</option>
-                        <option>2</option>
-                        <option>3</option>
-                        <option>4</option>
-                        <option selected>5</option>
-                        <option>6</option>
-                        <option>7</option>
-                        <option>8</option>
-                        <option>9</option>
-                        <option>10</option>
-                    </select>
-                </p>
-                <p><button class="w3-button w3-theme-dark w3-padding large" type="button" hx-get="/"
-                        hx-target="#main">Cancel</button>
-                    <button class="w3-button w3-theme-dark w3-padding large" type="submit">Submit</button>
-                </p>
-            </form>
-        </div>
+        <h1>Configuration</h1>
+        <form action="/settings" method="post">
+            <p><label>Theme</label>
+                <select name="theme">
+                    <option>indigo</option>
+                    <option>red</option>
+                    <option>pink</option>
+                    <option>purple</option>
+                    <option>blue</option>
+                    <option>cyan</option>
+                    <option>teal</option>
+                    <option>khaki</option>
+                    <option>blue-grey</option>
+                    <option>grey</option>
+                    <option>black</option>
+                </select>
+            </p>
+            <p><label>Font&nbsp;&nbsp;</label>
+                <select name="font">
+                    <option>Roboto</option>
+                    <option>Montserrat</option>
+                    <option>Lato</option>
+                    <option>Ubuntu</option>
+                    <option>Tangerine</option>
+                </select>
+            </p>
+            <p><label>Refresh Rate (minutes)</label>
+                <select name="refresh">
+                    <option>1</option>
+                    <option>2</option>
+                    <option>3</option>
+                    <option>4</option>
+                    <option selected>5</option>
+                    <option>6</option>
+                    <option>7</option>
+                    <option>8</option>
+                    <option>9</option>
+                    <option>10</option>
+                </select>
+            </p>
+            <p><button class="w3-button w3-theme-dark w3-padding large" type="button" hx-get="/"
+                    hx-target="#main">Cancel</button>
+                <button class="w3-button w3-theme-dark w3-padding large" type="submit">Submit</button>
+            </p>
+        </form>
     </div>
 </div>
 {{end}}

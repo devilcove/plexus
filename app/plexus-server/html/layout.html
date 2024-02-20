@@ -34,14 +34,25 @@
         ul {
             list-style-type: none;
         }
+        div.sidebar {
+            width:15%;
+        }
+        div.content {
+            margin-left:15%;
+        }
     </style>
 </head>
 
 <body class="w3-theme-dark" id="main">
     <div hx-ext="response-targets">
+        {{if (eq .NeedsLogin true)}}
+            {{template "login"}}
+        {{else}}
         {{template "header"}}
         {{template "about" . }}
-        {{template "content" .}}
+        {{template "sidebar" .Networks}}
+        {{template "networks" .}}
+        {{end}}
     </div>
 </body>
 

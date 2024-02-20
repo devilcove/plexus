@@ -2,91 +2,84 @@
 <!-- [html-validate-disable no-dup-id]-->
 <!-- [html-validate-disable prefer-tbody]-->
 <div id="content" hx-get="/peers/" hx-trigger="every 3m">
-    <div class="w3-container w3-center w3-theme-dark w3-padding">
+    <div class="w3-container w3-theme-dark w3-padding">
         <div id="error" class="w3-red"></div>
-        <div class="w3-third"><br></div>
-        <div class="w3-third">
-            <h1>Peers</h1>
-            <table class="w3-table w3-bordered w3-theme-l3">
-                <thead>
-                    <tr>
-                        <td>Name</td>
-                        <td>Endpoint</td>
-                        <td>Port</td>
-                        <td>Version</td>
-                        <td>Status</td>
-                        <td>Delete</td>
-                    </tr>
-                </thead>
-                <tbody>
-                    {{range .}}
-                    <tr>
-                        <td><button class="w3-button w3-theme" type="button" hx-get="peers/{{.WGPublicKey}}"
-                                hx-target="#content" hx-target-error="#error">{{.Name}}</button></td>
-                        <td>{{.Endpoint}}</td>
-                        <td>{{.PublicListenPort}}</td>
-                        <td>{{.Version}}</td>
-                        {{if .NatsConnected}}
-                            <td><img src="images/connect-green.svg" alt="green" height="36"></td>
-                        {{- else}}
-                            <td><img src="images/connect-red.svg" alt="red" height="36"></td>
-                        {{- end}}
-                        <td><button class="w3-button w3-theme" type="button" hx-delete="peers/{{.WGPublicKey}}"
-                                hx-target="#content" hx-target-error="#error" 
-                                hx-confirm="Delete Peer?">Delete</button></td>
-                    </tr>
-                    {{end}}
-                </tbody>
-            </table>
-        </div>
+        <h1>Peers</h1>
+        <table class="w3-table w3-bordered w3-theme-l3">
+            <thead>
+                <tr>
+                    <td>Name</td>
+                    <td>Endpoint</td>
+                    <td>Port</td>
+                    <td>Version</td>
+                    <td>Status</td>
+                    <td>Delete</td>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .}}
+                <tr>
+                    <td><button class="w3-button w3-theme" type="button" hx-get="peers/{{.WGPublicKey}}"
+                            hx-target="#content" hx-target-error="#error">{{.Name}}</button></td>
+                    <td>{{.Endpoint}}</td>
+                    <td>{{.PublicListenPort}}</td>
+                    <td>{{.Version}}</td>
+                    {{if .NatsConnected}}
+                    <td><i class="fas fa-cogs w3-green w3-large"></i></td>
+                    {{- else}}
+                    <td><i class="fas fa-cogs w3-red w3-large"></i></td>
+                    {{- end}}
+                    <td><button class="w3-button w3-theme" type="button" hx-delete="peers/{{.WGPublicKey}}"
+                            hx-target="#content" hx-target-error="#error" hx-confirm="Delete Peer?">Delete</button></td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
     </div>
 </div>
 {{end}}
 
 {{define "peerDetails"}}
 <div id="content">
-    <div class="w3-container w3-center w3-theme-dark w3-padding">
+    <div class="w3-container w3-theme-dark w3-padding">
         <div id="error" class="w3-red"></div>
-        <div class="w3-third"><br></div>
-        <div class="w3-third">
-            <h1>Peer: {{.Name}}</h1>
-            <table class="w3-table w3-bordered w3-theme-l3">
-                <tr>
-                    <td>Wireguard Public Key</td>
-                    <td>{{.WGPublicKey}}</td>
-                </tr>
-                <tr>
-                    <td>Agent Version</td>
-                    <td>{{.Version}}</td>
-                </tr>
-                <tr>
-                    <td>Operating System</td>
-                    <td>{{.OS}}</td>
-                </tr>
-                <tr>
-                    <td>Listening Port</td>
-                    <td>{{.ListenPort}}</td>
-                </tr>
-                <tr>
-                    <td>Public Listen Port</td>
-                    <td>{{.PublicListenPort}}</td>
-                </tr>
-                <tr>
-                    <td>Endpoint</td>
-                    <td>{{.Endpoint}}</td>
-                </tr>
-                <tr>
-                    <td>Nats Public Key</td>
-                    <td>{{.PubNkey}}</td>
-                </tr>
-                <tr>
-                    <td>Updated</td>
-                    <td>{{.Updated}}</td>
-                </tr>
-            </table>
-            <button class="w3-button w3-theme" type="button" hx-get="/peers/"
-                hx-target="#content" hx-target-error="#error">Close</button>
-        </div>
+        <h1>Peer: {{.Name}}</h1>
+        <table class="w3-table w3-bordered w3-theme-l3">
+            <tr>
+                <td>Wireguard Public Key</td>
+                <td>{{.WGPublicKey}}</td>
+            </tr>
+            <tr>
+                <td>Agent Version</td>
+                <td>{{.Version}}</td>
+            </tr>
+            <tr>
+                <td>Operating System</td>
+                <td>{{.OS}}</td>
+            </tr>
+            <tr>
+                <td>Listening Port</td>
+                <td>{{.ListenPort}}</td>
+            </tr>
+            <tr>
+                <td>Public Listen Port</td>
+                <td>{{.PublicListenPort}}</td>
+            </tr>
+            <tr>
+                <td>Endpoint</td>
+                <td>{{.Endpoint}}</td>
+            </tr>
+            <tr>
+                <td>Nats Public Key</td>
+                <td>{{.PubNkey}}</td>
+            </tr>
+            <tr>
+                <td>Updated</td>
+                <td>{{.Updated}}</td>
+            </tr>
+        </table>
+        <button class="w3-button w3-theme" type="button" hx-get="/peers/" hx-target="#content"
+            hx-target-error="#error">Close</button>
     </div>
 </div>
 {{end}}
