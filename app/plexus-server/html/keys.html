@@ -1,72 +1,53 @@
 {{define "keys"}}
 <!-- [html-validate-disable no-dup-id]-->
-<div hx-get="/keys/" hx-target="#content" hx-trigger="every 1m">
-    <div class="w3-container w3-center w3-theme-dark w3-padding">
-        <div id="error" class="w3-red"></div>
-        <div class="w3-row">
-                <div class="w3-bar w3-theme-d5 w3-center">
-                    <button class="w3-button" type="button" hx-get="/keys/add" hx-target="#content"
-                        hx-target-errors="#error">
-                        <i class="fa fa-key"></i>
-                        Create New Key</button>
-                </div>
-                <h1>Plexus Keys</h1>
-                <table class="w3-table w3-bordered w3-theme-l3">
-                    <thead>
-                        <tr>
-                            <td>Name</td>
-                            <td>Uses Remaining</td>
-                            <td>Expires</td>
-                            <td>Networks</td>
-                            <td></td>
-                        </tr>
-                    </thead>
-                    {{range .}}
-                    <tbody>
-                        <tr>
-                            <td><button class="w3-button w3-theme" type="button" 
-                                onclick='navigator.clipboard.writeText("{{.Value}}").then(() =>{
-                                alert("copied to clipboard");
-                                },()=>{
-                                    alert("failed to copy");
-                                });'>{{.Name}}</button></td>
-                            <td>{{.Usage}}</td>
-                            <td>{{.DispExp}}</td>
-                            <td>{{.Networks}}</td>
-                            <td><button class="w3-button w3-theme" type="button" hx-delete="/keys/{{.Name}}" hx-target="#content"
-                                    hx-target-error="#error" hx-confirm="Delete Key?">
-                                    Delete</button></td>
-                        </tr>
-                        {{end}}
-                    </tbody>
-                </table>
-            </div>
+<div id="error" class="w3-red"></div>
+<div class="w3-bar w3-theme-d5">
+    <button class="w3-button" type="button" hx-get="/keys/add" hx-target="#content" hx-target-errors="#error">
+        <i class="fa fa-key"></i>
+        Create New Key</button>
+</div>
+<h1>Plexus Keys</h1>
+<div class="grid5">
+    <div class="w3-theme-l3">Name</div>
+    <div class="w3-theme-l3">Uses Remaining</div>
+    <div class="w3-theme-l3">Expires</div>
+    <div class="w3-theme-l3">Networks</div>
+    <div class="w3-theme-l3"></div>
+    {{range .}}
+    <div><button class="w3-button w3-theme" type="button" onclick='navigator.clipboard.writeText("{{.Value}}").then(() =>{
+        alert("copied to clipboard");
+            },()=>{
+        alert("failed to copy");
+               });'>{{.Name}}</button>
     </div>
+    <div>{{.Usage}}</div>
+    <div>{{.DispExp}}</div>
+    <div>{{.Networks}}</div>
+    <div><button class="w3-button w3-theme" type="button" hx-delete="/keys/{{.Name}}" hx-target="#content"
+            hx-target-error="#error" hx-confirm="Delete Key?">
+            Delete</button></div>
+    {{end}}
 </div>
 {{end}}
 
 {{define "addKey"}}
-<div id="content">
-    <div class="w3-container w3-theme-dark">
-        <div id="error" class="w3-red"></div>
-        <h1>Create Key</h1>
-        <form hx-post="/keys/add" hx-target="#content" hx-target-errors="#error">
-            <label for="name">Key Name</label>
-            <input type="text" placeholder="key name (lowercase, chars and -)" name="name" required><br>
-            <label for="usage">Uses</label>
-            <input type="number" value="1" name="usage"><br>
-            <label for="expires">Expires</label>
-            <input type="date" name="expires" value="{{.DefaultDate}}">
-            <h2>Networks</h2>
-            {{range .Networks}}
-            <input class="w3-check" type="checkbox" name="networks" value="{{.}}">
-            <label>{{.}}</label>
-            {{end}}
-            <p><button class="w3-button" type="button" hx-get="/keys/" hx-target="#content">Cancel</button>
-                <button class="w3-button w3-theme-dark" type="reset">Reset</button>
-                <button class="w3-button w3-theme-dark" type="submit">Create</button>
-            </p>
-        </form>
-    </div>
-</div>
+<div id="error" class="w3-red"></div>
+<h1>Create Key</h1>
+<form class="w3-container w3-card4" hx-post="/keys/add" hx-target="#content" hx-target-errors="#error">
+    <label>Key Name</label>
+    <input class="w3-input" type="text" placeholder="key name (lowercase, chars and -)" name="name" required style="width:50%"><br>
+    <label>Uses</label>
+    <input class="w3-input" type="number" value="1" name="usage" style="width:50%"><br>
+    <label>Expires</label>
+    <input class="w3-input" type="date" name="expires" value="{{.DefaultDate}}" style="width:50%">
+    <h2>Networks</h2>
+    {{range .Networks}}
+    <input class="w3-check" type="checkbox" name="networks" value="{{.}}">
+    <label>{{.}}</label>
+    {{end}}
+    <p><button class="w3-button" type="button" hx-get="/keys/" hx-target="#content">Cancel</button>
+        <button class="w3-button w3-theme-dark" type="reset">Reset</button>
+        <button class="w3-button w3-theme-dark" type="submit">Create</button>
+    </p>
+</form>
 {{end}}
