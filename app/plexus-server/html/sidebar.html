@@ -10,9 +10,10 @@
         <i class="fa fa-network-wired w3-large"></i>
         Networks</button>
     -->
-    <a href="/"><button type="button" class="w3-button w3-theme-dark">
+    <button type="button" class="w3-button w3-theme-dark"
+        hx-get="/networks/" hx-target="#content" hx-target-error="#error">
         <i class="fa fa-network-wired w3-large"></i>
-    Networks</button></a>
+    Networks</button>
     <div class="w3-dropdown-content w3-bar-block">
         {{range .}}
         <button type="button" class="w3-bar-item w3-button w3-right w3-theme-light" 

@@ -2,39 +2,51 @@
 <!-- allow button inside <a> tag-->
 <!-- [html-validate-disable element-permitted-content]-->
 <!-- [html-validate-disable no-dup-id]-->
-<div id="content" class="content w3-container w3-theme-dark w3-padding">
-    <div id="error" class="w3-red"></div>
-    <!-- Network Nav Bar-->
-    <div class="w3-bar w3-theme-d5">
-        <button class="w3-button" type="button" hx-get="networks/add" hx-target="#content" hx-target-error="#error">
-            <i class="fa fa-network-wired"></i>
-            Create New Network</button>
+<!-- Network Nav Bar-->
+<div id="error" class="w3-red"></div>
+<div class="w3-bar w3-theme-d5">
+    <button class="w3-button" type="button" hx-get="networks/add" hx-target="#content" hx-target-error="#error">
+        <i class="fa fa-network-wired"></i>
+        Create New Network</button>
+</div>
+<h1>Networks</h1>
+<div class="grid3">
+    <div class="w3-theme-l3">Peer</div>
+    <div class="w3-theme-l3">CIDR</div>
+    <div class="w3-theme-l3">Delete</div>
+{{range .Data}}
+    <div>
+        <button class="w3-button" type="button" 
+            hx-get="networks/{{.Name}}" hx-target="#content" hx-target-error="#error">
+            <i class="fas fa-desktop"></i>
+            {{.Name}}</button>
     </div>
-    <h1>Networks</h1>
-    {{range .Data}}
-    <h5><button class="w3-button" type="button" hx-get="networks/{{.Name}}" hx-target="#content"
-            hx-target-error="#error">
-            {{.Name}}</button>{{.AddressString}}
-        <button class="w3-button" type="button" hx-delete="networks/{{.Name}}" hx-target="#content"
+    <div class="w3-margin-top">{{.AddressString}}</div>
+    <div>
+        <button class="w3-button" type="button" 
+            hx-delete="networks/{{.Name}}" hx-target="#content"
             hx-target-error="#error" hx-confirm="Delete Network?">
+            <i class="fa fa-trash-alt"></i>
             Delete</button>
-    </h5>
-    {{end}}
+    </div>
+{{end}}
 </div>
 {{end}}
 
 {{ define "addNetwork"}}
+<div id="error"></div>
 <div class="w3-container w3-theme-dark">
-    <div id="error"></div>
     <h1>Add Network</h1>
-    <form hx-post="/networks/add" hx-target="#content" hx-target-error="#error">
-        <label for="name">Network Name</label>
-        <input type="text" placeholder="network name" name="name" required><br>
-        <label for="addressstring">Network CIDR</label>
-        <input type="text" placeholder="10.10.10.0/24" name="addressstring" required><br>
+    <form class="w3-container w3-card4" 
+        hx-post="/networks/add" hx-target="#content" hx-target-error="#error">
+        <label>Network Name</label>
+        <input class="w3-input" type="text" value="plexus" name="name" required><br>
+        <label>Network CIDR</label>
+        <input class="w3-input" type="text" value="10.10.10.0/24" name="addressstring" required><br>
         <p>
-            <a href="/"><button class="w3-button w3-theme-dark w3-padding large" type="button">
-                    Cancel</button></a>
+            <button class="w3-button w3-theme-dark w3-padding large" type="button"
+                hx-get="/networks" hx-target="#content">
+                    Cancel</button>
             <button class="w3-button w3-theme-dark" type="reset">Reset</button>
             <button class="W3-button w3-theme-dark" type="submit">Add</button>
         </p>
@@ -43,8 +55,8 @@
 {{end}}
 
 {{define "networkDetails"}}
+<div id="error" class="w3-red"></div>
 <div class="w3-container w3-theme-dark w3-padding">
-    <div id="error" class="w3-red"></div>
     <!-- Network Details Nav Bar-->
     <div class="w3-bar w3-theme-d5 w3-center">
         <button type="button" class="w3-bar-item w3-button"
@@ -64,44 +76,54 @@
     <h1>Network: {{.Name}}</h1>
     {{$network:=.Name}}
     <h2>Peers</h2>
-    <table class="w3-table w3-bordered w3-theme-l3">
-        <thead>
-            <tr>
-                <td>Name</td>
-                <td>Address</td>
-                <td>Status</td>
-                <td>Connected</td>
-                <td>Remove</td>
-            </tr>
-        </thead>
-        <tbody>
-            {{range .Peers}}
-            <tr>
-                <td><button class="w3-button w3-theme" type="button" hx-get="/peers/{{.WGPublicKey}}"
-                        hx-target="#content" hx-target-error="#error">{{.HostName}}</button></td>
-                <td>{{.Address.IP}}</td>
-                {{if .NatsConnected}}
-                <td><i class="fas fa-cogs w3-green w3-large"></i></td>
-                {{- else}}
-                <td><i class="fas fa-cogs w3-red w3-large"></i></td>
-                {{- end}}
-                {{if eq .Connectivity 1.0 }}
-                <td><i class="fa fa-traffic-light w3-green w3-large"></i>{{.Connectivity}}</td>
-                {{else if ge .Connectivity .7}}
-                <td><i class="fa fa-traffic-light w3-yellow w3-large"></i>{{.Connectivity}}</td>
-                {{else if ge .Connectivity .5}}
-                <td><i class="fa fa-traffic-light w3-orange w3-large"></i>{{.Connectivity}}</td>
-                {{else}}
-                <td><i class="fa fa-traffic-light w3-red w3-large"></i>{{.Connectivity}}</td>
-                {{end}}
-                <td><button class="w3-button w3-theme" type="button"
-                        hx-delete="networks/peers/{{$network}}/{{.WGPublicKey}}" hx-target="#content"
-                        hx-target-error="#error" hx-confirm="Remove Peer from Network?">Remove</button></td>
-            </tr>
+    <div class="grid7">
+        <!-- Headings -->
+        <div class="w3-theme-l3 ">Name</div>
+        <div class="w3-theme-l3 ">Status</div>
+        <div class="w3-theme-l3 ">Traffic</div>
+        <div class="w3-theme-l3 ">Address</div>
+        <div class="w3-theme-l3 ">Remove</div>
+        <div class="w3-theme-l3 ">Relay</div>
+        <div class="w3-theme-l3 ">Gateway</div>
+        <!-- details -->
+        {{range .Peers}}
+        <div>
+            <button class="w3-button w3-theme" type="button" hx-get="/peers/{{.WGPublicKey}}" hx-target="#content"
+                hx-target-error="#error">
+                <i class="fa fa-desktop"></i>
+                {{.HostName}}</button><br>
+        </div>
+        <div>
+            {{if .NatsConnected}}
+            <i class="fas fa-cogs w3-green w3-large w3-margin-top"></i>
+            {{- else}}
+            <i class="fas fa-cogs w3-red w3-large w3-margin-top"></i>
+            {{- end}}
+        </div>
+        <div>
+            {{if eq .Connectivity 1.0 }}
+            <i class="fas fa-traffic-light w3-green w3-large w3-margin-top"></i>{{.Connectivity}}
+            {{else if ge .Connectivity .7}}
+            <i class="fas fa-traffic-light w3-yellow w3-large w3-margin-top"></i>{{.Connectivity}}
+            {{else if ge .Connectivity .5}}
+            <i class="fas fa-traffic-light w3-orange w3-large w3-margin-top"></i>{{.Connectivity}}
+            {{else}}
+            <i class="fas fa-traffic-light w3-red w3-large w3-margin-top"></i>{{.Connectivity}}
             {{end}}
-        </tbody>
-    </table>
+        </div>
+        <div class="w3-margin-top">{{.Address.IP}}</div>
+        <div>
+            <button class="w3-button w3-theme" type="button" hx-delete="networks/peers/{{$network}}/{{.WGPublicKey}}"
+                hx-target="#content" hx-target-error="#error" hx-confirm="Remove Peer from Network?">
+                <i class="fa fa-trash-alt"></i>
+                Remove</button>
+        </div>
+        <div class="w3-margin-top">TBD</div>
+        <div class="w3-margin-top">TBD</div>
+        {{end}}
+    </div>
 </div>
+
 {{template "addPeerToNetwork" .}}
 {{end}}
 
@@ -112,18 +134,18 @@
         <div class="w3-container w3-center w3-theme-dark">
             {{$network:=.Name}}
             <h3>Add Peer to Network {{.Name}}</h3>
-            <div class="w3-row">
-                <div class="w3-col m3 w3-theme-l3">Name</div>
-                <div class="w3-col m3 w3-theme-l3">Port</div>
-                <div class="w3-col m3 w3-theme-l3">Endpoint</div>
-            </div>
+            <div class="grid3">
+                <div class="w3-theme-l3">Name</div>
+                <div class="w3-theme-l3">Port</div>
+                <div class="w3-theme-l3">Endpoint</div>
             {{range .AvailablePeers}}
-            <div class="w3-row">
-                <div class="w3-col m3"><button class="w3-button w3-theme" type="button"
+                <div>
+                    <button class="w3-button w3-theme" type="button"
                         hx-post="/networks/addPeer/{{$network}}/{{.WGPublicKey}}" hx-target="#content"
-                        hx-target-error="#error">{{.Name}}</button></div>
-                <div class="w3-col m3">{{.PublicListenPort}}</div>
-                <div class="w3-col m3">{{.Endpoint}}</div>
+                        hx-target-error="#error">{{.Name}}</button>
+                </div>
+                <div>{{.PublicListenPort}}</div>
+                <div>{{.Endpoint}}</div>
             </div>
             {{end}}
             <br><br>

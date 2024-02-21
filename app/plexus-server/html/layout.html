@@ -34,11 +34,45 @@
         ul {
             list-style-type: none;
         }
+
         div.sidebar {
-            width:15%;
+            width: 15%;
         }
+
         div.content {
-            margin-left:15%;
+            margin-left: 15%;
+        }
+
+        .grid7 {
+            display: grid;
+            grid-template-columns: auto auto auto auto auto auto auto;
+            gap: 10px;
+            padding: 10px;
+        }
+
+        .grid7>div {
+            text-align: left;
+            padding: 10px, 10px;
+        }
+        .grid6 {
+            display: grid;
+            grid-template-columns: auto auto auto auto auto auto;
+            gap: 10px;
+            padding: 10px;
+        }
+        .grid6>div {
+            text-align: left;
+            padding: 10px, 10px;
+        }
+        .grid3 {
+            display: grid;
+            grid-template-columns: auto auto auto;
+            gap: 10px;
+            padding: 10px;
+        }
+        .grid3>div {
+            text-align: left;
+            padding: 10px, 10px;
         }
     </style>
 </head>
@@ -46,12 +80,14 @@
 <body class="w3-theme-dark" id="main">
     <div hx-ext="response-targets">
         {{if (eq .NeedsLogin true)}}
-            {{template "login"}}
+        {{template "login"}}
         {{else}}
         {{template "header"}}
         {{template "about" . }}
         {{template "sidebar" .Networks}}
-        {{template "networks" .}}
+        <div class="content w3-container w3-theme-dark w3-padding">
+            <div id="content"></div>
+        </div>
         {{end}}
     </div>
 </body>
