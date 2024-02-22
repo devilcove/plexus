@@ -90,17 +90,20 @@ func displayNetworks(c *gin.Context) {
 }
 
 func getAvailablePeers(network plexus.Network) []plexus.Peer {
+	taken := make(map[string]bool)
+	peers := []plexus.Peer{}
 	allPeers, err := boltdb.GetAll[plexus.Peer]("peers")
 	if err != nil {
 		slog.Error("get peers", "error", err)
 		return allPeers
 	}
-	peers := allPeers
+	for _, peer := range network.Peers {
+		taken[peer.WGPublicKey] = true
+	}
 	for _, peer := range allPeers {
-		for i, netPeer := range network.Peers {
-			if peer.WGPublicKey == netPeer.WGPublicKey {
-				peers = slices.Delete(allPeers, i, i+1)
-			}
+		_, ok := taken[peer.WGPublicKey]
+		if !ok {
+			peers = append(peers, peer)
 		}
 	}
 	return peers
