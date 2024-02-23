@@ -79,6 +79,11 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 		if err := replacePeerInInterface(networkMap[networkName].Interface, update.Peer); err != nil {
 			slog.Error("replace peer", "error", err)
 		}
+	case plexus.AddRelay:
+		slog.Info("add relay")
+		if err := addRelayToInterface(networkMap[networkName].Interface, update.Peer); err != nil {
+			slog.Error("addRelay", "error", err)
+		}
 	case plexus.DeleteNetork:
 		slog.Info("delete network")
 		networkMap[network.Name].Channel <- true

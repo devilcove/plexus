@@ -1,6 +1,6 @@
 package plexus
 
-//go:generate stringer -type delim
+//go:generate stringer -type Command
 
 import (
 	"encoding/base64"
@@ -20,6 +20,8 @@ const (
 	DeletePeer Command = iota
 	AddPeer
 	UpdatePeer
+	AddRelay
+	DeleteRelay
 	DeleteNetork
 	ConnectToNetwork
 	LeaveNetwork

@@ -203,6 +203,41 @@ func replacePeerInInterface(name string, replacement plexus.NetworkPeer) error {
 	return iface.Apply()
 }
 
+func addRelayToInterface(name string, relay plexus.NetworkPeer) error {
+	iface, err := plexus.Get(name)
+	if err != nil {
+		return err
+	}
+	key, err := wgtypes.ParseKey(relay.WGPublicKey)
+	if err != nil {
+		return err
+	}
+	keepalive := defaultKeepalive
+	relayPeer := wgtypes.PeerConfig{
+		PublicKey: key,
+		Endpoint: &net.UDPAddr{
+			IP:   net.ParseIP(relay.Endpoint),
+			Port: relay.PublicListenPort,
+		},
+		PersistentKeepaliveInterval: &keepalive,
+		ReplaceAllowedIPs:           true,
+		AllowedIPs:                  []net.IPNet{relay.Address},
+	}
+	for i, peer := range iface.Config.Peers {
+		var relayIndex int
+		if peer.PublicKey.String() == relay.WGPublicKey {
+			relayIndex = i
+			iface.Config.Peers[i] = relayPeer
+		}
+		if slices.Contains(relay.RelayedPeers, peer.PublicKey.String()) {
+			peer.Remove = true
+			iface.Config.Peers[i] = peer
+			iface.Config.Peers[relayIndex].AllowedIPs = append(iface.Config.Peers[relayIndex].AllowedIPs, peer.AllowedIPs...)
+		}
+	}
+	return iface.Apply()
+}
+
 func getFreePort(start int) (int, error) {
 	addr := net.UDPAddr{}
 	if start == 0 {

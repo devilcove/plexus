@@ -285,11 +285,15 @@ func addRelay(c *gin.Context) {
 		processError(c, http.StatusBadRequest, err.Error())
 		return
 	}
+	update := plexus.NetworkUpdate{
+		Type: plexus.AddRelay,
+	}
 	peers := []plexus.NetworkPeer{}
 	for _, peer := range network.Peers {
 		if peer.WGPublicKey == relayID {
 			peer.IsRelay = true
 			peer.RelayedPeers = relayedIDs
+			update.Peer = peer
 		}
 		if slices.Contains(relayedIDs, peer.WGPublicKey) {
 			peer.IsRelayed = true
@@ -300,6 +304,10 @@ func addRelay(c *gin.Context) {
 	if err := boltdb.Save(network, network.Name, "networks"); err != nil {
 		processError(c, http.StatusInternalServerError, err.Error())
 		return
+	}
+	slog.Debug("publish network update - add relay", "network", network.Name, "relay", relayID)
+	if err := encodedConn.Publish("networks."+network.Name, update); err != nil {
+		slog.Error("publish new relay", "error", err)
 	}
 	networkDetails(c)
 }
