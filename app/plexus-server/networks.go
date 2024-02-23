@@ -251,3 +251,55 @@ func getConfig(id string) []byte {
 	}
 	return payload
 }
+
+func displayAddRelay(c *gin.Context) {
+	data := struct {
+		Network        string
+		Relay          plexus.NetworkPeer
+		AvailablePeers []plexus.NetworkPeer
+	}{}
+	data.Network = c.Param("id")
+	relay := c.Param("peer")
+	slog.Debug("add relay", "network", data.Network, "relay", relay)
+	network, err := boltdb.Get[plexus.Network](data.Network, "networks")
+	if err != nil {
+		processError(c, http.StatusBadGateway, err.Error())
+		return
+	}
+	for _, peer := range network.Peers {
+		if peer.WGPublicKey == relay {
+			data.Relay = peer
+		} else {
+			data.AvailablePeers = append(data.AvailablePeers, peer)
+		}
+	}
+	c.HTML(http.StatusOK, "addRelayToNetwork", data)
+}
+
+func addRelay(c *gin.Context) {
+	netID := c.Param("id")
+	relayID := c.Param("peer")
+	relayedIDs := c.PostFormArray("relayed")
+	network, err := boltdb.Get[plexus.Network](netID, "networks")
+	if err != nil {
+		processError(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	peers := []plexus.NetworkPeer{}
+	for _, peer := range network.Peers {
+		if peer.WGPublicKey == relayID {
+			peer.IsRelay = true
+			peer.RelayedPeers = relayedIDs
+		}
+		if slices.Contains(relayedIDs, peer.WGPublicKey) {
+			peer.IsRelayed = true
+		}
+		peers = append(peers, peer)
+	}
+	network.Peers = peers
+	if err := boltdb.Save(network, network.Name, "networks"); err != nil {
+		processError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	networkDetails(c)
+}

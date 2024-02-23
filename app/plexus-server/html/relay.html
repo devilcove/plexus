@@ -1,0 +1,21 @@
+{{define "addRelayToNetwork"}}
+<div id="error"></div>
+<h2>Network {{.Network}}</h2>
+<h2>Create Relay</h2>
+<h2>Peers to Relay</h2>
+<form class="w3-container w3-card4" hx-post="/networks/relay/{{.Network}}/{{.Relay.WGPublicKey}}" hx-target="#content"
+    hx-target-error="#error">
+    {{range .AvailablePeers}}
+    <input class="w3-check" type="checkbox" name="relayed" value="{{.WGPublicKey}}">
+    <label>{{.HostName}} {{.Address.IP}}</label>
+    {{end}}
+    <p>
+        <button class="w3-button w3-theme-dark w3-padding large" type="button" 
+            hx-post="/networks/relay/{{.Network}}/{{.Relay.WGPublicKey}}" 
+            hx-target="#content" hx-target-error="#error">
+            Cancel</button>
+        <button class="w3-button w3-theme-dark" type="reset">Reset</button>
+        <button class="W3-button w3-theme-dark" type="submit">Add</button>
+    </p>
+</form>
+{{end}}
