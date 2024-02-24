@@ -39,6 +39,7 @@ func SetLogging(v string) *slog.Logger {
 	default:
 		logLevel.Set(slog.LevelInfo)
 	}
+	slog.SetLogLoggerLevel(slog.LevelDebug)
 	slog.Debug("Logging level set to", "level", logLevel.Level())
 	return logger
 }
