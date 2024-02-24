@@ -12,6 +12,7 @@ import (
 	"github.com/devilcove/plexus"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nkeys"
 )
 
 func startAgentNatsServer(ctx context.Context, wg *sync.WaitGroup) {
@@ -83,7 +84,10 @@ func subcribe(ec *nats.EncodedConn) {
 			slog.Error("pub response to connect request", "error", err)
 		}
 	})
-	ec.Subscribe("join", processJoin)
+	ec.Subscribe("register", func(sub, reply string, data *plexus.RegisterRequest) {
+		resp := registerPeer(data)
+		ec.Publish(reply, resp)
+	})
 	ec.Subscribe("loglevel", func(level *plexus.LevelRequest) {
 		newLevel := strings.ToUpper(level.Level)
 		slog.Info("loglevel change", "level", newLevel)
@@ -282,4 +286,32 @@ func addNewNetworks(self plexus.Device, networks []plexus.Network) {
 			slog.Error("start new interface", "error", err)
 		}
 	}
+}
+
+func createRegistationConnection(key plexus.KeyValue) (*nats.EncodedConn, error) {
+	loginKeyPair, err := nkeys.FromSeed([]byte(key.Seed))
+	if err != nil {
+		return nil, err
+	}
+	loginPublicKey, err := loginKeyPair.PublicKey()
+	if err != nil {
+		return nil, err
+	}
+	sign := func(nonce []byte) ([]byte, error) {
+		return loginKeyPair.Sign(nonce)
+	}
+	opts := nats.Options{
+		Url:         key.URL,
+		Nkey:        loginPublicKey,
+		SignatureCB: sign,
+	}
+	nc, err := opts.Connect()
+	if err != nil {
+		return nil, err
+	}
+	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
+	if err != nil {
+		return nil, err
+	}
+	return ec, nil
 }

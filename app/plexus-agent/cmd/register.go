@@ -23,37 +23,36 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// joinCmd represents the join command
-var joinCmd = &cobra.Command{
-	Use:   "join",
-	Short: "join a plexus server",
-	Long:  `join a plexus server using token`,
+// registerCmd represents the register command
+var registerCmd = &cobra.Command{
+	Use:   "register token",
+	Args:  cobra.ExactArgs(1),
+	Short: "register with a plexus server",
+	Long:  `register with a plexus server using token`,
 	Run: func(cmd *cobra.Command, args []string) {
-		token, err := cmd.Flags().GetString("token")
-		checkErr(err)
-		fmt.Println("join called")
+		request := plexus.RegisterRequest{
+			Token: args[0],
+		}
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
-		err = ec.Publish("join", plexus.JoinCommand{
-			Token: token,
-		})
-		cobra.CheckErr(err)
-		networks := []plexus.Network{}
-		cobra.CheckErr(ec.Request("status", nil, &networks, agent.NatsTimeout))
-		fmt.Println(networks)
+		resp := plexus.NetworkResponse{}
+		cobra.CheckErr(ec.Request("register", request, &resp, agent.NatsTimeout))
+		if resp.Error {
+			fmt.Println("errors encountered during registration")
+		}
+		fmt.Println(resp.Message)
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(joinCmd)
+	rootCmd.AddCommand(registerCmd)
 
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// joinCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// registerCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	joinCmd.Flags().StringP("token", "t", "", "token to join server")
 }

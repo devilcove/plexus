@@ -2,70 +2,61 @@ package agent
 
 import (
 	"errors"
-	"log/slog"
+	"log"
 	"net"
 	"os"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
-	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nkeys"
 	"github.com/pion/stun"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
-func processJoin(request *plexus.JoinCommand) error {
+func registerPeer(request *plexus.RegisterRequest) plexus.NetworkResponse {
+	log.Println("register request")
+	errResp := plexus.NetworkResponse{Error: true}
 	loginKey, err := plexus.DecodeToken(request.Token)
 	if err != nil {
-		return err
+		log.Println(err)
+		errResp.Message = err.Error()
+		return errResp
 	}
-	loginKeyPair, err := nkeys.FromSeed([]byte(loginKey.Seed))
+	ec, err := createRegistationConnection(loginKey)
 	if err != nil {
-		return err
+		errResp.Message = err.Error()
+		return errResp
 	}
-	loginPublicKey, err := loginKeyPair.PublicKey()
+	self, err := newDevice()
 	if err != nil {
-		return err
-	}
-	sign := func(nonce []byte) ([]byte, error) {
-		return loginKeyPair.Sign(nonce)
-	}
-	device, err := newDevice()
-	if err != nil {
-		return err
-	}
-	joinRequest := plexus.JoinRequest{
-		KeyName: loginKey.KeyName,
-		Peer:    device.Peer,
-	}
-	opts := nats.Options{
-		Url:         loginKey.URL,
-		Nkey:        loginPublicKey,
-		SignatureCB: sign,
-	}
-	nc, err := opts.Connect()
-	if err != nil {
-		return err
-	}
-	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
-	if err != nil {
-		return err
+		errResp.Message = err.Error()
+		return errResp
 	}
 	resp := plexus.NetworkResponse{}
-	if err := ec.Request("join", joinRequest, &resp, NatsTimeout); err != nil {
-		return err
+	serverRequest := plexus.ServerRegisterRequest{
+		KeyName: loginKey.KeyName,
+		Peer:    self.Peer,
 	}
-	self, err := boltdb.Get[plexus.Device]("self", "devices")
-	if err != nil {
-		slog.Error("get self", "error", err)
+	if err := ec.Request("register", serverRequest, &resp, NatsTimeout); err != nil {
+		log.Println(err)
+		errResp.Message = err.Error()
+		return errResp
 	}
-	addNewNetworks(self, resp.Networks)
+	if !slices.Contains(self.Servers, loginKey.URL) {
+		self.Servers = append(self.Servers, loginKey.URL)
+		if err := boltdb.Save(self, "self", "devices"); err != nil {
+			log.Println(err)
+			errResp.Message = err.Error()
+			return errResp
+		}
+	}
 	// reset nats connection
 	connectToServers()
-	return nil
+	return resp
 }
 
 func newDevice() (plexus.Device, error) {

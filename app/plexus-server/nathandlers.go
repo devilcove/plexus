@@ -34,40 +34,32 @@ func devicePermissions(id string) *server.Permissions {
 	}
 }
 
-func joinHandler(request *plexus.JoinRequest) plexus.NetworkResponse {
-	slog.Debug("join request", "request", request)
+func registerPermissions() *server.Permissions {
+	return &server.Permissions{
+		Publish: &server.SubjectPermission{
+			Allow: []string{"register"},
+		},
+		Subscribe: &server.SubjectPermission{
+			Allow: []string{"_INBOX.>"},
+		},
+	}
+}
+
+func registerHandler(request *plexus.ServerRegisterRequest) plexus.NetworkResponse {
+	slog.Debug("register request", "request", request)
 	errResp := plexus.NetworkResponse{Error: true}
 	response := plexus.NetworkResponse{}
-	key, err := decrementKeyUsage(request.KeyName)
-	if err != nil {
-		slog.Error("key update", "error", err)
-		errResp.Message = "key error " + err.Error()
+	if err := saveNewPeer(request.Peer); err != nil {
+		slog.Debug(err.Error())
+		errResp.Message = err.Error()
 		return errResp
 	}
-	_, err = boltdb.Get[plexus.Peer](request.Peer.WGPublicKey, "peers")
-	if errors.Is(err, boltdb.ErrNoResults) {
-		slog.Debug("peer does not exist ... adding")
-		if err := saveNewPeer(request.Peer); err != nil {
-			slog.Debug(err.Error())
-			errResp.Message = err.Error()
-			return errResp
-		}
-		if err := addNKeyUser(request.Peer); err != nil {
-			errResp.Message = err.Error()
-			slog.Debug(errResp.Message)
-			return errResp
-		}
+	if err := addNKeyUser(request.Peer); err != nil {
+		errResp.Message = err.Error()
+		slog.Debug(errResp.Message)
+		return errResp
 	}
-	for _, network := range key.Networks {
-		net, err := addPeerToNetwork(request.Peer, network)
-		if err != nil {
-			errResp.Message = err.Error()
-			slog.Debug(errResp.Message)
-			return errResp
-		}
-		response.Networks = append(response.Networks, net)
-	}
-	response.Message = fmt.Sprintf("joined network(s) successfully %v", key.Networks)
+	response.Message = "registration successful"
 	return response
 }
 

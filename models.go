@@ -78,12 +78,11 @@ type NetworkPeer struct {
 }
 
 type Key struct {
-	Name     string `form:"name"`
-	Value    string
-	Usage    int `form:"usage"`
-	Expires  time.Time
-	DispExp  string   `form:"expires"`
-	Networks []string `form:"networks"`
+	Name    string `form:"name"`
+	Value   string
+	Usage   int `form:"usage"`
+	Expires time.Time
+	DispExp string `form:"expires"`
 }
 
 type KeyValue struct {
@@ -117,9 +116,13 @@ type ServerClients struct {
 	PubNKey string
 }
 
+type ServerRegisterRequest struct {
+	KeyName string
+	Peer
+}
+
 type JoinRequest struct {
-	KeyName string //used by join
-	Network string //used by connect
+	Network string
 	Peer
 }
 
@@ -163,7 +166,7 @@ type DeviceUpdate struct {
 //Data    any
 //}
 
-type JoinCommand struct {
+type RegisterRequest struct {
 	Token string
 }
 

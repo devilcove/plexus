@@ -126,20 +126,19 @@ func newValue(name string) (string, error) {
 	return base64.StdEncoding.EncodeToString(payload), nil
 }
 
-func decrementKeyUsage(name string) (plexus.Key, error) {
+func decrementKeyUsage(name string) error {
 	key, err := boltdb.Get[plexus.Key](name, "keys")
 	if err != nil {
-		return key, err
+		return err
 	}
 	if key.Usage == 1 {
-		removeKey(key)
-		return key, nil
+		return removeKey(key)
 	}
 	key.Usage = key.Usage - 1
 	if err := boltdb.Save(key, key.Name, "keys"); err != nil {
-		return key, err
+		return err
 	}
-	return key, nil
+	return nil
 }
 
 func expireKeys(ctx context.Context, wg *sync.WaitGroup) {

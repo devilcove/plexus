@@ -90,16 +90,19 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 		slog.Error("nats encoded connect", "error", err)
 		brokerfail <- 1
 	}
-	// join handler
-	joinSub, err := encodedConn.Subscribe("join", func(subj, reply string, request *plexus.JoinRequest) {
-		response := joinHandler(request)
-		slog.Debug("publish join reply", "response", response)
+	// register handler
+	registerSub, err := encodedConn.Subscribe("register", func(subj, reply string, request *plexus.ServerRegisterRequest) {
+		response := registerHandler(request)
+		slog.Debug("publish register reply", "response", response)
 		if err := encodedConn.Publish(reply, response); err != nil {
-			slog.Error("join", "error", err)
+			slog.Error("publish register reply", "error", err)
+		}
+		if err := decrementKeyUsage(request.KeyName); err != nil {
+			slog.Error("decrement key usage", "error", err)
 		}
 	})
 	if err != nil {
-		slog.Error("subscribe join", "error", err)
+		slog.Error("subscribe register", "error", err)
 	}
 	checkinSub, err := natsConn.Subscribe("checkin.*", checkinHandler)
 	if err != nil {
@@ -139,7 +142,7 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 	for {
 		select {
 		case <-ctx.Done():
-			joinSub.Drain()
+			registerSub.Drain()
 			checkinSub.Drain()
 			updateSub.Drain()
 			configSub.Drain()
@@ -163,15 +166,8 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 				continue
 			}
 			natsOptions.Nkeys = append(natsOptions.Nkeys, &server.NkeyUser{
-				Nkey: nPubKey,
-				Permissions: &server.Permissions{
-					Publish: &server.SubjectPermission{
-						Allow: []string{"join"},
-					},
-					Subscribe: &server.SubjectPermission{
-						Allow: []string{"_INBOX.>"},
-					},
-				},
+				Nkey:        nPubKey,
+				Permissions: registerPermissions(),
 			})
 			natServer.ReloadOptions(natsOptions)
 		}
@@ -206,14 +202,7 @@ func createNkeyUser(token string) *server.NkeyUser {
 		slog.Error("unable to create public key", "error", err)
 	}
 	return &server.NkeyUser{
-		Nkey: pk,
-		Permissions: &server.Permissions{
-			Publish: &server.SubjectPermission{
-				Allow: []string{"join"},
-			},
-			Subscribe: &server.SubjectPermission{
-				Allow: []string{"_INBOX.>"},
-			},
-		},
+		Nkey:        pk,
+		Permissions: registerPermissions(),
 	}
 }

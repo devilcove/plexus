@@ -8,11 +8,10 @@
         Create New Key</button>
 </div>
 <h1>Plexus Keys</h1>
-<div class="grid5">
+<div class="grid4">
     <div class="w3-theme-l3">Name</div>
     <div class="w3-theme-l3">Uses Remaining</div>
     <div class="w3-theme-l3">Expires</div>
-    <div class="w3-theme-l3">Networks</div>
     <div class="w3-theme-l3"></div>
     {{range .}}
     <div><button class="w3-button w3-theme" type="button" onclick='navigator.clipboard.writeText("{{.Value}}").then(() =>{
@@ -23,7 +22,6 @@
     </div>
     <div>{{.Usage}}</div>
     <div>{{.DispExp}}</div>
-    <div>{{.Networks}}</div>
     <div><button class="w3-button w3-theme" type="button" hx-delete="/keys/{{.Name}}" hx-target="#content"
             hx-target-error="#error" hx-confirm="Delete Key?">
             Delete</button></div>
@@ -41,11 +39,6 @@
     <input class="w3-input" type="number" value="1" name="usage" style="width:50%"><br>
     <label>Expires</label>
     <input class="w3-input" type="date" name="expires" value="{{.DefaultDate}}" style="width:50%">
-    <h2>Networks</h2>
-    {{range .Networks}}
-    <input class="w3-check" type="checkbox" name="networks" value="{{.}}">
-    <label>{{.}}</label>
-    {{end}}
     <p><button class="w3-button" type="button" hx-get="/keys/" hx-target="#content">Cancel</button>
         <button class="w3-button w3-theme-dark" type="reset">Reset</button>
         <button class="w3-button w3-theme-dark" type="submit">Create</button>

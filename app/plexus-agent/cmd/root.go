@@ -39,7 +39,7 @@ var rootCmd = &cobra.Command{
 	Short: "plexus agent",
 	Long: `plexus agent to setup and manage plexus wireguard
 networks.  Communicates with plexus server for network updates.
-CLI to join/leave connect/disconnect from networks.`,
+CLI to join/leave networks.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
