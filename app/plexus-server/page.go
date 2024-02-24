@@ -80,7 +80,8 @@ func login(c *gin.Context) {
 	page := getPage(user.Username)
 	page.NeedsLogin = false
 	page.Page = "networks"
-	c.HTML(http.StatusOK, "content", page)
+	displayMain(c)
+	//c.HTML(http.StatusOK, "content", page)
 }
 
 func validateUser(visitor *plexus.User) bool {

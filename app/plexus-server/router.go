@@ -43,7 +43,7 @@ func setupRouter() *gin.Engine {
 	_ = router.SetTrustedProxies(nil)
 	router.Use(gin.Recovery(), session)
 	router.GET("/", displayMain)
-	router.POST("/login", login)
+	router.POST("/", login)
 	router.GET("/logout", logout)
 	networks := router.Group("/networks", auth)
 	{
