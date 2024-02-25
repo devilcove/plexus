@@ -3,26 +3,22 @@
     <!-- [html-validate-disable element-permitted-content]-->
 <!-- [html-validate-disable no-inline-style]-->
 <!-- Icon Bar (Sidebar - hidden on small screens) -->
-<nav class="sidebar w3-sidebar w3-bar-block w3-hide-small w3-theme-dark">
-    <div class="w3-dropdown-hover">
-    <!--
-        <button type="button" class="w3-button w3-theme-dark"
-        hx-get="/networks/" hx-target="#content" hx-target-error="#error">
-        <i class="fa fa-network-wired w3-large"></i>
-        Networks</button>
-    -->
-    <button type="button" class="w3-button w3-theme-dark"
-        hx-get="/networks/" hx-target="#content" hx-target-error="#error">
-        <i class="fa fa-network-wired w3-large"></i>
-    Networks</button>
-    <div class="w3-dropdown-content w3-bar-block">
-        {{range .}}
-        <button type="button" class="w3-bar-item w3-button w3-right w3-theme-light" 
-            hx-get="/networks/{{.}}" hx-target="#content" hx-target-error="#error">
-            <i class="fa fa-cloud w3-small"></i>
-            {{.}}</button>
-        {{end}}
-    </div>
+<nav class="w3-sidebar w3-bar-block w3-hide-small w3-theme-dark" style="width:15%">
+    <div class="w3-bar-item">
+        <details>
+            <summary><i class="fa fa-network-wired w3-large"></i>
+                Networks</summary>
+            {{range .}}
+            <button type="button" class="w3-bar-item w3-button w3-padding-large w3-theme-dark" 
+                hx-get="/networks/{{.}}" hx-target="#content" hx-target-error="#error">
+                <i class="fa fa-cloud w3-small"></i>
+                {{.}}</button>
+            {{end}}
+            <button type="button" class="w3-bar-item w3-button w3-padding-large w3-theme-dark" 
+                hx-get="/networks/" hx-target="#content" hx-target-error="#error">
+                <i class="fa fa-network-wired w3-small"></i>
+                all</button>
+        </details>
     </div>
     <button type="button" class="w3-bar-item w3-button w3-padding-large w3-theme-dark" hx-get="/peers/"
         hx-target="#content" hx-target-error="#error">

@@ -11,8 +11,9 @@
         Create New Network</button>
 </div>
 <h1>Networks</h1>
-<div class="grid3">
-    <div class="w3-theme-l3">Peer</div>
+<div class="grid4">
+    <div class="w3-theme-l3">Name</div>
+    <div class="w3-theme-l3">Peers</div>
     <div class="w3-theme-l3">CIDR</div>
     <div class="w3-theme-l3">Delete</div>
     {{range .Data}}
@@ -22,6 +23,7 @@
             <i class="fas fa-desktop"></i>
             {{.Name}}</button>
     </div>
+    <div>{{len .Peers}}</div>
     <div class="w3-margin-top">{{.AddressString}}</div>
     <div>
         <button class="w3-button" type="button" hx-delete="networks/{{.Name}}" hx-target="#content"
