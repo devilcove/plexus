@@ -23,8 +23,12 @@ import (
 
 	"github.com/devilcove/plexus"
 	"github.com/devilcove/plexus/agent"
+	"github.com/kr/pretty"
 	"github.com/spf13/cobra"
+	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
+
+var long bool
 
 // statusCmd represents the status command
 var statusCmd = &cobra.Command{
@@ -61,23 +65,38 @@ var statusCmd = &cobra.Command{
 			fmt.Println("\t public key:", wg.PrivateKey.PublicKey())
 			fmt.Println("\t listen port:", wg.ListenPort)
 			fmt.Println()
-			for i, peer := range network.Peers {
+			wgPeer := wgtypes.Peer{}
+			for _, peer := range network.Peers {
 				if peer.WGPublicKey == wg.PrivateKey.PublicKey().String() {
+					//self, skip
 					continue
+				}
+				for _, x := range wg.Peers {
+					if x.PublicKey.String() == peer.WGPublicKey {
+						wgPeer = x
+						break
+					}
 				}
 				fmt.Println("peer:", peer.WGPublicKey, peer.HostName, peer.Address.IP)
 				fmt.Println("\tendpoint:", peer.Endpoint+":", peer.PublicListenPort)
 				fmt.Print("\tallowed ips:")
-				for _, ip := range wg.Peers[i].AllowedIPs {
+				for _, ip := range wgPeer.AllowedIPs {
 					ones, _ := ip.Mask.Size()
 					fmt.Print(", " + ip.IP.String() + "/" + strconv.Itoa(ones))
 				}
 				fmt.Println()
-				fmt.Println("\tlast handshake:", time.Since(wg.Peers[i].LastHandshakeTime).Seconds(), "seconds ago")
-				fmt.Println("\ttransfer:", wg.Peers[i].ReceiveBytes, "received", wg.Peers[i].TransmitBytes, "sent")
-				fmt.Println("\tkeepalive:", wg.Peers[i].PersistentKeepaliveInterval)
+				if wgPeer.LastHandshakeTime.IsZero() {
+					fmt.Println("\tlast handshake: never")
+				} else {
+					fmt.Printf("\tlast handshake: %f0.0 %s\n", time.Since(wgPeer.LastHandshakeTime).Seconds(), "seconds ago")
+				}
+				fmt.Println("\ttransfer:", wgPeer.TransmitBytes, "sent", wgPeer.ReceiveBytes, "received")
+				fmt.Println("\tkeepalive:", wgPeer.PersistentKeepaliveInterval)
 			}
 			fmt.Println()
+			if long {
+				pretty.Println(network)
+			}
 		}
 	},
 }
@@ -93,5 +112,5 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// statusCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	statusCmd.Flags().BoolVarP(&long, "long", "l", false, "display additional network detail")
 }
