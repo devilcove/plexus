@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nats-io/nats.go"
 )
 
 type Command int
@@ -168,12 +167,6 @@ type DeviceUpdate struct {
 
 type RegisterRequest struct {
 	Token string
-}
-
-type NetMap struct {
-	Interface     string
-	Channel       chan bool
-	Subscriptions []*nats.Subscription
 }
 
 type ConnectivityData struct {

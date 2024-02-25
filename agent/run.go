@@ -131,7 +131,8 @@ func connectToServer(self plexus.Device, server string) (*nats.EncodedConn, erro
 		}),
 		nats.Nkey(pk, sign),
 	}...)
-	nc, err := nats.Connect("nats://"+server+":4222", opts...)
+	slog.Debug("connecting to server", "url", server)
+	nc, err := nats.Connect(server, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -145,12 +146,12 @@ func checkin(wg *sync.WaitGroup) {
 		slog.Error("get device", "error", err)
 		return
 	}
-	for server, ec := range serverMap {
-		if !ec.Conn.IsConnected() {
+	for server, data := range serverMap {
+		if !data.EC.Conn.IsConnected() {
 			slog.Debug("not connected to server broker .... skipping checkin", "server", server)
 			continue
 		}
-		msg, err := ec.Conn.Request("checkin."+self.WGPublicKey, []byte("checking"), NatsTimeout)
+		msg, err := data.EC.Conn.Request("checkin."+self.WGPublicKey, []byte("checking"), NatsTimeout)
 		if err != nil {
 			slog.Error("error publishing checkin ", "error", err)
 			continue
@@ -161,14 +162,12 @@ func checkin(wg *sync.WaitGroup) {
 }
 
 func closeServerConnections() {
-	for _, ec := range serverMap {
-		for _, network := range networkMap {
-			for _, sub := range network.Subscriptions {
-				if err := sub.Drain(); err != nil {
-					slog.Error("drain subscription", "sub", sub.Subject, "error", err)
-				}
+	for _, server := range serverMap {
+		for _, sub := range server.Subscriptions {
+			if err := sub.Drain(); err != nil {
+				slog.Error("drain subscription", "sub", sub.Subject, "error", err)
 			}
 		}
-		ec.Close()
+		server.EC.Close()
 	}
 }

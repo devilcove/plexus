@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"log"
 	"log/slog"
 	"slices"
 	"strconv"
@@ -110,16 +111,12 @@ func ConnectToAgentBroker() (*nats.EncodedConn, error) {
 }
 
 func connectToServers() {
-	serverMap = make(map[string]*nats.EncodedConn)
-	networkMap = make(map[string]plexus.NetMap)
+	serverMap = make(map[string]serverData)
+	networkMap = make(map[string]netMap)
 	self, err := boltdb.Get[plexus.Device]("self", "devices")
 	if err != nil {
 		slog.Error("unable to read device", "error", err)
 		return
-	}
-	networks, err := boltdb.GetAll[plexus.Network]("networks")
-	if err != nil {
-		slog.Error("unable to read networks", "error", err)
 	}
 	for _, server := range self.Servers {
 		slog.Debug("connecting to server", "server", server)
@@ -128,27 +125,18 @@ func connectToServers() {
 			slog.Error("connect to server", "server", server, "error", err)
 			continue
 		}
-		serverMap[server] = ec
-	}
-	for _, network := range networks {
-		iface := network.Interface
-		channel := make(chan bool, 1)
-		ec, ok := serverMap[network.ServerURL]
-		if !ok {
-			slog.Error("network server not in list of servers", "network server", "network.ServerURL", "servers", self.Servers)
-			continue
-		}
-		updates, err := ec.Subscribe("networks.>", networkUpdates)
+		serverData := serverData{EC: ec}
+		networkUpdates, err := ec.Subscribe("networks.>", networkUpdates)
 		if err != nil {
 			slog.Error("network subscription failed", "error", err)
 		}
-		self, err := ec.Subscribe(self.WGPublicKey, func(subject string, data *plexus.DeviceUpdate) {
+		updates, err := ec.Subscribe(self.WGPublicKey, func(subject string, data *plexus.DeviceUpdate) {
 			slog.Info("device update", "command", data.Type.String())
 			switch data.Type {
 			case plexus.LeaveServer:
-				delete(serverMap, network.ServerURL)
+				delete(serverMap, data.Network.ServerURL)
 				ec.Close()
-				deleteServer(network.ServerURL)
+				deleteServer(data.Network.ServerURL)
 			case plexus.JoinNetwork:
 				if err := connectToNetwork(data.Network); err != nil {
 					slog.Error("connect to network", "error", err)
@@ -160,14 +148,30 @@ func connectToServers() {
 		if err != nil {
 			slog.Error("device subscription failed", "error", err)
 		}
-		networkMap[network.Name] = plexus.NetMap{
-			Interface:     iface,
-			Channel:       channel,
-			Subscriptions: []*nats.Subscription{updates, self},
+		serverData.Subscriptions = []*nats.Subscription{networkUpdates, updates}
+		serverMap[server] = serverData
+
+	}
+	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	if err != nil {
+		slog.Error("unable to read networks", "error", err)
+	}
+	for _, network := range networks {
+		iface := network.Interface
+		channel := make(chan bool, 1)
+		_, ok := serverMap[network.ServerURL]
+		if !ok {
+			slog.Error("network server not in list of servers", "network server", "network.ServerURL", "servers", self.Servers)
+			continue
+		}
+		networkMap[network.Name] = netMap{
+			Interface: iface,
+			Channel:   channel,
 		}
 	}
-	slog.Debug("server connection", "servermap", serverMap,
-		"length", len(serverMap), "networkmap", networkMap)
+	log.Println("server connection", serverMap, len(serverMap), networkMap)
+	//slog.Debug("server connection", "servermap", serverMap,
+	//"length", len(serverMap), "networkmap", networkMap)
 }
 
 func processLeave(request plexus.UpdateRequest) plexus.NetworkResponse {
@@ -187,13 +191,13 @@ func processLeave(request plexus.UpdateRequest) plexus.NetworkResponse {
 		return errResponse
 	}
 	request.Peer.WGPublicKey = self.WGPublicKey
-	conn, ok := serverMap[network.ServerURL]
+	server, ok := serverMap[network.ServerURL]
 	if !ok {
 		slog.Debug(networkNotMapped)
 		errResponse.Message = networkNotMapped
 		return errResponse
 	}
-	if err := conn.Request("leave."+self.WGPublicKey, request, &response, NatsTimeout); err != nil {
+	if err := server.EC.Request("leave."+self.WGPublicKey, request, &response, NatsTimeout); err != nil {
 		slog.Debug(err.Error())
 		errResponse.Message = err.Error()
 		return errResponse

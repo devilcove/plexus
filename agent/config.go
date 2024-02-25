@@ -4,7 +4,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/devilcove/plexus"
 	"github.com/nats-io/nats.go"
 )
 
@@ -24,8 +23,8 @@ var (
 	restart  chan struct{}
 	natsfail chan struct{}
 	// networkMap containss the interface name and reset channel for networks
-	networkMap map[string]plexus.NetMap
-	serverMap  map[string]*nats.EncodedConn
+	networkMap map[string]netMap
+	serverMap  map[string]serverData
 	//errors
 	ErrNetNotMapped = errors.New("network not mapped to server")
 	ErrConnected    = errors.New("network connected")
@@ -34,4 +33,14 @@ var (
 type Configuration struct {
 	NatsPort  int
 	Verbosity string
+}
+
+type serverData struct {
+	EC            *nats.EncodedConn
+	Subscriptions []*nats.Subscription
+}
+
+type netMap struct {
+	Interface string
+	Channel   chan bool
 }

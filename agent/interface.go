@@ -289,12 +289,12 @@ func publishConnectivity(self plexus.Device) {
 				}
 			}
 			data.Connectivity = goodHandShakes / float64(len(device.Peers))
-			ec, ok := serverMap[network.ServerURL]
+			server, ok := serverMap[network.ServerURL]
 			if !ok {
 				slog.Error("serverMap", "serverURL", network.ServerURL)
 				continue
 			}
-			ec.Publish("connectivity."+self.WGPublicKey, data)
+			server.EC.Publish("connectivity."+self.WGPublicKey, data)
 			slog.Debug("published connectivity", "data", data)
 		}
 	}
