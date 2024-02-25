@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -208,20 +207,17 @@ func configHandler(m *nats.Msg) {
 }
 
 // connectivityHandler handles connectivity stats ie message published to connectivity.<ID>
-func connectivityHandler(m *nats.Msg) {
-	device := m.Subject[13:]
+func connectivityHandler(sub string, data *plexus.ConnectivityData) struct{ Message string } {
+	response := struct {
+		Message string
+	}{}
+	device := sub[13:]
 	slog.Info("received connectivity stats", "device", device)
-	data := plexus.ConnectivityData{}
-	if err := json.Unmarshal(m.Data, &data); err != nil {
-		m.Header.Set("error", "invalid data")
-		m.Respond([]byte("nack"))
-		return
-	}
 	network, err := boltdb.Get[plexus.Network](data.Network, "networks")
 	if err != nil {
-		m.Header.Set("error", "no such network")
-		m.Respond([]byte("nack"))
-		return
+		slog.Error("connectivity data received for invalid network", "network", data.Network)
+		response.Message = "error: no such network"
+		return response
 	}
 	updatedPeers := []plexus.NetworkPeer{}
 	for _, peer := range network.Peers {
@@ -232,7 +228,8 @@ func connectivityHandler(m *nats.Msg) {
 	}
 	network.Peers = updatedPeers
 	boltdb.Save(network, network.Name, "networks")
-	m.Respond([]byte("ack"))
+	response.Message = "ack"
+	return response
 }
 
 // processLeave handles leaving a network

@@ -294,8 +294,11 @@ func publishConnectivity(self plexus.Device) {
 				slog.Error("serverMap", "serverURL", network.ServerURL)
 				continue
 			}
-			server.EC.Publish("connectivity."+self.WGPublicKey, data)
-			slog.Debug("published connectivity", "data", data)
+			resp := struct {
+				Messsage string
+			}{}
+			server.EC.Request("connectivity."+self.WGPublicKey, data, resp, NatsTimeout)
+			slog.Debug("published connectivity", "data", data, "response", resp)
 		}
 	}
 }
