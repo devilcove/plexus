@@ -14,7 +14,7 @@ func _() {
 	_ = x[AddRelay-3]
 	_ = x[DeleteRelay-4]
 	_ = x[DeleteNetork-5]
-	_ = x[ConnectToNetwork-6]
+	_ = x[JoinNetwork-6]
 	_ = x[LeaveNetwork-7]
 	_ = x[LeaveServer-8]
 }

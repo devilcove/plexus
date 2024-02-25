@@ -35,7 +35,6 @@ func startAgentNatsServer(ctx context.Context, wg *sync.WaitGroup) {
 		natsfail <- struct{}{}
 		return
 	}
-	defer nc.Close()
 	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
 	if err != nil {
 		slog.Error("nats encoder", "error", err)
@@ -72,8 +71,8 @@ func subcribe(ec *nats.EncodedConn) {
 	ec.Subscribe("update", func(sub, reply string, data plexus.UpdateRequest) {
 		response := plexus.NetworkResponse{}
 		switch data.Action {
-		case plexus.ConnectToNetwork:
-			response = processConnect(data)
+		case plexus.JoinNetwork:
+			response = processJoin(data)
 		case plexus.LeaveNetwork:
 			response = processLeave(data)
 		default:
@@ -150,7 +149,7 @@ func connectToServers() {
 				delete(serverMap, network.ServerURL)
 				ec.Close()
 				deleteServer(network.ServerURL)
-			case plexus.ConnectToNetwork:
+			case plexus.JoinNetwork:
 				if err := connectToNetwork(data.Network); err != nil {
 					slog.Error("connect to network", "error", err)
 				}
@@ -203,8 +202,8 @@ func processLeave(request plexus.UpdateRequest) plexus.NetworkResponse {
 	return response
 }
 
-func processConnect(request plexus.UpdateRequest) plexus.NetworkResponse {
-	slog.Debug("connect", "network", request.Network, "server", request.Server)
+func processJoin(request plexus.UpdateRequest) plexus.NetworkResponse {
+	slog.Debug("join", "network", request.Network, "server", request.Server)
 	response := plexus.NetworkResponse{}
 	errResponse := plexus.NetworkResponse{Error: true}
 	_, err := boltdb.Get[plexus.Network](request.Network, "networks")

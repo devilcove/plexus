@@ -23,14 +23,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// connectCmd represents the connect command
-var connectCmd = &cobra.Command{
-	Use:   "connect network server",
+// joinCmd represents the connect command
+var joinCmd = &cobra.Command{
+	Use:   "join network server",
 	Args:  cobra.ExactArgs(2),
-	Short: "connect to network",
-	Long:  `connect to network that was previously disconnected`,
+	Short: "join network",
+	Long:  `join network`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("connect called")
+		fmt.Println("join called")
 		var response plexus.NetworkResponse
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
@@ -38,7 +38,7 @@ var connectCmd = &cobra.Command{
 		cobra.CheckErr(ec.Request("update", plexus.UpdateRequest{
 			Network: args[0],
 			Server:  args[1],
-			Action:  plexus.ConnectToNetwork,
+			Action:  plexus.JoinNetwork,
 		}, &response, agent.NatsTimeout))
 		if response.Error {
 			fmt.Println("errors were encountered")
@@ -48,15 +48,5 @@ var connectCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(connectCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// connectCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// connectCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.AddCommand(joinCmd)
 }

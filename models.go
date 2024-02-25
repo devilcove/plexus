@@ -23,7 +23,7 @@ const (
 	AddRelay
 	DeleteRelay
 	DeleteNetork
-	ConnectToNetwork
+	JoinNetwork
 	LeaveNetwork
 	LeaveServer
 )
