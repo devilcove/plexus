@@ -79,11 +79,36 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 		if err := replacePeerInInterface(networkMap[networkName].Interface, update.Peer); err != nil {
 			slog.Error("replace peer", "error", err)
 		}
+
 	case plexus.AddRelay:
 		slog.Info("add relay")
-		if err := addRelayToInterface(networkMap[networkName].Interface, update.Peer); err != nil {
-			slog.Error("addRelay", "error", err)
+		updatedPeers := []plexus.NetworkPeer{}
+		for _, peer := range network.Peers {
+			if peer.WGPublicKey == self.WGPublicKey {
+				updatedPeers = append(updatedPeers, update.Peer)
+				continue
+			}
+			if slices.Contains(update.Peer.RelayedPeers, peer.WGPublicKey) {
+				peer.IsRelayed = true
+			}
+			updatedPeers = append(updatedPeers, peer)
 		}
+		network.Peers = updatedPeers
+		if err := boltdb.Save(network, network.Name, "networks"); err != nil {
+			slog.Error("update network with relayed peers", "error", err)
+		}
+		iface, err := plexus.Get(networkMap[networkName].Interface)
+		if err != nil {
+			slog.Error("add relay", "error", err)
+			return
+		}
+		iface.Config.ReplacePeers = true
+		iface.Config.Peers = getWGPeers(self, network)
+		if err := iface.Apply(); err != nil {
+			slog.Error("unable to add relay to interface", "error", err)
+		}
+		return
+
 	case plexus.DeleteNetwork:
 		slog.Info("delete network")
 		networkMap[network.Name].Channel <- true

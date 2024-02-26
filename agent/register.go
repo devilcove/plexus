@@ -3,6 +3,7 @@ package agent
 import (
 	"errors"
 	"log"
+	"log/slog"
 	"net"
 	"os"
 	"runtime"
@@ -54,6 +55,8 @@ func registerPeer(request *plexus.RegisterRequest) plexus.NetworkResponse {
 			return errResp
 		}
 	}
+	slog.Debug("server response to join request", "response", resp)
+	addNewNetworks(self, resp.Networks)
 	// reset nats connection
 	connectToServers()
 	return resp

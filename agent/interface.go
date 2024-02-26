@@ -61,8 +61,17 @@ func startAllInterfaces(self plexus.Device) {
 
 // func startInterfaces(ctx context.Context, wg *sync.WaitGroup) {
 func startInterface(self plexus.Device, network plexus.Network) error {
-	keepalive := defaultKeepalive
 	address := netlink.Addr{}
+	for _, peer := range network.Peers {
+		if peer.WGPublicKey == self.WGPublicKey {
+			add := net.IPNet{
+				IP:   peer.Address.IP,
+				Mask: network.Net.Mask,
+			}
+			address.IPNet = &add
+			break
+		}
+	}
 	privKey, err := wgtypes.ParseKey(self.WGPrivateKey)
 	if err != nil {
 		slog.Error("unable to parse private key", "error", err)
@@ -73,45 +82,7 @@ func startInterface(self plexus.Device, network plexus.Network) error {
 		return err
 	}
 	mtu := 1420
-	peers := []wgtypes.PeerConfig{}
-	for _, peer := range network.Peers {
-		slog.Info("checking peer", "peer", peer.WGPublicKey, "address", peer.Address, "mask", network.Net.Mask)
-		if peer.WGPublicKey == self.WGPublicKey {
-			add := net.IPNet{
-				IP:   peer.Address.IP,
-				Mask: network.Net.Mask,
-			}
-			address.IPNet = &add
-			continue
-		}
-		if peer.IsRelayed {
-			continue
-		}
-		pubKey, err := wgtypes.ParseKey(peer.WGPublicKey)
-		if err != nil {
-			slog.Error("unable to parse public key", "key", peer.WGPublicKey, "error", err)
-			continue
-		}
-		allowed := []net.IPNet{}
-		if peer.IsRelay {
-			allowed = getAllowedIPs(peer, network.Peers)
-		}
-		allowed = append(allowed, net.IPNet{
-			IP:   peer.Address.IP,
-			Mask: net.CIDRMask(32, 32),
-		})
-		wgPeer := wgtypes.PeerConfig{
-			PublicKey:         pubKey,
-			ReplaceAllowedIPs: true,
-			AllowedIPs:        allowed,
-			Endpoint: &net.UDPAddr{
-				IP:   net.ParseIP(peer.Endpoint),
-				Port: peer.PublicListenPort,
-			},
-			PersistentKeepaliveInterval: &keepalive,
-		}
-		peers = append(peers, wgPeer)
-	}
+	peers := getWGPeers(self, network)
 	port, err := getFreePort(network.ListenPort)
 	if err != nil {
 		return err
@@ -203,41 +174,6 @@ func replacePeerInInterface(name string, replacement plexus.NetworkPeer) error {
 	return iface.Apply()
 }
 
-func addRelayToInterface(name string, relay plexus.NetworkPeer) error {
-	iface, err := plexus.Get(name)
-	if err != nil {
-		return err
-	}
-	key, err := wgtypes.ParseKey(relay.WGPublicKey)
-	if err != nil {
-		return err
-	}
-	keepalive := defaultKeepalive
-	relayPeer := wgtypes.PeerConfig{
-		PublicKey: key,
-		Endpoint: &net.UDPAddr{
-			IP:   net.ParseIP(relay.Endpoint),
-			Port: relay.PublicListenPort,
-		},
-		PersistentKeepaliveInterval: &keepalive,
-		ReplaceAllowedIPs:           true,
-		AllowedIPs:                  []net.IPNet{relay.Address},
-	}
-	for i, peer := range iface.Config.Peers {
-		var relayIndex int
-		if peer.PublicKey.String() == relay.WGPublicKey {
-			relayIndex = i
-			iface.Config.Peers[i] = relayPeer
-		}
-		if slices.Contains(relay.RelayedPeers, peer.PublicKey.String()) {
-			peer.Remove = true
-			iface.Config.Peers[i] = peer
-			iface.Config.Peers[relayIndex].AllowedIPs = append(iface.Config.Peers[relayIndex].AllowedIPs, peer.AllowedIPs...)
-		}
-	}
-	return iface.Apply()
-}
-
 func getFreePort(start int) (int, error) {
 	addr := net.UDPAddr{}
 	if start == 0 {
@@ -313,4 +249,43 @@ func getAllowedIPs(relay plexus.NetworkPeer, peers []plexus.NetworkPeer) []net.I
 		}
 	}
 	return allowed
+}
+
+func getWGPeers(self plexus.Device, network plexus.Network) []wgtypes.PeerConfig {
+	keepalive := defaultKeepalive
+	peers := []wgtypes.PeerConfig{}
+	for _, peer := range network.Peers {
+		slog.Info("checking peer", "peer", peer.WGPublicKey, "address", peer.Address, "mask", network.Net.Mask)
+		if peer.WGPublicKey == self.WGPublicKey {
+			continue
+		}
+		if peer.IsRelayed {
+			continue
+		}
+		pubKey, err := wgtypes.ParseKey(peer.WGPublicKey)
+		if err != nil {
+			slog.Error("unable to parse public key", "key", peer.WGPublicKey, "error", err)
+			continue
+		}
+		allowed := []net.IPNet{}
+		if peer.IsRelay {
+			allowed = getAllowedIPs(peer, network.Peers)
+		}
+		allowed = append(allowed, net.IPNet{
+			IP:   peer.Address.IP,
+			Mask: net.CIDRMask(32, 32),
+		})
+		wgPeer := wgtypes.PeerConfig{
+			PublicKey:         pubKey,
+			ReplaceAllowedIPs: true,
+			AllowedIPs:        allowed,
+			Endpoint: &net.UDPAddr{
+				IP:   net.ParseIP(peer.Endpoint),
+				Port: peer.PublicListenPort,
+			},
+			PersistentKeepaliveInterval: &keepalive,
+		}
+		peers = append(peers, wgPeer)
+	}
+	return peers
 }

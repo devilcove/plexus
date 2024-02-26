@@ -18,6 +18,7 @@ package cmd
 import (
 	"fmt"
 	"log/slog"
+	"slices"
 	"strconv"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/devilcove/plexus/agent"
 	"github.com/kr/pretty"
 	"github.com/spf13/cobra"
+	"github.com/vishvananda/netlink"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
@@ -53,20 +55,34 @@ var statusCmd = &cobra.Command{
 			fmt.Println("no networks")
 			return
 		}
+		fmt.Println()
 		for _, network := range status.Networks {
 			wg, err := plexus.GetDevice(network.Interface)
 			if err != nil {
 				slog.Error("get wg device", "interface", network.Interface, "error", err)
 				continue
 			}
+			link, err := netlink.LinkByName(network.Interface)
+			if err != nil {
+				slog.Error("get interface", "interface", network.Interface, "error", err)
+			}
+			addr, err := netlink.AddrList(link, netlink.FAMILY_ALL)
+			if err != nil {
+				slog.Error("get address of interface", "interface", network.Interface, "error", err)
+			}
 			fmt.Println("interface:", network.Interface)
 			fmt.Println("\t network name:", network.Name)
 			fmt.Println("\t server: ", network.ServerURL)
 			fmt.Println("\t public key:", wg.PrivateKey.PublicKey())
 			fmt.Println("\t listen port:", wg.ListenPort)
-			fmt.Println()
+			for i := range addr {
+				fmt.Println("\t address:", addr[i].IP)
+			}
 			wgPeer := wgtypes.Peer{}
 			for _, peer := range network.Peers {
+				if peer.IsRelayed {
+					continue
+				}
 				if peer.WGPublicKey == wg.PrivateKey.PublicKey().String() {
 					//self, skip
 					continue
@@ -78,11 +94,15 @@ var statusCmd = &cobra.Command{
 					}
 				}
 				fmt.Println("peer:", peer.WGPublicKey, peer.HostName, peer.Address.IP)
+				if peer.IsRelay {
+					fmt.Println("\trelay: true")
+					showRelayedPeers(peer.RelayedPeers, network)
+				}
 				fmt.Println("\tendpoint:", peer.Endpoint+":", peer.PublicListenPort)
 				fmt.Print("\tallowed ips:")
 				for _, ip := range wgPeer.AllowedIPs {
 					ones, _ := ip.Mask.Size()
-					fmt.Print(", " + ip.IP.String() + "/" + strconv.Itoa(ones))
+					fmt.Print(" " + ip.IP.String() + "/" + strconv.Itoa(ones))
 				}
 				fmt.Println()
 				if wgPeer.LastHandshakeTime.IsZero() {
@@ -113,4 +133,12 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	statusCmd.Flags().BoolVarP(&long, "long", "l", false, "display additional network detail")
+}
+
+func showRelayedPeers(relayed []string, network plexus.Network) {
+	for _, peer := range network.Peers {
+		if slices.Contains(relayed, peer.WGPublicKey) {
+			fmt.Printf("\t\t relayed: %s %s %v\n", peer.WGPublicKey, peer.HostName, peer.Address.IP)
+		}
+	}
 }

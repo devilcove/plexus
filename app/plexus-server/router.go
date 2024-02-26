@@ -56,6 +56,8 @@ func setupRouter() *gin.Engine {
 		networks.DELETE("/peers/:id/:peer", removePeerFromNetwork)
 		networks.GET("/relay/:id/:peer", displayAddRelay)
 		networks.POST("/relay/:id/:peer", addRelay)
+		networks.DELETE("/relay/:id/:peer", deleteRelay)
+		networks.GET("/peers/:id/:peer", networkPeerDetails)
 	}
 	keys := router.Group("/keys", auth)
 	{

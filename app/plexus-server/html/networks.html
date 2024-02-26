@@ -82,7 +82,7 @@
         <!-- details -->
         {{range .Peers}}
         <div>
-            <button class="w3-button w3-theme" type="button" hx-get="/peers/{{.WGPublicKey}}" hx-target="#content"
+            <button class="w3-button w3-theme" type="button" hx-get="/networks/peers/{{$network}}/{{.WGPublicKey}}" hx-target="#content"
                 hx-target-error="#error">
                 <i class="fa fa-desktop"></i>
                 {{.HostName}}</button><br>
@@ -110,10 +110,15 @@
             <button class="w3-button w3-theme" type="button" hx-delete="networks/peers/{{$network}}/{{.WGPublicKey}}"
                 hx-target="#content" hx-target-error="#error" hx-confirm="Remove Peer from Network?">
                 <i class="fa fa-trash-alt"></i>
-                Remove</button>
+                Remove Peer</button>
         </div>
         {{if eq .IsRelay true}}
-            <div>Relay</div>
+            <div>Relay
+            <button class="w3-button w3-theme" type="button" hx-delete="networks/relay/{{$network}}/{{.WGPublicKey}}"
+                hx-target="#content" hx-target-error="#error" hx-confirm="Remove Relay from Network?">
+                <i class="fa fa-trash-alt"></i>
+                Delete Relay</button>
+            </div>
         {{else if eq .IsRelayed true}}
             <div>Relayed</div>
         {{else}}

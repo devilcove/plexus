@@ -30,7 +30,7 @@
 {{define "peerDetails"}}
 <div id="error" class="w3-red"></div>
 <h1>Peer: {{.Name}}</h1>
-<div class="grid2" w3-border>
+<div class="grid2 w3-theme-l3">
     <div>Wireguard Public Key</div>
     <div>{{.WGPublicKey}}</div>
     <div>Agent Version</div>
@@ -50,4 +50,44 @@
 </div>
 <button class="w3-button w3-theme" type="button" hx-get="/peers/" hx-target="#content"
     hx-target-error="#error">Close</button>
+{{end}}
+
+{{define "displayNetworkPeer"}}
+<div id="error" class="w3-red"></div>
+<h1>Network Peer: {{.HostName}}</h1>
+<div class="grid3 w3-theme-l3">
+    <div>Wireguard Public Key</div>
+    <div>{{.WGPublicKey}}</div>
+    <div></div>
+    <div>Public Listen Port</div>
+    <div>{{.PublicListenPort}}</div>
+    <div></div>
+    <div>Endpoint</div>
+    <div>{{.Endpoint}}</div>
+    <div></div>
+    <div>Connected to Server</div>
+    <div>{{.NatsConnected}}</div>
+    <div></div>
+    <div>Connectivity (%peers)</div>
+    <div>{{.Connectivity}}0%</div>
+    <div></div>
+    <div>Is Relay</div>
+    <div>{{.IsRelay}}</div>
+    {{if eq .IsRelay true}}
+        <div>remove</div>
+    {{ else }}
+        <div></div>
+    {{end}}
+    <div>Is Relayed</div>
+    <div>{{.IsRelayed}}</div>
+    <div></div>
+    <div>Relayed Peers</div>
+    <div>{{.RelayedPeers}}</div>
+    <div></div>
+</div>
+<button class="w3-button w3-theme" type="button" hx-get="/networks/" hx-target="#content"
+    hx-target-error="#error">Close</button>
+
+
+
 {{end}}

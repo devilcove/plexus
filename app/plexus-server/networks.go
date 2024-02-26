@@ -300,6 +300,7 @@ func addRelay(c *gin.Context) {
 			peer.IsRelay = true
 			peer.RelayedPeers = relayedIDs
 			update.Peer = peer
+
 		}
 		if slices.Contains(relayedIDs, peer.WGPublicKey) {
 			peer.IsRelayed = true
@@ -316,4 +317,64 @@ func addRelay(c *gin.Context) {
 		slog.Error("publish new relay", "error", err)
 	}
 	networkDetails(c)
+}
+
+func deleteRelay(c *gin.Context) {
+	netName := c.Param("id")
+	peerID := c.Param("peer")
+	network, err := boltdb.Get[plexus.Network](netName, "networks")
+	if err != nil {
+		processError(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	update := plexus.NetworkUpdate{
+		Type: plexus.DeleteRelay,
+	}
+	peersToUnrelay := []string{}
+	updatedPeers := []plexus.NetworkPeer{}
+	for _, peer := range network.Peers {
+		if peer.WGPublicKey == peerID {
+			peer.IsRelay = false
+			peersToUnrelay = peer.RelayedPeers
+			peer.RelayedPeers = []string{}
+			updatedPeers = append(updatedPeers, peer)
+			break
+		}
+	}
+	for _, peer := range network.Peers {
+		if peer.WGPublicKey == peerID {
+			//already added above
+			continue
+		}
+		if slices.Contains(peersToUnrelay, peer.WGPublicKey) {
+			peer.IsRelayed = false
+		}
+		updatedPeers = append(updatedPeers, peer)
+	}
+	network.Peers = updatedPeers
+	if err := boltdb.Save(network, network.Name, "networks"); err != nil {
+		processError(c, http.StatusBadRequest, "failed to save update network peers "+err.Error())
+		return
+	}
+	if err := encodedConn.Publish("networks."+network.Name, update); err != nil {
+		slog.Error("publish new relay", "error", err)
+	}
+	networkDetails(c)
+}
+
+func networkPeerDetails(c *gin.Context) {
+	netName := c.Param("id")
+	peerID := c.Param("peer")
+	network, err := boltdb.Get[plexus.Network](netName, "networks")
+	if err != nil {
+		processError(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	for _, peer := range network.Peers {
+		if peer.WGPublicKey == peerID {
+			c.HTML(http.StatusOK, "displayNetworkPeer", peer)
+			return
+		}
+	}
+	processError(c, http.StatusBadRequest, "peer not found")
 }
