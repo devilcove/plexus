@@ -1,13 +1,10 @@
 package agent
 
 import (
-	"context"
-	"fmt"
 	"log"
 	"log/slog"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 
@@ -27,70 +24,39 @@ func Run() {
 		slog.Error("failed to initialize database", "error", err)
 		return
 	}
-	wg := sync.WaitGroup{}
-	fmt.Println(deleteAllInterface())
 	quit := make(chan os.Signal, 1)
-	reset := make(chan os.Signal, 1)
-	restart = make(chan struct{}, 1)
-	natsfail = make(chan struct{}, 1)
-	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
-	//signal.Notify(quit, syscall.SIGTERM)
-	signal.Notify(reset, syscall.SIGHUP)
-	ctx, cancel := context.WithCancel(context.Background())
+	signal.Notify(quit, syscall.SIGTERM, os.Interrupt)
 	self, err := newDevice()
 	if err != nil {
 		slog.Error("new device", "error", err)
 	}
 	startAllInterfaces(self)
-	wg.Add(1)
-	go startAgentNatsServer(ctx, &wg)
+	ns, ec := startAgentNatsServer()
 	slog.Info("setup nats")
 	connectToServers()
-	//slog.Info("refresh data from servers")
-	//refreshData(self)
-	//slog.Info("set up subcriptions")
-	//setupSubs(ctx, &wg, self)
 	checkinTicker := time.NewTicker(checkinTime)
 	serverTicker := time.NewTicker(serverCheckTime)
 	for {
 		select {
 		case <-quit:
 			slog.Info("quit")
+			slog.Info("deleting wg interfaces")
+			deleteAllInterface()
+			slog.Info("stopping tickers")
 			checkinTicker.Stop()
 			serverTicker.Stop()
-			cancel()
-			deleteAllInterface()
-			wg.Wait()
-			slog.Info("go routines stopped")
-			os.Exit(1)
-		case <-reset:
-			slog.Info("reset")
-			cancel()
-			wg.Wait()
-			slog.Info("go routines stopped by reset")
-			ctx, cancel = context.WithCancel(context.Background())
-			wg.Add(1)
-			go startAgentNatsServer(ctx, &wg)
-			connectToServers()
-			//refreshData(self)
-			closeServerConnections()
-			connectToServers()
-			//setupSubs(ctx, &wg, self)
-		case <-restart:
-			slog.Info("restart")
-			cancel()
-			wg.Wait()
-			slog.Info("go routines stopped by restart")
-			ctx, cancel = context.WithCancel(context.Background())
-			wg.Add(1)
-			go startAgentNatsServer(ctx, &wg)
-			connectToServers()
-			//refreshData(self)
-			//setupSubs(ctx, &wg, self)
+			slog.Info("shutdown nats server")
+			ec.Drain()
+			go ns.Shutdown()
+			slog.Info("wait for nat server shutdown to complete")
+			ns.WaitForShutdown()
+			slog.Info("nats server has shutdown")
+			slog.Info("exiting ...")
+			return
 		case <-checkinTicker.C:
-			wg.Add(1)
-			checkin(&wg)
+			checkin()
 		case <-serverTicker.C:
+			// reconnect to servers in case server was down when tried to connect earlier
 			slog.Debug("refreshing server connection")
 			closeServerConnections()
 			connectToServers()
@@ -139,8 +105,7 @@ func connectToServer(self plexus.Device, server string) (*nats.EncodedConn, erro
 	return nats.NewEncodedConn(nc, nats.JSON_ENCODER)
 }
 
-func checkin(wg *sync.WaitGroup) {
-	defer wg.Done()
+func checkin() {
 	self, err := boltdb.Get[plexus.Device]("self", "devices")
 	if err != nil {
 		slog.Error("get device", "error", err)
@@ -157,8 +122,8 @@ func checkin(wg *sync.WaitGroup) {
 			continue
 		}
 		log.Println("checkin response from server", server, string(msg.Data))
+		publishConnectivity(self)
 	}
-	publishConnectivity(self)
 }
 
 func closeServerConnections() {

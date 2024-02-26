@@ -18,6 +18,7 @@ import (
 
 func deleteInterface(name string) error {
 	slog.Debug("deleting interface", "interface", name)
+	defer log.Println("delete inteface done")
 	link, err := netlink.LinkByName(name)
 	if err != nil {
 		return fmt.Errorf("interface does not exist %w", err)
@@ -26,21 +27,22 @@ func deleteInterface(name string) error {
 	return netlink.LinkDel(link)
 }
 
-func deleteAllInterface() error {
+func deleteAllInterface() {
+	defer log.Println("all interfaces deleted")
 	slog.Debug("deleting all interfaces")
 	networks, err := boltdb.GetAll[plexus.Network]("networks")
 	if err != nil {
 		slog.Error("retrieve networks", "error", err)
-		return err
+		return
 	}
 	log.Printf("%d interfaces to delete", len(networks))
 	for _, network := range networks {
+		log.Println("calling deleteInterface", network.Interface)
 		if err := deleteInterface(network.Interface); err != nil {
 			slog.Error("delete interface", "error", err)
-			return err
+			return
 		}
 	}
-	return nil
 }
 
 func startAllInterfaces(self plexus.Device) {

@@ -19,9 +19,7 @@ const (
 )
 
 var (
-	Config   Configuration
-	restart  chan struct{}
-	natsfail chan struct{}
+	Config Configuration
 	// networkMap containss the interface name and reset channel for networks
 	networkMap map[string]netMap
 	serverMap  map[string]serverData
@@ -42,5 +40,4 @@ type serverData struct {
 
 type netMap struct {
 	Interface string
-	Channel   chan bool
 }

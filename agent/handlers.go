@@ -53,7 +53,6 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 		slog.Info("delete peer from network", "peer address", update.Peer.Address, "network", networkName)
 		if update.Peer.WGPublicKey == self.Peer.WGPublicKey {
 			slog.Info("self delete --> delete network", "network", networkName)
-			networkMap[network.Name].Channel <- true
 			if err := boltdb.Delete[plexus.Network](network.Name, "networks"); err != nil {
 				slog.Error("delete network", "error", err)
 			}
@@ -111,7 +110,6 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 
 	case plexus.DeleteNetwork:
 		slog.Info("delete network")
-		networkMap[network.Name].Channel <- true
 		if err := boltdb.Delete[plexus.Network](network.Name, "networks"); err != nil {
 			slog.Error("delete network", "error", err)
 		}

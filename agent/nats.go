@@ -1,13 +1,11 @@
 package agent
 
 import (
-	"context"
 	"log"
 	"log/slog"
 	"slices"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
@@ -16,15 +14,14 @@ import (
 	"github.com/nats-io/nkeys"
 )
 
-func startAgentNatsServer(ctx context.Context, wg *sync.WaitGroup) {
-	defer wg.Done()
-	ns, err := server.NewServer(&server.Options{Host: "localhost", Port: 4223})
+func startAgentNatsServer() (*server.Server, *nats.EncodedConn) {
+	defer log.Println("Agent server halting")
+	ns, err := server.NewServer(&server.Options{Host: "localhost", Port: 4223, NoSigs: true})
 	if err != nil {
 		slog.Error("start nats", "error", err)
 		panic(err)
 	}
-	go ns.Start()
-	defer ns.Shutdown()
+	ns.Start()
 	if !ns.ReadyForConnections(NatsTimeout) {
 		slog.Error("nats not ready for connections")
 		panic("not ready for connections")
@@ -33,18 +30,15 @@ func startAgentNatsServer(ctx context.Context, wg *sync.WaitGroup) {
 	nc, err := nats.Connect(ns.ClientURL())
 	if err != nil {
 		slog.Error("nats connect", "error", err)
-		natsfail <- struct{}{}
-		return
+		return nil, nil
 	}
 	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
 	if err != nil {
 		slog.Error("nats encoder", "error", err)
-		natsfail <- struct{}{}
-		return
+		return nil, nil
 	}
-	defer ec.Close()
 	subcribe(ec)
-	<-ctx.Done()
+	return ns, ec
 }
 
 func subcribe(ec *nats.EncodedConn) {
@@ -158,7 +152,6 @@ func connectToServers() {
 	}
 	for _, network := range networks {
 		iface := network.Interface
-		channel := make(chan bool, 1)
 		_, ok := serverMap[network.ServerURL]
 		if !ok {
 			slog.Error("network server not in list of servers", "network server", "network.ServerURL", "servers", self.Servers)
@@ -166,7 +159,6 @@ func connectToServers() {
 		}
 		networkMap[network.Name] = netMap{
 			Interface: iface,
-			Channel:   channel,
 		}
 	}
 	log.Println("server connection", serverMap, len(serverMap), networkMap)
@@ -304,7 +296,7 @@ func createRegistationConnection(key plexus.KeyValue) (*nats.EncodedConn, error)
 		return loginKeyPair.Sign(nonce)
 	}
 	opts := nats.Options{
-		Url:         key.URL,
+		Url:         "nats://" + key.URL + ":4222",
 		Nkey:        loginPublicKey,
 		SignatureCB: sign,
 	}
