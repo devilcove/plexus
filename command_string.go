@@ -13,15 +13,15 @@ func _() {
 	_ = x[UpdatePeer-2]
 	_ = x[AddRelay-3]
 	_ = x[DeleteRelay-4]
-	_ = x[DeleteNetork-5]
+	_ = x[DeleteNetwork-5]
 	_ = x[JoinNetwork-6]
 	_ = x[LeaveNetwork-7]
 	_ = x[LeaveServer-8]
 }
 
-const _Command_name = "DeletePeerAddPeerUpdatePeerAddRelayDeleteRelayDeleteNetorkConnectToNetworkLeaveNetworkLeaveServer"
+const _Command_name = "DeletePeerAddPeerUpdatePeerAddRelayDeleteRelayDeleteNetworkJoinNetworkLeaveNetworkLeaveServer"
 
-var _Command_index = [...]uint8{0, 10, 17, 27, 35, 46, 58, 74, 86, 97}
+var _Command_index = [...]uint8{0, 10, 17, 27, 35, 46, 59, 70, 82, 93}
 
 func (i Command) String() string {
 	if i < 0 || i >= Command(len(_Command_index)-1) {

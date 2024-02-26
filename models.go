@@ -21,7 +21,7 @@ const (
 	UpdatePeer
 	AddRelay
 	DeleteRelay
-	DeleteNetork
+	DeleteNetwork
 	JoinNetwork
 	LeaveNetwork
 	LeaveServer

@@ -38,7 +38,7 @@ to quickly create a Cobra application.`,
 		fmt.Println("deleteNetwork called")
 		nc := broker()
 		request := plexus.NetworkUpdate{
-			Type: plexus.DeleteNetork,
+			Type: plexus.DeleteNetwork,
 		}
 		payload, err := json.Marshal(request)
 		cobra.CheckErr(err)

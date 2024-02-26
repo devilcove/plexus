@@ -170,6 +170,12 @@ func deleteNetwork(c *gin.Context) {
 		processError(c, http.StatusInternalServerError, "delete network "+err.Error())
 		return
 	}
+	log.Println("deleting network", network)
+	if err := encodedConn.Publish("networks."+network, plexus.NetworkUpdate{
+		Type: plexus.DeleteNetwork,
+	}); err != nil {
+		slog.Error("publish delete network", "error", err)
+	}
 	displayNetworks(c)
 }
 

@@ -84,7 +84,7 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 		if err := addRelayToInterface(networkMap[networkName].Interface, update.Peer); err != nil {
 			slog.Error("addRelay", "error", err)
 		}
-	case plexus.DeleteNetork:
+	case plexus.DeleteNetwork:
 		slog.Info("delete network")
 		networkMap[network.Name].Channel <- true
 		if err := boltdb.Delete[plexus.Network](network.Name, "networks"); err != nil {
