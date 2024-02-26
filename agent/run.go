@@ -28,8 +28,7 @@ func Run() {
 		return
 	}
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-	fmt.Println(deleteAllInterface(&wg))
+	fmt.Println(deleteAllInterface())
 	quit := make(chan os.Signal, 1)
 	reset := make(chan os.Signal, 1)
 	restart = make(chan struct{}, 1)
@@ -60,6 +59,7 @@ func Run() {
 			checkinTicker.Stop()
 			serverTicker.Stop()
 			cancel()
+			deleteAllInterface()
 			wg.Wait()
 			slog.Info("go routines stopped")
 			os.Exit(1)

@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"net"
 	"slices"
-	"sync"
 	"time"
 
 	"github.com/devilcove/boltdb"
@@ -27,8 +26,7 @@ func deleteInterface(name string) error {
 	return netlink.LinkDel(link)
 }
 
-func deleteAllInterface(wg *sync.WaitGroup) error {
-	defer wg.Done()
+func deleteAllInterface() error {
 	slog.Debug("deleting all interfaces")
 	networks, err := boltdb.GetAll[plexus.Network]("networks")
 	if err != nil {
@@ -71,6 +69,9 @@ func startInterface(self plexus.Device, network plexus.Network) error {
 			address.IPNet = &add
 			break
 		}
+	}
+	if address.IPNet == nil {
+		return errors.New("no address for network" + network.Name)
 	}
 	privKey, err := wgtypes.ParseKey(self.WGPrivateKey)
 	if err != nil {
