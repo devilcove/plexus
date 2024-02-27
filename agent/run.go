@@ -41,7 +41,7 @@ func Run() {
 		case <-quit:
 			slog.Info("quit")
 			slog.Info("deleting wg interfaces")
-			deleteAllInterface()
+			deleteAllInterfaces()
 			slog.Info("stopping tickers")
 			checkinTicker.Stop()
 			serverTicker.Stop()

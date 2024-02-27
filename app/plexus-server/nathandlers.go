@@ -196,14 +196,18 @@ func checkinHandler(m *nats.Msg) {
 }
 
 // configHandler handles requests for device configuration ie request published to config.<ID>
-func configHandler(m *nats.Msg) {
-	device := m.Subject[7:]
-	slog.Info("received config request", "device", device)
-	config := getConfig(device)
-	if config == nil {
-		m.Header.Set("error", "empty")
+func configHandler(subject string) plexus.NetworkResponse {
+	response := plexus.NetworkResponse{}
+	peer := subject[7:]
+	slog.Info("received config request", "peer", peer)
+	networks, err := getNetworksForPeer(peer)
+	if err != nil {
+		response.Error = true
+		response.Message = err.Error()
+		return response
 	}
-	m.Respond(config)
+	response.Networks = networks
+	return response
 }
 
 // connectivityHandler handles connectivity stats ie message published to connectivity.<ID>

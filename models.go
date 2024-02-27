@@ -179,6 +179,10 @@ type StatusResponse struct {
 	Networks []Network
 }
 
+type ReloadRequest struct {
+	Server string
+}
+
 func DecodeToken(token string) (KeyValue, error) {
 	kv := KeyValue{}
 	data, err := base64.StdEncoding.DecodeString(token)

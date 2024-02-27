@@ -27,7 +27,7 @@ func deleteInterface(name string) error {
 	return netlink.LinkDel(link)
 }
 
-func deleteAllInterface() {
+func deleteAllInterfaces() {
 	defer log.Println("all interfaces deleted")
 	slog.Debug("deleting all interfaces")
 	networks, err := boltdb.GetAll[plexus.Network]("networks")
@@ -81,7 +81,7 @@ func startInterface(self plexus.Device, network plexus.Network) error {
 		return err
 	}
 	if _, err := netlink.LinkByName(network.Interface); err == nil {
-		slog.Info("interface exists", "interface", network.Interface)
+		slog.Warn("interface exists", "interface", network.Interface)
 		return err
 	}
 	mtu := 1420
@@ -96,6 +96,7 @@ func startInterface(self plexus.Device, network plexus.Network) error {
 		ReplacePeers: true,
 		Peers:        peers,
 	}
+	slog.Debug("creating new wireguard interface", "name", network.Interface, "address", address, "key", config.PrivateKey, "port", config.ListenPort)
 	link := plexus.New(network.Interface, mtu, address, config)
 	if err := link.Up(); err != nil {
 		slog.Error("failed initializition interface", "interface", network.Interface, "error", err)
@@ -258,7 +259,7 @@ func getWGPeers(self plexus.Device, network plexus.Network) []wgtypes.PeerConfig
 	keepalive := defaultKeepalive
 	peers := []wgtypes.PeerConfig{}
 	for _, peer := range network.Peers {
-		slog.Info("checking peer", "peer", peer.WGPublicKey, "address", peer.Address, "mask", network.Net.Mask)
+		slog.Debug("checking peer", "peer", peer.WGPublicKey, "address", peer.Address, "mask", network.Net.Mask)
 		if peer.WGPublicKey == self.WGPublicKey {
 			continue
 		}

@@ -236,12 +236,11 @@ func removePeerFromNetwork(c *gin.Context) {
 	networkDetails(c)
 }
 
-func getConfig(id string) []byte {
+func getNetworksForPeer(id string) ([]plexus.Network, error) {
 	response := []plexus.Network{}
 	networks, err := boltdb.GetAll[plexus.Network]("networks")
 	if err != nil {
-		slog.Error("get networks", "error", err)
-		return []byte{}
+		return response, err
 	}
 	for _, network := range networks {
 		for _, peer := range network.Peers {
@@ -250,12 +249,7 @@ func getConfig(id string) []byte {
 			}
 		}
 	}
-	payload, err := json.Marshal(response)
-	if err != nil {
-		slog.Error("marshal", "error", err)
-		return []byte{}
-	}
-	return payload
+	return response, nil
 }
 
 func displayAddRelay(c *gin.Context) {

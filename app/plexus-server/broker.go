@@ -118,9 +118,14 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 	if err != nil {
 		slog.Error("subscribe update", "error", err)
 	}
-	configSub, err := natsConn.Subscribe("config.*", configHandler)
+	configSub, err := encodedConn.Subscribe("config.*", func(sub, reply string, request any) {
+		response := configHandler(sub)
+		if err := encodedConn.Publish(reply, response); err != nil {
+			slog.Error("pub response to config request", "error", err)
+		}
+	})
 	if err != nil {
-		slog.Error("subscribe config", "error", err)
+		slog.Error("subcribe config", "error", err)
 	}
 	connectivitySub, err := encodedConn.Subscribe("connectivity.*", func(sub, reply string, data *plexus.ConnectivityData) {
 		response := connectivityHandler(sub, data)

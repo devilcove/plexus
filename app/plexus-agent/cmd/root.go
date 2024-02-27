@@ -62,7 +62,6 @@ func init() {
 	// will be global for your application.
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is /etc/plexus/plexus-agent.yaml)")
-	rootCmd.PersistentFlags().StringP("server", "s", "", "server FQDN eg plexus.example.com")
 	rootCmd.PersistentFlags().StringP("verbosity", "v", "INFO", "logging verbosity")
 
 	// Cobra also supports local flags, which will only run

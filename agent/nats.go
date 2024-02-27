@@ -88,6 +88,20 @@ func subcribe(ec *nats.EncodedConn) {
 		plexus.SetLogging(newLevel)
 
 	})
+	ec.Subscribe("reload", func(sub, reply string, data *plexus.ReloadRequest) {
+		resp := reload(data)
+		if err := ec.Publish(reply, resp); err != nil {
+			slog.Error("pub reply to reload request", "error", err)
+		}
+		self, err := boltdb.Get[plexus.Device]("self", "devices")
+		if err != nil {
+			slog.Error("get device", "error", err)
+			return
+		}
+		deleteAllNetworks()
+		deleteAllInterfaces()
+		addNewNetworks(self, resp.Networks)
+	})
 }
 
 func ConnectToAgentBroker() (*nats.EncodedConn, error) {
@@ -309,4 +323,39 @@ func createRegistationConnection(key plexus.KeyValue) (*nats.EncodedConn, error)
 		return nil, err
 	}
 	return ec, nil
+}
+
+func reload(data *plexus.ReloadRequest) plexus.NetworkResponse {
+	response := plexus.NetworkResponse{Error: true}
+	serverResponse := plexus.NetworkResponse{}
+	self, err := boltdb.Get[plexus.Device]("self", "devices")
+	if err != nil {
+		slog.Error("get device", "error", err)
+		response.Message = err.Error()
+		return response
+	}
+	if data.Server != "" {
+		server, ok := serverMap[data.Server]
+		if !ok {
+			response.Message = "invalid server"
+			return response
+		}
+		if err := server.EC.Request("config."+self.WGPublicKey, nil, &serverResponse, NatsTimeout); err != nil {
+			response.Message = "error from server" + err.Error()
+			return response
+		}
+		return serverResponse
+	}
+	for name, server := range serverMap {
+		if err := server.EC.Request("config."+self.WGPublicKey, nil, &serverResponse, NatsTimeout); err != nil {
+			response.Message += "error from server" + name + err.Error()
+			continue
+		}
+		response.Networks = append(response.Networks, serverResponse.Networks...)
+	}
+	if response.Message == "" {
+		response.Error = false
+		response.Message = "data reloaded successfully"
+	}
+	return response
 }
