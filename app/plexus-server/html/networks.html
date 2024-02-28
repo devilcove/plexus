@@ -113,7 +113,7 @@
                 Remove Peer</button>
         </div>
         {{if eq .IsRelay true}}
-            <div>Relay
+            <div>
             <button class="w3-button w3-theme" type="button" hx-delete="networks/relay/{{$network}}/{{.WGPublicKey}}"
                 hx-target="#content" hx-target-error="#error" hx-confirm="Remove Relay from Network?">
                 <i class="fa fa-trash-alt"></i>

@@ -269,9 +269,12 @@ func displayAddRelay(c *gin.Context) {
 	for _, peer := range network.Peers {
 		if peer.WGPublicKey == relay {
 			data.Relay = peer
-		} else {
-			data.AvailablePeers = append(data.AvailablePeers, peer)
+			continue
 		}
+		if peer.IsRelay || peer.IsRelayed {
+			continue
+		}
+		data.AvailablePeers = append(data.AvailablePeers, peer)
 	}
 	c.HTML(http.StatusOK, "addRelayToNetwork", data)
 }
@@ -316,6 +319,7 @@ func addRelay(c *gin.Context) {
 func deleteRelay(c *gin.Context) {
 	netName := c.Param("id")
 	peerID := c.Param("peer")
+	slog.Info("delete relay", "network", netName, "relay", peerID)
 	network, err := boltdb.Get[plexus.Network](netName, "networks")
 	if err != nil {
 		processError(c, http.StatusBadRequest, err.Error())
@@ -328,6 +332,8 @@ func deleteRelay(c *gin.Context) {
 	updatedPeers := []plexus.NetworkPeer{}
 	for _, peer := range network.Peers {
 		if peer.WGPublicKey == peerID {
+			// send the original peer to agents which will include the list of peers to unrelay
+			update.Peer = peer
 			peer.IsRelay = false
 			peersToUnrelay = peer.RelayedPeers
 			peer.RelayedPeers = []string{}

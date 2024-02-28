@@ -17,7 +17,7 @@ import (
 )
 
 func deleteInterface(name string) error {
-	slog.Debug("deleting interface", "interface", name)
+	slog.Info("deleting interface", "interface", name)
 	defer log.Println("delete inteface done")
 	link, err := netlink.LinkByName(name)
 	if err != nil {
@@ -28,7 +28,6 @@ func deleteInterface(name string) error {
 }
 
 func deleteAllInterfaces() {
-	defer log.Println("all interfaces deleted")
 	slog.Debug("deleting all interfaces")
 	networks, err := boltdb.GetAll[plexus.Network]("networks")
 	if err != nil {
@@ -61,6 +60,7 @@ func startAllInterfaces(self plexus.Device) {
 
 // func startInterfaces(ctx context.Context, wg *sync.WaitGroup) {
 func startInterface(self plexus.Device, network plexus.Network) error {
+	slog.Info("starting interface", "interface", network.Interface, "network", network.Name)
 	address := netlink.Addr{}
 	for _, peer := range network.Peers {
 		if peer.WGPublicKey == self.WGPublicKey {
@@ -100,6 +100,26 @@ func startInterface(self plexus.Device, network plexus.Network) error {
 	link := plexus.New(network.Interface, mtu, address, config)
 	if err := link.Up(); err != nil {
 		slog.Error("failed initializition interface", "interface", network.Interface, "error", err)
+		return err
+	}
+	return nil
+}
+
+func resetPeersOnNetworkInterface(self plexus.Device, network plexus.Network) error {
+	slog.Info("resetting peers", "interface", network.Interface, "network", network.Name)
+	iface, err := plexus.Get(network.Interface)
+	if err != nil {
+		return err
+	}
+	listOfPeers := []string{}
+	iface.Config.ReplacePeers = true
+	peers := getWGPeers(self, network)
+	for _, peer := range peers {
+		listOfPeers = append(listOfPeers, peer.PublicKey.String())
+	}
+	iface.Config.Peers = peers
+	slog.Debug("peers", "keys", listOfPeers)
+	if err := iface.Apply(); err != nil {
 		return err
 	}
 	return nil
@@ -261,11 +281,31 @@ func getWGPeers(self plexus.Device, network plexus.Network) []wgtypes.PeerConfig
 	for _, peer := range network.Peers {
 		slog.Debug("checking peer", "peer", peer.WGPublicKey, "address", peer.Address, "mask", network.Net.Mask)
 		if peer.WGPublicKey == self.WGPublicKey {
+			if peer.IsRelayed {
+				slog.Info("I am relayed")
+				return selfRelayedPeers(self, network)
+			}
+			if peer.IsRelay {
+				slog.Info("I am a relay")
+				//turn off relayed status
+				for i := range network.Peers {
+					if slices.Contains(peer.RelayedPeers, network.Peers[i].WGPublicKey) {
+						network.Peers[i].IsRelayed = false
+					}
+				}
+			}
+		}
+	}
+	for _, peer := range network.Peers {
+		if peer.WGPublicKey == self.WGPublicKey {
+			slog.Debug("skipping self")
 			continue
 		}
 		if peer.IsRelayed {
+			slog.Debug("skipping relayed peer", "peer", peer.HostName)
 			continue
 		}
+		slog.Debug("adding peer", "peer", peer.HostName, "key", peer.WGPublicKey)
 		pubKey, err := wgtypes.ParseKey(peer.WGPublicKey)
 		if err != nil {
 			slog.Error("unable to parse public key", "key", peer.WGPublicKey, "error", err)
@@ -279,6 +319,9 @@ func getWGPeers(self plexus.Device, network plexus.Network) []wgtypes.PeerConfig
 			IP:   peer.Address.IP,
 			Mask: net.CIDRMask(32, 32),
 		})
+		if peer.IsRelay {
+			log.Println("------------------------------", allowed)
+		}
 		wgPeer := wgtypes.PeerConfig{
 			PublicKey:         pubKey,
 			ReplaceAllowedIPs: true,
@@ -292,4 +335,30 @@ func getWGPeers(self plexus.Device, network plexus.Network) []wgtypes.PeerConfig
 		peers = append(peers, wgPeer)
 	}
 	return peers
+}
+
+func selfRelayedPeers(self plexus.Device, network plexus.Network) []wgtypes.PeerConfig {
+	keepalive := defaultKeepalive
+	for _, peer := range network.Peers {
+		if slices.Contains(peer.RelayedPeers, self.WGPublicKey) {
+			pubKey, err := wgtypes.ParseKey(peer.WGPublicKey)
+			if err != nil {
+				slog.Error("unable to parse public key", "key", peer.WGPublicKey, "error", err)
+				continue
+			}
+			wgPeer := wgtypes.PeerConfig{
+				PublicKey:         pubKey,
+				ReplaceAllowedIPs: true,
+				AllowedIPs:        []net.IPNet{network.Net},
+				Endpoint: &net.UDPAddr{
+					IP:   net.ParseIP(peer.Endpoint),
+					Port: peer.PublicListenPort,
+				},
+				PersistentKeepaliveInterval: &keepalive,
+			}
+			return []wgtypes.PeerConfig{wgPeer}
+		}
+	}
+	slog.Error("relay not found for self")
+	return []wgtypes.PeerConfig{}
 }

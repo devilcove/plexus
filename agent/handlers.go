@@ -27,11 +27,11 @@ func deleteServer(server string) {
 
 func networkUpdates(subject string, update plexus.NetworkUpdate) {
 	networkName := subject[9:]
-	slog.Info("network update for", "network", networkName, "msg", update)
+	slog.Info("network update for", "network", networkName, "type", update.Type.String(), "peer", update.Peer)
 	network, err := boltdb.Get[plexus.Network](networkName, "networks")
 	if err != nil {
 		if errors.Is(err, boltdb.ErrNoResults) {
-			slog.Info("received update for invalid network", "network", network)
+			slog.Info("received update for invalid network ... ignoring", "network", networkName)
 			return
 		}
 		slog.Error("unable to read networks", "error", err)
@@ -44,13 +44,11 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 	}
 	switch update.Type {
 	case plexus.AddPeer:
-		slog.Info("addpeer")
 		network.Peers = append(network.Peers, update.Peer)
 		if err := addPeertoInterface(networkMap[network.Name].Interface, update.Peer); err != nil {
 			slog.Error("add peer", "error", err)
 		}
 	case plexus.DeletePeer:
-		slog.Info("delete peer from network", "peer address", update.Peer.Address, "network", networkName)
 		if update.Peer.WGPublicKey == self.Peer.WGPublicKey {
 			slog.Info("self delete --> delete network", "network", networkName)
 			if err := boltdb.Delete[plexus.Network](network.Name, "networks"); err != nil {
@@ -69,7 +67,6 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 			}
 		}
 	case plexus.UpdatePeer:
-		slog.Info("update peer")
 		for i, oldpeer := range network.Peers {
 			if oldpeer.WGPublicKey == update.Peer.WGPublicKey {
 				network.Peers = slices.Replace(network.Peers, i, i+1, update.Peer)
@@ -80,33 +77,45 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 		}
 
 	case plexus.AddRelay:
-		slog.Info("add relay")
-		updatedPeers := []plexus.NetworkPeer{}
-		for _, peer := range network.Peers {
-			if peer.WGPublicKey == self.WGPublicKey {
-				updatedPeers = append(updatedPeers, update.Peer)
+		newPeers := []plexus.NetworkPeer{}
+		for _, existing := range network.Peers {
+			if existing.WGPublicKey == update.Peer.WGPublicKey {
+				newPeers = append(newPeers, update.Peer)
 				continue
 			}
-			if slices.Contains(update.Peer.RelayedPeers, peer.WGPublicKey) {
-				peer.IsRelayed = true
+			if slices.Contains(update.Peer.RelayedPeers, existing.WGPublicKey) {
+				existing.IsRelayed = true
 			}
-			updatedPeers = append(updatedPeers, peer)
+			newPeers = append(newPeers, existing)
 		}
-		network.Peers = updatedPeers
+		network.Peers = newPeers
 		if err := boltdb.Save(network, network.Name, "networks"); err != nil {
 			slog.Error("update network with relayed peers", "error", err)
 		}
-		iface, err := plexus.Get(networkMap[networkName].Interface)
-		if err != nil {
-			slog.Error("add relay", "error", err)
-			return
+		if err := resetPeersOnNetworkInterface(self, network); err != nil {
+			slog.Error("add relay:restart interface", "network", network.Name, "error", err)
 		}
-		iface.Config.ReplacePeers = true
-		iface.Config.Peers = getWGPeers(self, network)
-		if err := iface.Apply(); err != nil {
-			slog.Error("unable to add relay to interface", "error", err)
+
+	case plexus.DeleteRelay:
+		oldRelay := update.Peer
+		newPeers := []plexus.NetworkPeer{}
+		for _, existing := range network.Peers {
+			if existing.WGPublicKey == oldRelay.WGPublicKey {
+				existing.IsRelay = false
+				existing.RelayedPeers = []string{}
+			}
+			if slices.Contains(oldRelay.RelayedPeers, existing.WGPublicKey) {
+				existing.IsRelayed = false
+			}
+			newPeers = append(newPeers, existing)
 		}
-		return
+		network.Peers = newPeers
+		if err := boltdb.Save(network, network.Name, "networks"); err != nil {
+			slog.Error("remove relay: save network", "network", network.Name, "error", err)
+		}
+		if err := resetPeersOnNetworkInterface(self, network); err != nil {
+			slog.Error("delete relay:restart interface", "network", network.Name, "error", err)
+		}
 
 	case plexus.DeleteNetwork:
 		slog.Info("delete network")

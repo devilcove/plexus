@@ -11,8 +11,7 @@
     {{end}}
     <p>
         <button class="w3-button w3-theme-dark w3-padding large" type="button" 
-            hx-post="/networks/relay/{{.Network}}/{{.Relay.WGPublicKey}}" 
-            hx-target="#content" hx-target-error="#error">
+            hx-get="/networks/{{.Network}}/" hx-target="#content" hx-target-error="#error">
             Cancel</button>
         <button class="w3-button w3-theme-dark" type="reset">Reset</button>
         <button class="W3-button w3-theme-dark" type="submit">Add</button>
