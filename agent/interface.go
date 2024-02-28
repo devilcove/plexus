@@ -111,14 +111,8 @@ func resetPeersOnNetworkInterface(self plexus.Device, network plexus.Network) er
 	if err != nil {
 		return err
 	}
-	listOfPeers := []string{}
 	iface.Config.ReplacePeers = true
-	peers := getWGPeers(self, network)
-	for _, peer := range peers {
-		listOfPeers = append(listOfPeers, peer.PublicKey.String())
-	}
-	iface.Config.Peers = peers
-	slog.Debug("peers", "keys", listOfPeers)
+	iface.Config.Peers = getWGPeers(self, network)
 	if err := iface.Apply(); err != nil {
 		return err
 	}
