@@ -102,6 +102,35 @@ func subcribe(ec *nats.EncodedConn) {
 		deleteAllInterfaces()
 		addNewNetworks(self, resp.Networks)
 	})
+	ec.Subscribe("reset", func(sub, reply string, request *plexus.ResetRequest) {
+		self, err := boltdb.Get[plexus.Device]("self", "devices")
+		if err != nil {
+			slog.Error(err.Error())
+			if err := ec.Publish(reply, plexus.NetworkResponse{Error: true, Message: err.Error()}); err != nil {
+				slog.Error(err.Error())
+			}
+			return
+		}
+		network, err := boltdb.Get[plexus.Network](request.Network, "networks")
+		if err != nil {
+			slog.Error(err.Error())
+			if err := ec.Publish(reply, plexus.NetworkResponse{Error: true, Message: err.Error()}); err != nil {
+				slog.Error(err.Error())
+			}
+			return
+		}
+		if err := resetPeersOnNetworkInterface(self, network); err != nil {
+			slog.Error(err.Error())
+			if err := ec.Publish(reply, plexus.NetworkResponse{Error: true, Message: err.Error()}); err != nil {
+				slog.Error(err.Error())
+			}
+			return
+
+		}
+		if err := ec.Publish(reply, plexus.NetworkResponse{Message: "interface reset"}); err != nil {
+			slog.Error(err.Error())
+		}
+	})
 }
 
 func ConnectToAgentBroker() (*nats.EncodedConn, error) {
@@ -218,7 +247,7 @@ func processJoin(request plexus.UpdateRequest) plexus.NetworkResponse {
 	errResponse := plexus.NetworkResponse{Error: true}
 	_, err := boltdb.Get[plexus.Network](request.Network, "networks")
 	if err == nil {
-		slog.Debug(err.Error())
+		slog.Warn("already connected to network")
 		errResponse.Message = "already connected to network"
 		return errResponse
 	}

@@ -183,6 +183,10 @@ type ReloadRequest struct {
 	Server string
 }
 
+type ResetRequest struct {
+	Network string
+}
+
 func DecodeToken(token string) (KeyValue, error) {
 	kv := KeyValue{}
 	data, err := base64.StdEncoding.DecodeString(token)
