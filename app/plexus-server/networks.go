@@ -183,7 +183,7 @@ func validateNetworkName(name string) bool {
 	if len(name) > 255 {
 		return false
 	}
-	valid := regexp.MustCompile(`^[a-z,-]+$`)
+	valid := regexp.MustCompile(`^[a-z,-,0-9]+$`)
 	return valid.MatchString(name)
 }
 
