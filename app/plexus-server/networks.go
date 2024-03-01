@@ -145,12 +145,6 @@ func networkDetails(c *gin.Context) {
 			continue
 		}
 		slog.Debug("network details", "peer", peer.HostName, "connected", time.Since(p.Updated) < time.Second*10, "connectivity", peer.Connectivity)
-		if time.Since(p.Updated) < time.Second*10 {
-			peer.NatsConnected = true
-		} else {
-			peer.NatsConnected = false
-			peer.Connectivity = 0
-		}
 		details.Peers = append(details.Peers, peer)
 		slog.Debug("connectivity", "network", network.Name, "peer", peer.HostName, "connectivity", peer.Connectivity)
 	}

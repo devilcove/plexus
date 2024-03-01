@@ -104,7 +104,13 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 	if err != nil {
 		slog.Error("subscribe register", "error", err)
 	}
-	checkinSub, err := natsConn.Subscribe("checkin.*", checkinHandler)
+	checkinSub, err := encodedConn.Subscribe("checkin.*", func(subj, reply string, request *plexus.CheckinData) {
+		slog.Debug("checkin", "peer", request.ID)
+		response := processCheckin(request)
+		if err := encodedConn.Publish(reply, response); err != nil {
+			slog.Error("publish checkin response", err)
+		}
+	})
 	if err != nil {
 		slog.Error("subscribe checkin", "error", err)
 	}
@@ -127,13 +133,6 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 	if err != nil {
 		slog.Error("subcribe config", "error", err)
 	}
-	connectivitySub, err := encodedConn.Subscribe("connectivity.*", func(sub, reply string, data *plexus.ConnectivityData) {
-		response := connectivityHandler(sub, data)
-		encodedConn.Publish(reply, response)
-	})
-	if err != nil {
-		slog.Error("subscribe connectivity", "error", err)
-	}
 	leaveSub, err := encodedConn.Subscribe("leave.*", func(subj, reply string, request *plexus.UpdateRequest) {
 		response := processLeave(request)
 		slog.Debug("publish leave reply", "response", response)
@@ -154,7 +153,6 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 			checkinSub.Drain()
 			updateSub.Drain()
 			configSub.Drain()
-			connectivitySub.Drain()
 			leaveSub.Drain()
 			return
 		case token := <-newDevice:

@@ -209,23 +209,27 @@ func getFreePort(start int) (int, error) {
 	return 0, errors.New("no free ports")
 }
 
-func publishConnectivity(self plexus.Device) {
+func getConnectivity(server string) []plexus.ConnectivityData {
+	results := []plexus.ConnectivityData{}
 	networks, err := boltdb.GetAll[plexus.Network]("networks")
 	if err != nil {
 		slog.Error("get networks", "error", err)
-		return
+		return results
 	}
 	client, err := wgctrl.New()
 	if err != nil {
 		slog.Warn("get client", "error", err)
-		return
+		return results
 	}
 	devices, err := client.Devices()
 	if err != nil {
 		slog.Warn("get wireguard devices", "error", err)
-		return
+		return results
 	}
 	for _, network := range networks {
+		if network.ServerURL != server {
+			continue
+		}
 		data := plexus.ConnectivityData{
 			Network: network.Name,
 		}
@@ -243,18 +247,10 @@ func publishConnectivity(self plexus.Device) {
 				}
 			}
 			data.Connectivity = goodHandShakes / float64(len(device.Peers))
-			server, ok := serverMap[network.ServerURL]
-			if !ok {
-				slog.Error("serverMap", "serverURL", network.ServerURL)
-				continue
-			}
-			resp := struct {
-				Messsage string
-			}{}
-			server.EC.Request("connectivity."+self.WGPublicKey, data, resp, NatsTimeout)
-			slog.Debug("published connectivity", "data", data, "response", resp)
 		}
+		results = append(results, data)
 	}
+	return results
 }
 
 func getAllowedIPs(relay plexus.NetworkPeer, peers []plexus.NetworkPeer) []net.IPNet {
@@ -355,4 +351,22 @@ func selfRelayedPeers(self plexus.Device, network plexus.Network) []wgtypes.Peer
 	}
 	slog.Error("relay not found for self")
 	return []wgtypes.PeerConfig{}
+}
+
+func stunCheck(self plexus.Device, port int) (bool, string, int) {
+	changed := false
+	stunAddr, err := getPublicAddPort(port)
+	if err != nil {
+		slog.Error("stun", "error", err)
+		return false, "", 0
+	}
+	if stunAddr.IP.String() != self.Endpoint {
+		changed = true
+		self.Endpoint = stunAddr.String()
+		self.PublicListenPort = stunAddr.Port
+		if err := boltdb.Save(self, "self", "device"); err != nil {
+			slog.Error("update self", "error", err)
+		}
+	}
+	return changed, self.Endpoint, self.PublicListenPort
 }

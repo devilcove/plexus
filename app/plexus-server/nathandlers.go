@@ -6,14 +6,12 @@ import (
 	"log/slog"
 	"net"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/c-robinson/iplib"
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
 	"github.com/nats-io/nats-server/v2/server"
-	"github.com/nats-io/nats.go"
 )
 
 func devicePermissions(id string) *server.Permissions {
@@ -23,7 +21,6 @@ func devicePermissions(id string) *server.Permissions {
 				"checkin." + id,
 				"update." + id,
 				"config." + id,
-				"connectivity." + id,
 				"leave." + id,
 			},
 		},
@@ -170,29 +167,48 @@ func getNextIP(network plexus.Network) (net.IP, error) {
 	return ipToCheck, nil
 }
 
-// checkinHandler handle messages published to checkin.<ID>
-func checkinHandler(m *nats.Msg) {
-	parts := strings.Split(m.Subject, ".")
-	if len(parts) < 2 {
-		slog.Error("invalid topic")
-		return
-	}
-	peerID := parts[1]
-	//update, err := database.GetDevice(device)
-	slog.Info("received checkin", "device", peerID)
-	peer, err := boltdb.Get[plexus.Peer](peerID, "peers")
+// processCheckin handle messages published to checkin.<ID>
+func processCheckin(data *plexus.CheckinData) plexus.NetworkResponse {
+	publishUpdate := false
+	response := plexus.NetworkResponse{}
+	slog.Info("received checkin", "device", data.ID)
+	peer, err := boltdb.Get[plexus.Peer](data.ID, "peers")
 	if err != nil {
 		slog.Error("peer checkin", "error", err)
-		m.Respond([]byte("error " + err.Error()))
-		return
+		response.Error = true
+		response.Message = "no such peer"
+		return response
 	}
 	peer.Updated = time.Now()
+	peer.NatsConnected = true
+	if peer.Version != data.Version {
+		peer.Version = data.Version
+	}
+	if peer.PublicListenPort != data.PublicListenPort {
+		peer.PublicListenPort = data.PublicListenPort
+		publishUpdate = true
+	}
+	if peer.ListenPort != data.ListenPort {
+		peer.ListenPort = data.ListenPort
+		publishUpdate = true
+	}
+	if peer.Endpoint != data.Endpoint {
+		peer.Endpoint = data.Endpoint
+		publishUpdate = true
+	}
 	if err := boltdb.Save(peer, peer.WGPublicKey, "peers"); err != nil {
 		slog.Error("peer checkin save", "error", err)
-		m.Respond([]byte("error " + err.Error()))
-		return
+		response.Error = true
+		response.Message = "could not save peer" + err.Error()
+		return response
 	}
-	m.Respond([]byte("ack"))
+	if publishUpdate {
+		if err := publishNetworkPeerUpdate(peer); err != nil {
+			slog.Error("checkin peer update", "error", err)
+		}
+	}
+	processConnectionData(data)
+	return plexus.NetworkResponse{Message: "checkin processed"}
 }
 
 // configHandler handles requests for device configuration ie request published to config.<ID>
@@ -210,30 +226,26 @@ func configHandler(subject string) plexus.NetworkResponse {
 	return response
 }
 
-// connectivityHandler handles connectivity stats ie message published to connectivity.<ID>
-func connectivityHandler(sub string, data *plexus.ConnectivityData) struct{ Message string } {
-	response := struct {
-		Message string
-	}{}
-	device := sub[13:]
-	slog.Info("received connectivity stats", "device", device)
-	network, err := boltdb.Get[plexus.Network](data.Network, "networks")
-	if err != nil {
-		slog.Error("connectivity data received for invalid network", "network", data.Network)
-		response.Message = "error: no such network"
-		return response
-	}
-	updatedPeers := []plexus.NetworkPeer{}
-	for _, peer := range network.Peers {
-		if peer.WGPublicKey == device {
-			peer.Connectivity = data.Connectivity
+// processConnectionData handles connectivity (nats, handshakes) stats
+func processConnectionData(data *plexus.CheckinData) {
+	slog.Debug("received connectivity stats", "device", data.ID)
+	for _, conn := range data.Connections {
+		network, err := boltdb.Get[plexus.Network](conn.Network, "networks")
+		if err != nil {
+			slog.Error("connectivity data received for invalid network", "network", conn.Network)
+			continue
 		}
-		updatedPeers = append(updatedPeers, peer)
+		updatedPeers := []plexus.NetworkPeer{}
+		for _, peer := range network.Peers {
+			if peer.WGPublicKey == data.ID {
+				peer.Connectivity = conn.Connectivity
+				peer.NatsConnected = true
+			}
+			updatedPeers = append(updatedPeers, peer)
+		}
+		network.Peers = updatedPeers
+		boltdb.Save(network, network.Name, "networks")
 	}
-	network.Peers = updatedPeers
-	boltdb.Save(network, network.Name, "networks")
-	response.Message = "ack"
-	return response
 }
 
 // processLeave handles leaving a network
@@ -317,4 +329,28 @@ func connectToNetwork(request *plexus.JoinRequest) plexus.NetworkResponse {
 	response.Networks = append(response.Networks, network)
 	response.Message = fmt.Sprintf("%s added to network %s", request.Peer.WGPublicKey, request.Network)
 	return response
+}
+
+func publishNetworkPeerUpdate(peer plexus.Peer) error {
+	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	if err != nil {
+		return err
+	}
+	for i, network := range networks {
+		for j, netPeer := range network.Peers {
+			if netPeer.WGPublicKey == peer.WGPublicKey {
+				netPeer.PublicListenPort = peer.PublicListenPort
+				netPeer.Endpoint = peer.Endpoint
+				networks[i].Peers[j] = netPeer
+				data := plexus.NetworkUpdate{
+					Type: plexus.UpdatePeer,
+					Peer: netPeer,
+				}
+				if err := encodedConn.Publish("networks."+network.Name, data); err != nil {
+					slog.Error("publish network update", "error", err)
+				}
+			}
+		}
+	}
+	return nil
 }

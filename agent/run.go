@@ -30,12 +30,16 @@ func Run() {
 	if err != nil {
 		slog.Error("new device", "error", err)
 	}
+	changed, _, _ := stunCheck(self, self.ListenPort)
 	startAllInterfaces(self)
 	ns, ec := startAgentNatsServer()
-	slog.Info("setup nats")
 	connectToServers()
 	checkinTicker := time.NewTicker(checkinTime)
-	serverTicker := time.NewTicker(serverCheckTime)
+	if changed {
+		slog.Info("stun change, sending update to servers")
+		sendDeviceUpdate()
+	}
+	//serverTicker := time.NewTicker(serverCheckTime)
 	for {
 		select {
 		case <-quit:
@@ -44,7 +48,7 @@ func Run() {
 			deleteAllInterfaces()
 			slog.Info("stopping tickers")
 			checkinTicker.Stop()
-			serverTicker.Stop()
+			//serverTicker.Stop()
 			slog.Info("shutdown nats server")
 			ec.Drain()
 			go ns.Shutdown()
@@ -55,11 +59,11 @@ func Run() {
 			return
 		case <-checkinTicker.C:
 			checkin()
-		case <-serverTicker.C:
+			//case <-serverTicker.C:
 			// reconnect to servers in case server was down when tried to connect earlier
-			slog.Debug("refreshing server connection")
-			closeServerConnections()
-			connectToServers()
+			//slog.Debug("refreshing server connection")
+			//closeServerConnections()
+			//connectToServers()
 		}
 	}
 }
@@ -106,23 +110,32 @@ func connectToServer(self plexus.Device, server string) (*nats.EncodedConn, erro
 }
 
 func checkin() {
+	slog.Debug("checkin")
+	checkinData := plexus.CheckinData{}
+	serverResponse := plexus.NetworkResponse{}
 	self, err := boltdb.Get[plexus.Device]("self", "devices")
 	if err != nil {
 		slog.Error("get device", "error", err)
 		return
 	}
+	stunCheck(self, checkPort(self.ListenPort))
+	checkinData.ID = self.WGPublicKey
+	checkinData.Version = self.Version
+	checkinData.ListenPort = self.ListenPort
+	checkinData.PublicListenPort = self.PublicListenPort
+	checkinData.Endpoint = self.Endpoint
+
 	for server, data := range serverMap {
 		if !data.EC.Conn.IsConnected() {
 			slog.Debug("not connected to server broker .... skipping checkin", "server", server)
 			continue
 		}
-		msg, err := data.EC.Conn.Request("checkin."+self.WGPublicKey, []byte("checking"), NatsTimeout)
-		if err != nil {
+		checkinData.Connections = getConnectivity(server)
+		if err := data.EC.Request("checkin."+self.WGPublicKey, checkinData, &serverResponse, NatsTimeout); err != nil {
 			slog.Error("error publishing checkin ", "error", err)
 			continue
 		}
-		log.Println("checkin response from server", server, string(msg.Data))
-		publishConnectivity(self)
+		log.Println("checkin response from server", server, serverResponse.Error, serverResponse.Message)
 	}
 }
 
@@ -134,5 +147,36 @@ func closeServerConnections() {
 			}
 		}
 		server.EC.Close()
+	}
+}
+
+func sendDeviceUpdate() {
+	self, err := boltdb.Get[plexus.Device]("self", "devices")
+	if err != nil {
+		slog.Error("get device", "error", err)
+		return
+	}
+	for _, server := range self.Servers {
+		conn, ok := serverMap[server]
+		if !ok {
+			slog.Error("server not mapped", "server", server)
+			return
+		}
+		if err := conn.EC.Publish("update."+self.WGPublicKey, plexus.UpdateRequest{
+			Action: plexus.UpdatePeer,
+			Peer: plexus.Peer{
+				WGPublicKey:      self.WGPublicKey,
+				PubNkey:          self.PubNkey,
+				Version:          self.Version,
+				Name:             self.Name,
+				OS:               self.OS,
+				ListenPort:       self.ListenPort,
+				PublicListenPort: self.PublicListenPort,
+				Endpoint:         self.Endpoint,
+				NatsConnected:    true,
+			},
+		}); err != nil {
+			slog.Error("publish device update", "error", err)
+		}
 	}
 }

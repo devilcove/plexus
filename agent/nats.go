@@ -156,7 +156,7 @@ func connectToServers() {
 		return
 	}
 	for _, server := range self.Servers {
-		slog.Debug("connecting to server", "server", server)
+		slog.Info("connecting to server", "server", server)
 		ec, err := connectToServer(self, server)
 		if err != nil {
 			slog.Error("connect to server", "server", server, "error", err)

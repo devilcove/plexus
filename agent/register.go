@@ -109,7 +109,7 @@ func createPeer() (*plexus.Peer, *wgtypes.Key, string, error) {
 		return nil, nil, empty, errors.New("invalid public key")
 	}
 	port := checkPort(51820)
-	stunAddr, err := getPublicAddPort()
+	stunAddr, err := getPublicAddPort(port)
 	if err != nil {
 		return nil, nil, empty, err
 	}
@@ -155,7 +155,7 @@ func checkPort(rangestart int) int {
 	return 0
 }
 
-func getPublicAddPort() (*stun.XORMappedAddress, error) {
+func getPublicAddPort(port int) (*stun.XORMappedAddress, error) {
 	add := &stun.XORMappedAddress{}
 	stunServer, err := net.ResolveUDPAddr("udp4", "stun1.l.google.com:19302")
 	if err != nil {
@@ -163,7 +163,7 @@ func getPublicAddPort() (*stun.XORMappedAddress, error) {
 	}
 	local := &net.UDPAddr{
 		IP:   net.ParseIP(""),
-		Port: 51820,
+		Port: port,
 	}
 	c, err := net.DialUDP("udp4", local, stunServer)
 	if err != nil {

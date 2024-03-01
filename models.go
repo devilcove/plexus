@@ -27,6 +27,10 @@ const (
 	LeaveServer
 )
 
+const (
+	ConnectivityTimeout = time.Minute * 3
+)
+
 type Settings struct {
 	Theme   string `json:"theme" form:"theme"`
 	Font    string `json:"font" form:"font"`
@@ -172,6 +176,15 @@ type RegisterRequest struct {
 type ConnectivityData struct {
 	Network      string
 	Connectivity float64
+}
+
+type CheckinData struct {
+	ID               string
+	Version          string
+	ListenPort       int
+	PublicListenPort int
+	Endpoint         string
+	Connections      []ConnectivityData
 }
 
 type StatusResponse struct {
