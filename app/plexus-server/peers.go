@@ -117,3 +117,44 @@ func deletePeerFromBroker(key string) {
 		slog.Error("delete peer from broker", "error", err)
 	}
 }
+
+func pingPeers() {
+	peers, err := boltdb.GetAll[plexus.Peer]("peers")
+	if err != nil {
+		slog.Error("get peers")
+		return
+	}
+	for _, peer := range peers {
+		current := peer.NatsConnected
+		if err := encodedConn.Publish(peer.WGPublicKey, plexus.UpdateRequest{Action: plexus.Ping}); err != nil {
+			peer.NatsConnected = false
+		} else {
+			peer.NatsConnected = true
+		}
+		if peer.NatsConnected != current {
+			savePeer(peer)
+		}
+	}
+}
+
+func savePeer(peer plexus.Peer) {
+	slog.Debug("saving peer", "peer", peer.Name, "key", peer.WGPublicKey)
+	if err := boltdb.Save(peer, peer.WGPublicKey, "peer"); err != nil {
+		slog.Error("save peer", "peer", peer.Name, "error", err)
+	}
+	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	if err != nil {
+		slog.Error("get networks", "error", err)
+	}
+	for _, network := range networks {
+		for i, netPeer := range network.Peers {
+			if netPeer.WGPublicKey == peer.WGPublicKey {
+				network.Peers[i].NatsConnected = peer.NatsConnected
+				slog.Debug("saving network peer", "network", network.Name, "peer", netPeer.HostName, "key", netPeer.WGPublicKey)
+				if err := boltdb.Save(network, network.Name, "networks"); err != nil {
+					slog.Error("save network", "network", network.Name, "error", err)
+				}
+			}
+		}
+	}
+}

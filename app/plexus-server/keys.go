@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -9,7 +8,6 @@ import (
 	"net/http"
 	"regexp"
 	"slices"
-	"sync"
 	"time"
 
 	"github.com/devilcove/boltdb"
@@ -141,28 +139,16 @@ func decrementKeyUsage(name string) error {
 	return nil
 }
 
-func expireKeys(ctx context.Context, wg *sync.WaitGroup) {
-	slog.Debug("key expiry checks starting")
-	defer wg.Done()
-	ticker := time.NewTicker(time.Hour * 6)
-	for {
-		select {
-		case <-ctx.Done():
-			ticker.Stop()
-			return
-		case <-ticker.C:
-			slog.Debug("checking for expired keys")
-			keys, err := boltdb.GetAll[plexus.Key]("keys")
-			if err != nil {
-				slog.Error("get keys", "error", err)
-				continue
-			}
-			for _, key := range keys {
-				if key.Expires.Before(time.Now()) {
-					slog.Debug("key has expired ...deleting", "key", key.Name, "expiry time", key.Expires.Format(time.RFC822))
-					removeKey(key)
-				}
-			}
+func expireKeys() {
+	slog.Debug("checking for expired keys")
+	keys, err := boltdb.GetAll[plexus.Key]("keys")
+	if err != nil {
+		slog.Error("get keys", "error", err)
+	}
+	for _, key := range keys {
+		if key.Expires.Before(time.Now()) {
+			slog.Info("key has expired ...deleting", "key", key.Name, "expiry time", key.Expires.Format(time.RFC822))
+			removeKey(key)
 		}
 	}
 }

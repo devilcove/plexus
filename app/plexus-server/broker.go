@@ -145,10 +145,13 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 	}
 
 	slog.Info("broker started")
-	//wg.Add(1)
+	pingTicker := time.NewTicker(plexus.PingTicker)
+	keyTicker := time.NewTicker(plexus.KeyTicker)
 	for {
 		select {
 		case <-ctx.Done():
+			pingTicker.Stop()
+			keyTicker.Stop()
 			registerSub.Drain()
 			checkinSub.Drain()
 			updateSub.Drain()
@@ -176,6 +179,10 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 				Permissions: registerPermissions(),
 			})
 			natServer.ReloadOptions(natsOptions)
+		case <-pingTicker.C:
+			pingPeers()
+		case <-keyTicker.C:
+			expireKeys()
 		}
 	}
 }

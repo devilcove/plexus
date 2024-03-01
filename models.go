@@ -25,10 +25,13 @@ const (
 	JoinNetwork
 	LeaveNetwork
 	LeaveServer
+	Ping
 )
 
 const (
 	ConnectivityTimeout = time.Minute * 3
+	PingTicker          = time.Minute * 3
+	KeyTicker           = time.Hour * 6
 )
 
 type Settings struct {
@@ -190,6 +193,10 @@ type CheckinData struct {
 type StatusResponse struct {
 	Servers  []string
 	Networks []Network
+}
+
+type PingResponse struct {
+	Message string
 }
 
 type ReloadRequest struct {

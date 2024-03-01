@@ -167,7 +167,7 @@ func connectToServers() {
 		if err != nil {
 			slog.Error("network subscription failed", "error", err)
 		}
-		updates, err := ec.Subscribe(self.WGPublicKey, func(subject string, data *plexus.DeviceUpdate) {
+		updates, err := ec.Subscribe(self.WGPublicKey, func(subject, reply string, data *plexus.DeviceUpdate) {
 			slog.Info("device update", "command", data.Type.String())
 			switch data.Type {
 			case plexus.LeaveServer:
@@ -177,6 +177,10 @@ func connectToServers() {
 			case plexus.JoinNetwork:
 				if err := connectToNetwork(data.Network); err != nil {
 					slog.Error("connect to network", "error", err)
+				}
+			case plexus.Ping:
+				if err := ec.Publish(reply, plexus.PingResponse{Message: "pong"}); err != nil {
+					slog.Error("publish pong", "error", err)
 				}
 			default:
 				slog.Error("invalid subject", "subj", data.Type)
