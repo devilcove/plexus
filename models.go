@@ -188,8 +188,13 @@ type CheckinData struct {
 }
 
 type StatusResponse struct {
-	Servers  []string
+	Servers  []ServerConnection
 	Networks []Network
+}
+
+type ServerConnection struct {
+	Server    string
+	Connected string
 }
 
 type PingResponse struct {

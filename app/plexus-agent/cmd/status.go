@@ -49,7 +49,7 @@ var statusCmd = &cobra.Command{
 		}
 		fmt.Println("Servers")
 		for _, server := range status.Servers {
-			fmt.Println("\t", server)
+			fmt.Println("\t", server.Server, ":", server.Connected)
 		}
 		if len(status.Networks) == 0 {
 			fmt.Println("no networks")

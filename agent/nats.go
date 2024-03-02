@@ -55,8 +55,24 @@ func subcribe(ec *nats.EncodedConn) {
 		if err != nil {
 			slog.Error("get device", "error", err)
 		}
+		servers := []plexus.ServerConnection{}
+		for _, serverName := range self.Servers {
+			server := plexus.ServerConnection{Server: serverName}
+			data, ok := serverMap[serverName]
+			if !ok {
+				server.Connected = "connection undefined"
+				servers = append(servers, server)
+				continue
+			}
+			if data.EC.Conn.IsConnected() {
+				server.Connected = "connected"
+			} else {
+				server.Connected = "not connected"
+			}
+			servers = append(servers, server)
+		}
 		status := plexus.StatusResponse{
-			Servers:  self.Servers,
+			Servers:  servers,
 			Networks: networks,
 		}
 		if err := ec.Publish(reply, status); err != nil {
