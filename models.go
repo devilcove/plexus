@@ -188,8 +188,9 @@ type CheckinData struct {
 }
 
 type StatusResponse struct {
-	Servers  []ServerConnection
-	Networks []Network
+	Servers    []ServerConnection
+	Networks   []Network
+	ListenPort int
 }
 
 type ServerConnection struct {

@@ -72,8 +72,9 @@ func subcribe(ec *nats.EncodedConn) {
 			servers = append(servers, server)
 		}
 		status := plexus.StatusResponse{
-			Servers:  servers,
-			Networks: networks,
+			Servers:    servers,
+			Networks:   networks,
+			ListenPort: self.PublicListenPort,
 		}
 		if err := ec.Publish(reply, status); err != nil {
 			slog.Error("status response", "error", err)

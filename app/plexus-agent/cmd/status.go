@@ -75,6 +75,7 @@ var statusCmd = &cobra.Command{
 			fmt.Println("\t server: ", network.ServerURL)
 			fmt.Println("\t public key:", wg.PrivateKey.PublicKey())
 			fmt.Println("\t listen port:", wg.ListenPort)
+			fmt.Println("\t public listen port:", status.ListenPort)
 			for i := range addr {
 				fmt.Println("\t address:", addr[i].IP)
 			}
