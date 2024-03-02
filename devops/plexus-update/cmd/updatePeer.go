@@ -38,8 +38,8 @@ to quickly create a Cobra application.`,
 		fmt.Println("updatePeer called")
 		nc := broker()
 		request := plexus.NetworkUpdate{
-			Type: plexus.UpdatePeer,
-			Peer: newPeer(),
+			Action: plexus.UpdatePeer,
+			Peer:   newPeer(),
 		}
 		request.Peer.WGPublicKey = args[1]
 		request.Peer.Endpoint = "172.16.0.3:51821"

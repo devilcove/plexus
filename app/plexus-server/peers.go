@@ -59,14 +59,14 @@ func deletePeer(c *gin.Context) {
 				found = true
 				network.Peers = slices.Delete(network.Peers, i, i+1)
 				update := plexus.NetworkUpdate{
-					Type: plexus.DeletePeer,
-					Peer: netpeer,
+					Action: plexus.DeletePeer,
+					Peer:   netpeer,
 				}
 				bytes, err := json.Marshal(update)
 				if err != nil {
 					slog.Error("marshal peer deletion", "error", err)
 				}
-				slog.Info("publishing network update", "type", update.Type, "network", network.Name)
+				slog.Info("publishing network update", "type", update.Action, "network", network.Name)
 				if err := natsConn.Publish("networks."+network.Name, bytes); err != nil {
 					slog.Error("publish net update", "error", err)
 				}

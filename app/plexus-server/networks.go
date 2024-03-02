@@ -166,7 +166,7 @@ func deleteNetwork(c *gin.Context) {
 	}
 	log.Println("deleting network", network)
 	if err := encodedConn.Publish("networks."+network, plexus.NetworkUpdate{
-		Type: plexus.DeleteNetwork,
+		Action: plexus.DeleteNetwork,
 	}); err != nil {
 		slog.Error("publish delete network", "error", err)
 	}
@@ -205,8 +205,8 @@ func removePeerFromNetwork(c *gin.Context) {
 				return
 			}
 			update := plexus.NetworkUpdate{
-				Type: plexus.DeletePeer,
-				Peer: peer,
+				Action: plexus.DeletePeer,
+				Peer:   peer,
 			}
 			payload, err := json.Marshal(&update)
 			if err != nil {
@@ -283,7 +283,7 @@ func addRelay(c *gin.Context) {
 		return
 	}
 	update := plexus.NetworkUpdate{
-		Type: plexus.AddRelay,
+		Action: plexus.AddRelay,
 	}
 	peers := []plexus.NetworkPeer{}
 	for _, peer := range network.Peers {
@@ -320,7 +320,7 @@ func deleteRelay(c *gin.Context) {
 		return
 	}
 	update := plexus.NetworkUpdate{
-		Type: plexus.DeleteRelay,
+		Action: plexus.DeleteRelay,
 	}
 	peersToUnrelay := []string{}
 	updatedPeers := []plexus.NetworkPeer{}

@@ -107,7 +107,7 @@ func addPeerToNetwork(peer plexus.Peer, network string) (plexus.Network, error) 
 	}
 	slog.Debug("setting ip to", "ip", addr)
 	update := plexus.NetworkUpdate{
-		Type: plexus.AddPeer,
+		Action: plexus.AddPeer,
 		Peer: plexus.NetworkPeer{
 			WGPublicKey:      peer.WGPublicKey,
 			HostName:         peer.Name,
@@ -272,8 +272,8 @@ func processLeave(request *plexus.UpdateRequest) plexus.NetworkResponse {
 			return errResponse
 		}
 		update := plexus.NetworkUpdate{
-			Type: plexus.DeletePeer,
-			Peer: peer,
+			Action: plexus.DeletePeer,
+			Peer:   peer,
 		}
 		slog.Debug("publishing network update for peer leaving network", "network", request.Network, "peer", request.Peer.WGPublicKey)
 		if err := encodedConn.Publish("networks."+request.Network, update); err != nil {
@@ -343,8 +343,8 @@ func publishNetworkPeerUpdate(peer plexus.Peer) error {
 				netPeer.Endpoint = peer.Endpoint
 				networks[i].Peers[j] = netPeer
 				data := plexus.NetworkUpdate{
-					Type: plexus.UpdatePeer,
-					Peer: netPeer,
+					Action: plexus.UpdatePeer,
+					Peer:   netPeer,
 				}
 				if err := encodedConn.Publish("networks."+network.Name, data); err != nil {
 					slog.Error("publish network update", "error", err)

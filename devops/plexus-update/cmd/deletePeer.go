@@ -38,7 +38,7 @@ to quickly create a Cobra application.`,
 		fmt.Println("deletePeer called")
 		nc := broker()
 		request := plexus.NetworkUpdate{
-			Type: plexus.DeletePeer,
+			Action: plexus.DeletePeer,
 			Peer: plexus.NetworkPeer{
 				WGPublicKey: args[1],
 			},

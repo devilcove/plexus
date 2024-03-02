@@ -38,8 +38,8 @@ to quickly create a Cobra application.`,
 		fmt.Println("addPeer called")
 		nc := broker()
 		request := plexus.NetworkUpdate{
-			Type: plexus.AddPeer,
-			Peer: newPeer(),
+			Action: plexus.AddPeer,
+			Peer:   newPeer(),
 		}
 		payload, err := json.Marshal(request)
 		cobra.CheckErr(err)

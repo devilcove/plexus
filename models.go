@@ -1,7 +1,5 @@
 package plexus
 
-//go:generate stringer -type Command
-
 import (
 	"encoding/base64"
 	"encoding/json"
@@ -13,10 +11,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type Command int
+type Action int
 
 const (
-	DeletePeer Command = iota
+	DeletePeer Action = iota
 	AddPeer
 	UpdatePeer
 	AddRelay
@@ -27,6 +25,11 @@ const (
 	LeaveServer
 	Ping
 )
+
+func (i Action) String() string {
+	return [...]string{"DeletePeer", "AddPeer", "UpdatePeer", "AddRelay", "DelteRely",
+		"DeleteNetwork", "JoinNetwork", "LeaveNetwork", "LeaveServer", "Ping"}[i]
+}
 
 const (
 	ConnectivityTimeout = time.Minute * 3
@@ -154,16 +157,16 @@ type UpdateRequest struct {
 	Network string
 	Server  string
 	Peer    Peer
-	Action  Command
+	Action  Action
 }
 
 type NetworkUpdate struct {
-	Type Command
-	Peer NetworkPeer
+	Action Action
+	Peer   NetworkPeer
 }
 
 type DeviceUpdate struct {
-	Type    Command
+	Type    Action
 	Network Network
 }
 
