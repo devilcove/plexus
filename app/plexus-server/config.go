@@ -29,8 +29,15 @@ type configuration struct {
 var (
 	config       configuration
 	ErrServerURL = errors.New("invalid server URL")
+)
+
+const (
 	//timers
 	connectedTime = time.Second * 30
+	natsTimeout   = time.Second * 3
+	keyExpiry     = time.Hour * 24
+	keyTick       = time.Hour * 6
+	pingTick      = time.Minute * 3
 )
 
 func configureServer() (*slog.Logger, error) {

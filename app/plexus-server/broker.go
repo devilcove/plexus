@@ -67,7 +67,7 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 		return
 	}
 	go natServer.Start()
-	if !natServer.ReadyForConnections(3 * time.Second) {
+	if !natServer.ReadyForConnections(natsTimeout) {
 		slog.Error("not ready for connection", "error", err)
 		return
 	}
@@ -145,8 +145,8 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 	}
 
 	slog.Info("broker started")
-	pingTicker := time.NewTicker(plexus.PingTicker)
-	keyTicker := time.NewTicker(plexus.KeyTicker)
+	pingTicker := time.NewTicker(pingTick)
+	keyTicker := time.NewTicker(keyTick)
 	for {
 		select {
 		case <-ctx.Done():

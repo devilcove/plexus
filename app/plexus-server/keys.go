@@ -51,7 +51,7 @@ func addKey(c *gin.Context) {
 		key.Usage = 1
 	}
 	if key.Expires.IsZero() {
-		key.Expires = time.Now().Add(24 * time.Hour)
+		key.Expires = time.Now().Add(keyExpiry)
 	}
 	existing, err := boltdb.Get[plexus.Key](key.Name, "keys")
 	if err != nil && !errors.Is(err, boltdb.ErrNoResults) {

@@ -31,12 +31,6 @@ func (i Action) String() string {
 		"DeleteNetwork", "JoinNetwork", "LeaveNetwork", "LeaveServer", "Ping"}[i]
 }
 
-const (
-	ConnectivityTimeout = time.Minute * 3
-	PingTicker          = time.Minute * 3
-	KeyTicker           = time.Hour * 6
-)
-
 type Settings struct {
 	Theme   string `json:"theme" form:"theme"`
 	Font    string `json:"font" form:"font"`
