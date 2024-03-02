@@ -1,0 +1,12 @@
+[Unit]
+Description=Plexus Agent
+After=network-online-target
+
+[Service]
+User=plexus
+Type=simple
+ExecStart=/bin/plexus-agent run
+Restart=on-success
+
+[Install]
+WantedBy=multi-user.target

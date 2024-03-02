@@ -1,0 +1,13 @@
+[Unit]
+Description=Plexus Server
+After=network-online-target
+
+[Service]
+User=plexus
+Type=simple
+ExecStart=/bin/plexus-server
+WorkingDirectory=/home/mkasun/timetraced
+Restart=on-success
+
+[Install]
+WantedBy=multi-user.target
