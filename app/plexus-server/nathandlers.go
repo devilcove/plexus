@@ -126,7 +126,7 @@ func addPeerToNetwork(peer plexus.Peer, network string) (plexus.Network, error) 
 	}
 	slog.Debug("publish device update", "name", peer.Name)
 	if err := encodedConn.Publish(peer.WGPublicKey, plexus.DeviceUpdate{
-		Type:    plexus.JoinNetwork,
+		Action:  plexus.JoinNetwork,
 		Network: netToUpdate,
 	}); err != nil {
 		slog.Error("publish device update", "peer", peer.Name, "error", err)

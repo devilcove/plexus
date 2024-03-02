@@ -144,8 +144,8 @@ type LeaveResponse struct {
 	Message string
 }
 type NetworkResponse struct {
-	Error    bool
 	Message  string
+	Error    bool
 	Networks []Network
 }
 
@@ -166,7 +166,7 @@ type NetworkUpdate struct {
 }
 
 type DeviceUpdate struct {
-	Type    Action
+	Action  Action
 	Network Network
 }
 
