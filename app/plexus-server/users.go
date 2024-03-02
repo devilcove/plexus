@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/devilcove/boltdb"
@@ -66,6 +68,48 @@ func hashPassword(password string) (string, error) {
 	return string(bytes), err
 }
 
-func getUsers(c *gin.Context) {
-	c.HTML(http.StatusOK, "users", natsOptions.Nkeys)
+func getNatsUsers(c *gin.Context) {
+	nats := []plexus.NatsUser{}
+	peers, _ := boltdb.GetAll[plexus.Peer]("peers")
+
+	for _, nkey := range natsOptions.Nkeys {
+		//fmt.Println(nkey.Permissions.Publish.Allow)
+		if slices.Contains(nkey.Permissions.Subscribe.Allow, "networks.>") {
+			user := plexus.NatsUser{
+				Kind:      "plexus-agent",
+				Subscribe: []string{"networks.>", "updates.<id>"},
+				Publish:   []string{"checkin.<id>", "update.<id>"},
+			}
+			for _, peer := range peers {
+				if peer.PubNkey == nkey.Nkey {
+					fmt.Println("nkey match", "peer", peer.Name, "key", peer.PubNkey)
+					user.Name = peer.Name
+				}
+			}
+			nats = append(nats, user)
+			continue
+		}
+		if slices.Contains(nkey.Permissions.Publish.Allow, ">") {
+			fmt.Println("admin user", nkey.Nkey)
+			user := plexus.NatsUser{
+				Kind:      "server",
+				Name:      "-",
+				Subscribe: []string{"any"},
+				Publish:   []string{"any"},
+			}
+			nats = append(nats, user)
+			continue
+		}
+		if slices.Contains(nkey.Permissions.Publish.Allow, "register") {
+			fmt.Println("Key user", nkey.Nkey)
+			user := plexus.NatsUser{
+				Kind:      "registation key",
+				Name:      "-",
+				Subscribe: []string{"-"},
+				Publish:   []string{"register"},
+			}
+			nats = append(nats, user)
+		}
+	}
+	c.HTML(http.StatusOK, "natsUsers", nats)
 }

@@ -55,6 +55,12 @@ type User struct {
 	Updated  time.Time
 }
 
+type NatsUser struct {
+	Kind      string
+	Name      string
+	Subscribe []string
+	Publish   []string
+}
 type Network struct {
 	Name            string `form:"name"`
 	ServerURL       string

@@ -74,9 +74,9 @@ func setupRouter() *gin.Engine {
 		peers.DELETE("/:id", deletePeer)
 	}
 	//router.GET("/login", displayLogin)
-	users := router.Group("/users", auth)
+	users := router.Group("/nats", auth)
 	{
-		users.GET("/", getUsers)
+		users.GET("/", getNatsUsers)
 		//	users.GET("current", getUser)
 		//	users.POST("", addUser)
 		//	users.POST(":name", editUser)

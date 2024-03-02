@@ -1,23 +1,21 @@
-{{define "users"}}
+{{define "natsUsers"}}
 <!-- [html-validate-disable prefer-tbody]-->
-<div id="content" hx-get="/users/" hx-trigger="every 1m">
+<div id="content" hx-get="/nats/" hx-trigger="every 1m">
     <div class="w3-container w3-center w3-theme-dark w3-padding">
         <div id="error" class="w3-red"></div>
-        <h1>Users</h1>
-        <table class="w3-table-all w3-center w3-theme-l3">
-            <tr class="w3-theme-d5 w3-center">
-                <td>Key</td>
-                <td>Subscribe</td>
-                <td>Publish</td>
-            </tr>
+        <h1>Authorized Nats Users</h1>
+        <div class="grid4">
+                <div class="w3-theme-l3">Kind</div>
+                <div class="w3-theme-l3">Name</div>
+                <div class="w3-theme-l3">Subscribe</div>
+                <div class="w3-theme-l3">Publish</div>
             {{range . }}
-            <tr class="w3-theme-l3">
-                <td>{{.Nkey}}</td>
-                <td>{{.Permissions.Subscribe.Allow}}</td>
-                <td>{{.Permissions.Publish.Allow}}</td>
-            </tr>
+                <div>{{.Kind}}</div>
+                <div>{{.Name}}</div>
+                <div>{{.Subscribe}}</div>
+                <div>{{.Publish}}</div>
             {{end}}
-        </table>
+        </div>
     </div>
 </div>
 {{end}}
