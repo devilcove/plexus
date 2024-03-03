@@ -126,7 +126,7 @@ func pingPeers() {
 	}
 	for _, peer := range peers {
 		current := peer.NatsConnected
-		if err := encodedConn.Publish(peer.WGPublicKey, plexus.UpdateRequest{Action: plexus.Ping}); err != nil {
+		if err := encodedConn.Publish(peer.WGPublicKey, plexus.AgentRequest{Action: plexus.Ping}); err != nil {
 			peer.NatsConnected = false
 		} else {
 			peer.NatsConnected = true

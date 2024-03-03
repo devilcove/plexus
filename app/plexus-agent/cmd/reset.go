@@ -37,7 +37,7 @@ var resetCmd = &cobra.Command{
 		}
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
-		resp := plexus.NetworkResponse{}
+		resp := plexus.ServerResponse{}
 		cobra.CheckErr(ec.Request("reset", request, &resp, agent.NatsTimeout))
 		if resp.Error {
 			fmt.Println("errors were encountered")

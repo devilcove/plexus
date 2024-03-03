@@ -29,6 +29,8 @@ type configuration struct {
 var (
 	config       configuration
 	ErrServerURL = errors.New("invalid server URL")
+	sessionAge   = 60 * 60 * 24
+	version      = "v0.1.0"
 )
 
 const (

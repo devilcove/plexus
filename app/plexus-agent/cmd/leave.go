@@ -34,7 +34,7 @@ var leaveCmd = &cobra.Command{
 		var response plexus.LeaveResponse
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
-		cobra.CheckErr(ec.Request("update", plexus.UpdateRequest{
+		cobra.CheckErr(ec.Request("update", plexus.AgentRequest{
 			Network: args[0],
 			Action:  plexus.LeaveNetwork,
 		}, &response, agent.NatsTimeout))

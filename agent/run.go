@@ -112,7 +112,7 @@ func connectToServer(self plexus.Device, server string) (*nats.EncodedConn, erro
 func checkin() {
 	slog.Debug("checkin")
 	checkinData := plexus.CheckinData{}
-	serverResponse := plexus.NetworkResponse{}
+	serverResponse := plexus.ServerResponse{}
 	self, err := boltdb.Get[plexus.Device]("self", "devices")
 	if err != nil {
 		slog.Error("get device", "error", err)
@@ -162,7 +162,7 @@ func sendDeviceUpdate() {
 			slog.Error("server not mapped", "server", server)
 			return
 		}
-		if err := conn.EC.Publish("update."+self.WGPublicKey, plexus.UpdateRequest{
+		if err := conn.EC.Publish("update."+self.WGPublicKey, plexus.AgentRequest{
 			Action: plexus.UpdatePeer,
 			Peer: plexus.Peer{
 				WGPublicKey:      self.WGPublicKey,

@@ -20,6 +20,8 @@ import (
 	"runtime/debug"
 	"strings"
 
+	"github.com/devilcove/plexus"
+	"github.com/devilcove/plexus/agent"
 	"github.com/spf13/cobra"
 )
 
@@ -34,13 +36,24 @@ var versionCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		long, err := cmd.Flags().GetBool("long")
 		cobra.CheckErr(err)
-		fmt.Print(version)
+		ec, err := agent.ConnectToAgentBroker()
+		cobra.CheckErr(err)
+		response := plexus.VersionResponse{}
+		// need longer timeout is case of server timeout
+		cobra.CheckErr(ec.Request("version", long, &response, agent.NatsLongTimeout))
+		fmt.Println("Servers")
+		for _, server := range response.Servers {
+			fmt.Printf("  %s\n", server.Name)
+			fmt.Printf("        %s\n", server.Version)
+		}
+		fmt.Printf("Agent:  %s\n", response.Agent)
+		fmt.Printf("Binary: %s", version)
 		if long {
 			fmt.Print(": ")
 			info, _ := debug.ReadBuildInfo()
 			for _, setting := range info.Settings {
 				if strings.Contains(setting.Key, "vcs") {
-					fmt.Print(setting.Value + " ")
+					fmt.Printf("%s ", setting.Value)
 				}
 			}
 			fmt.Print("\n")

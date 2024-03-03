@@ -12,10 +12,12 @@ const (
 	maxNetworks         = 100
 	defaultKeepalive    = time.Second * 20
 	NatsTimeout         = time.Second * 5
+	NatsLongTimeout     = time.Second * 15
 	checkinTime         = time.Minute * 1
 	serverCheckTime     = time.Minute * 1
 	connectivityTimeout = time.Minute * 3
 	networkNotMapped    = "network not mapped to server"
+	version             = "v0.1.0"
 )
 
 var (

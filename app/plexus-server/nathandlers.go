@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"runtime/debug"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/c-robinson/iplib"
@@ -41,10 +43,10 @@ func registerPermissions() *server.Permissions {
 	}
 }
 
-func registerHandler(request *plexus.ServerRegisterRequest) plexus.NetworkResponse {
+func registerHandler(request *plexus.ServerRegisterRequest) plexus.ServerResponse {
 	slog.Debug("register request", "request", request)
-	errResp := plexus.NetworkResponse{Error: true}
-	response := plexus.NetworkResponse{}
+	errResp := plexus.ServerResponse{Error: true}
+	response := plexus.ServerResponse{}
 	if err := saveNewPeer(request.Peer); err != nil {
 		slog.Debug(err.Error())
 		errResp.Message = err.Error()
@@ -168,9 +170,9 @@ func getNextIP(network plexus.Network) (net.IP, error) {
 }
 
 // processCheckin handle messages published to checkin.<ID>
-func processCheckin(data *plexus.CheckinData) plexus.NetworkResponse {
+func processCheckin(data *plexus.CheckinData) plexus.ServerResponse {
 	publishUpdate := false
-	response := plexus.NetworkResponse{}
+	response := plexus.ServerResponse{}
 	slog.Info("received checkin", "device", data.ID)
 	peer, err := boltdb.Get[plexus.Peer](data.ID, "peers")
 	if err != nil {
@@ -208,12 +210,12 @@ func processCheckin(data *plexus.CheckinData) plexus.NetworkResponse {
 		}
 	}
 	processConnectionData(data)
-	return plexus.NetworkResponse{Message: "checkin processed"}
+	return plexus.ServerResponse{Message: "checkin processed"}
 }
 
 // configHandler handles requests for device configuration ie request published to config.<ID>
-func configHandler(subject string) plexus.NetworkResponse {
-	response := plexus.NetworkResponse{}
+func configHandler(subject string) plexus.ServerResponse {
+	response := plexus.ServerResponse{}
 	peer := subject[7:]
 	slog.Info("received config request", "peer", peer)
 	networks, err := getNetworksForPeer(peer)
@@ -249,9 +251,9 @@ func processConnectionData(data *plexus.CheckinData) {
 }
 
 // processLeave handles leaving a network
-func processLeave(request *plexus.UpdateRequest) plexus.NetworkResponse {
-	errResponse := plexus.NetworkResponse{Error: true}
-	response := plexus.NetworkResponse{}
+func processLeave(request *plexus.AgentRequest) plexus.ServerResponse {
+	errResponse := plexus.ServerResponse{Error: true}
+	response := plexus.ServerResponse{}
 	slog.Debug("leave handler", "peer", request.Peer.WGPublicKey, "network", request.Network)
 	network, err := boltdb.Get[plexus.Network](request.Network, "networks")
 	if err != nil {
@@ -291,7 +293,7 @@ func processLeave(request *plexus.UpdateRequest) plexus.NetworkResponse {
 	return response
 }
 
-func processUpdate(request *plexus.UpdateRequest) plexus.NetworkResponse {
+func processUpdate(request *plexus.AgentRequest) plexus.ServerResponse {
 	switch request.Action {
 	case plexus.JoinNetwork:
 		connect := &plexus.JoinRequest{
@@ -299,17 +301,19 @@ func processUpdate(request *plexus.UpdateRequest) plexus.NetworkResponse {
 			Peer:    request.Peer,
 		}
 		return connectToNetwork(connect)
+	case plexus.Version:
+		return serverVersion(request.Args)
 	default:
-		return plexus.NetworkResponse{
+		return plexus.ServerResponse{
 			Error:   true,
 			Message: "invalid request action",
 		}
 	}
 }
 
-func connectToNetwork(request *plexus.JoinRequest) plexus.NetworkResponse {
-	errResponse := plexus.NetworkResponse{Error: true}
-	response := plexus.NetworkResponse{}
+func connectToNetwork(request *plexus.JoinRequest) plexus.ServerResponse {
+	errResponse := plexus.ServerResponse{Error: true}
+	response := plexus.ServerResponse{}
 	_, err := boltdb.Get[plexus.Peer](request.Peer.WGPublicKey, "peers")
 	if errors.Is(err, boltdb.ErrNoResults) {
 		if err := saveNewPeer(request.Peer); err != nil {
@@ -353,4 +357,20 @@ func publishNetworkPeerUpdate(peer plexus.Peer) error {
 		}
 	}
 	return nil
+}
+
+func serverVersion(long string) plexus.ServerResponse {
+	serverVersion := plexus.ServerVersion{
+		Name:    config.FQDN,
+		Version: version + ": ",
+	}
+	if long == "true" {
+		info, _ := debug.ReadBuildInfo()
+		for _, setting := range info.Settings {
+			if strings.Contains(setting.Key, "vcs") {
+				serverVersion.Version = serverVersion.Version + setting.Value + " "
+			}
+		}
+	}
+	return plexus.ServerResponse{Version: serverVersion}
 }

@@ -15,8 +15,7 @@ import (
 
 // var page Page
 var (
-	pages      map[string]Page
-	sessionAge int
+	pages map[string]Page
 )
 
 type Page struct {
@@ -33,7 +32,6 @@ type Page struct {
 
 func init() {
 	pages = make(map[string]Page)
-	sessionAge = 60 * 60 // one hour
 }
 
 func displayMain(c *gin.Context) {

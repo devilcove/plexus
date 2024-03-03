@@ -24,11 +24,12 @@ const (
 	LeaveNetwork
 	LeaveServer
 	Ping
+	Version
 )
 
 func (i Action) String() string {
 	return [...]string{"DeletePeer", "AddPeer", "UpdatePeer", "AddRelay", "DelteRely",
-		"DeleteNetwork", "JoinNetwork", "LeaveNetwork", "LeaveServer", "Ping"}[i]
+		"DeleteNetwork", "JoinNetwork", "LeaveNetwork", "LeaveServer", "Ping", "Version"}[i]
 }
 
 type Settings struct {
@@ -143,21 +144,33 @@ type LeaveResponse struct {
 	Error   bool
 	Message string
 }
-type NetworkResponse struct {
+type ServerResponse struct {
 	Message  string
 	Error    bool
 	Networks []Network
+	Version  ServerVersion
 }
 
 type LeaveRequest struct {
 	Network string
 }
 
-type UpdateRequest struct {
+type AgentRequest struct {
 	Network string
 	Server  string
 	Peer    Peer
 	Action  Action
+	Args    string
+}
+
+type VersionResponse struct {
+	Servers []ServerVersion
+	Agent   string
+}
+
+type ServerVersion struct {
+	Name    string
+	Version string
 }
 
 type NetworkUpdate struct {

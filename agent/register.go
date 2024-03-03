@@ -18,9 +18,9 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
-func registerPeer(request *plexus.RegisterRequest) plexus.NetworkResponse {
+func registerPeer(request *plexus.RegisterRequest) plexus.ServerResponse {
 	log.Println("register request")
-	errResp := plexus.NetworkResponse{Error: true}
+	errResp := plexus.ServerResponse{Error: true}
 	loginKey, err := plexus.DecodeToken(request.Token)
 	if err != nil {
 		log.Println(err)
@@ -37,7 +37,7 @@ func registerPeer(request *plexus.RegisterRequest) plexus.NetworkResponse {
 		errResp.Message = err.Error()
 		return errResp
 	}
-	resp := plexus.NetworkResponse{}
+	resp := plexus.ServerResponse{}
 	serverRequest := plexus.ServerRegisterRequest{
 		KeyName: loginKey.KeyName,
 		Peer:    self.Peer,

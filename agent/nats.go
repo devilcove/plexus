@@ -3,6 +3,7 @@ package agent
 import (
 	"log"
 	"log/slog"
+	"runtime/debug"
 	"slices"
 	"strconv"
 	"strings"
@@ -80,8 +81,8 @@ func subcribe(ec *nats.EncodedConn) {
 			slog.Error("status response", "error", err)
 		}
 	})
-	ec.Subscribe("update", func(sub, reply string, data plexus.UpdateRequest) {
-		response := plexus.NetworkResponse{}
+	ec.Subscribe("update", func(sub, reply string, data plexus.AgentRequest) {
+		response := plexus.ServerResponse{}
 		switch data.Action {
 		case plexus.JoinNetwork:
 			response = processJoin(data)
@@ -123,7 +124,7 @@ func subcribe(ec *nats.EncodedConn) {
 		self, err := boltdb.Get[plexus.Device]("self", "devices")
 		if err != nil {
 			slog.Error(err.Error())
-			if err := ec.Publish(reply, plexus.NetworkResponse{Error: true, Message: err.Error()}); err != nil {
+			if err := ec.Publish(reply, plexus.ServerResponse{Error: true, Message: err.Error()}); err != nil {
 				slog.Error(err.Error())
 			}
 			return
@@ -131,21 +132,54 @@ func subcribe(ec *nats.EncodedConn) {
 		network, err := boltdb.Get[plexus.Network](request.Network, "networks")
 		if err != nil {
 			slog.Error(err.Error())
-			if err := ec.Publish(reply, plexus.NetworkResponse{Error: true, Message: err.Error()}); err != nil {
+			if err := ec.Publish(reply, plexus.ServerResponse{Error: true, Message: err.Error()}); err != nil {
 				slog.Error(err.Error())
 			}
 			return
 		}
 		if err := resetPeersOnNetworkInterface(self, network); err != nil {
 			slog.Error(err.Error())
-			if err := ec.Publish(reply, plexus.NetworkResponse{Error: true, Message: err.Error()}); err != nil {
+			if err := ec.Publish(reply, plexus.ServerResponse{Error: true, Message: err.Error()}); err != nil {
 				slog.Error(err.Error())
 			}
 			return
 
 		}
-		if err := ec.Publish(reply, plexus.NetworkResponse{Message: "interface reset"}); err != nil {
+		if err := ec.Publish(reply, plexus.ServerResponse{Message: "interface reset"}); err != nil {
 			slog.Error(err.Error())
+		}
+	})
+	ec.Subscribe("version", func(sub, reply string, long *bool) {
+		slog.Debug("version request")
+		response := plexus.VersionResponse{}
+		serverResponse := plexus.ServerResponse{}
+		self, err := boltdb.Get[plexus.Device]("self", "devices")
+		if err != nil {
+			slog.Error("get device", "error", err)
+			if err := ec.Publish(reply, response); err != nil {
+				slog.Error("publish reply to version request", "error", err)
+			}
+			return
+		}
+		for server, data := range serverMap {
+			slog.Debug("checking version of server", "server", server)
+			if err := data.EC.Request("update."+self.WGPublicKey, plexus.AgentRequest{Action: plexus.Version, Args: strconv.FormatBool(*long)}, &serverResponse, NatsTimeout); err != nil {
+				slog.Error("version request", "server", server, "error", err)
+				continue
+			}
+			response.Servers = append(response.Servers, serverResponse.Version)
+		}
+		response.Agent = version + ": "
+		if *long {
+			info, _ := debug.ReadBuildInfo()
+			for _, setting := range info.Settings {
+				if strings.Contains(setting.Key, "vcs") {
+					response.Agent = response.Agent + setting.Value + " "
+				}
+			}
+		}
+		if err := ec.Publish(reply, response); err != nil {
+			slog.Error("publish reply to version request", "error", err)
 		}
 	})
 }
@@ -230,10 +264,10 @@ func connectToServers() {
 	//"length", len(serverMap), "networkmap", networkMap)
 }
 
-func processLeave(request plexus.UpdateRequest) plexus.NetworkResponse {
+func processLeave(request plexus.AgentRequest) plexus.ServerResponse {
 	slog.Debug("leave", "network", request.Network)
-	response := plexus.NetworkResponse{}
-	errResponse := plexus.NetworkResponse{Error: true}
+	response := plexus.ServerResponse{}
+	errResponse := plexus.ServerResponse{Error: true}
 	network, err := boltdb.Get[plexus.Network](request.Network, "networks")
 	if err != nil {
 		slog.Debug(err.Error())
@@ -262,10 +296,10 @@ func processLeave(request plexus.UpdateRequest) plexus.NetworkResponse {
 	return response
 }
 
-func processJoin(request plexus.UpdateRequest) plexus.NetworkResponse {
+func processJoin(request plexus.AgentRequest) plexus.ServerResponse {
 	slog.Debug("join", "network", request.Network, "server", request.Server)
-	response := plexus.NetworkResponse{}
-	errResponse := plexus.NetworkResponse{Error: true}
+	response := plexus.ServerResponse{}
+	errResponse := plexus.ServerResponse{Error: true}
 	_, err := boltdb.Get[plexus.Network](request.Network, "networks")
 	if err == nil {
 		slog.Warn("already connected to network")
@@ -375,9 +409,9 @@ func createRegistationConnection(key plexus.KeyValue) (*nats.EncodedConn, error)
 	return ec, nil
 }
 
-func reload(data *plexus.ReloadRequest) plexus.NetworkResponse {
-	response := plexus.NetworkResponse{Error: true}
-	serverResponse := plexus.NetworkResponse{}
+func reload(data *plexus.ReloadRequest) plexus.ServerResponse {
+	response := plexus.ServerResponse{Error: true}
+	serverResponse := plexus.ServerResponse{}
 	self, err := boltdb.Get[plexus.Device]("self", "devices")
 	if err != nil {
 		slog.Error("get device", "error", err)

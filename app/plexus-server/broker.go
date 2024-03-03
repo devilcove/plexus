@@ -114,7 +114,7 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 	if err != nil {
 		slog.Error("subscribe checkin", "error", err)
 	}
-	updateSub, err := encodedConn.Subscribe("update.*", func(subj, reply string, request *plexus.UpdateRequest) {
+	updateSub, err := encodedConn.Subscribe("update.*", func(subj, reply string, request *plexus.AgentRequest) {
 		response := processUpdate(request)
 		slog.Debug("pubish update rely", "respone", response)
 		if err := encodedConn.Publish(reply, response); err != nil {
@@ -133,7 +133,7 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 	if err != nil {
 		slog.Error("subcribe config", "error", err)
 	}
-	leaveSub, err := encodedConn.Subscribe("leave.*", func(subj, reply string, request *plexus.UpdateRequest) {
+	leaveSub, err := encodedConn.Subscribe("leave.*", func(subj, reply string, request *plexus.AgentRequest) {
 		response := processLeave(request)
 		slog.Debug("publish leave reply", "response", response)
 		if err := encodedConn.Publish(reply, response); err != nil {

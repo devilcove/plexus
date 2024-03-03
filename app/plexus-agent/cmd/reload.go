@@ -38,7 +38,7 @@ from single or all servers`,
 		}
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
-		resp := plexus.NetworkResponse{}
+		resp := plexus.ServerResponse{}
 		cobra.CheckErr(ec.Request("reload", request, &resp, agent.NatsTimeout))
 		if resp.Error {
 			fmt.Println("errors were encountered")
