@@ -18,6 +18,8 @@ const (
 	connectivityTimeout = time.Minute * 3
 	networkNotMapped    = "network not mapped to server"
 	version             = "v0.1.0"
+	networkTable        = "networks"
+	deviceTable         = "devices"
 )
 
 var (

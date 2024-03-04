@@ -62,11 +62,11 @@ func registerHandler(request *plexus.ServerRegisterRequest) plexus.ServerRespons
 }
 
 func saveNewPeer(peer plexus.Peer) error {
-	if _, err := boltdb.Get[plexus.Peer](peer.WGPublicKey, "peers"); err == nil {
+	if _, err := boltdb.Get[plexus.Peer](peer.WGPublicKey, peerTable); err == nil {
 		return errors.New("peer exists")
 	}
 	// save new peer(device)
-	if err := boltdb.Save(peer, peer.WGPublicKey, "peers"); err != nil {
+	if err := boltdb.Save(peer, peer.WGPublicKey, peerTable); err != nil {
 		slog.Debug("unable to save new peer", "error", err)
 		return err
 	}
@@ -93,7 +93,7 @@ func addNKeyUser(peer plexus.Peer) error {
 }
 
 func addPeerToNetwork(peer plexus.Peer, network string) (plexus.Network, error) {
-	netToUpdate, err := boltdb.Get[plexus.Network](network, "networks")
+	netToUpdate, err := boltdb.Get[plexus.Network](network, networkTable)
 	if err != nil {
 		return netToUpdate, err
 	}
@@ -122,7 +122,7 @@ func addPeerToNetwork(peer plexus.Peer, network string) (plexus.Network, error) 
 		},
 	}
 	netToUpdate.Peers = append(netToUpdate.Peers, update.Peer)
-	if err := boltdb.Save(netToUpdate, netToUpdate.Name, "networks"); err != nil {
+	if err := boltdb.Save(netToUpdate, netToUpdate.Name, networkTable); err != nil {
 		slog.Error("save updated network", "error", err)
 		return netToUpdate, err
 	}
@@ -174,7 +174,7 @@ func processCheckin(data *plexus.CheckinData) plexus.ServerResponse {
 	publishUpdate := false
 	response := plexus.ServerResponse{}
 	slog.Info("received checkin", "device", data.ID)
-	peer, err := boltdb.Get[plexus.Peer](data.ID, "peers")
+	peer, err := boltdb.Get[plexus.Peer](data.ID, peerTable)
 	if err != nil {
 		slog.Error("peer checkin", "error", err)
 		response.Error = true
@@ -198,7 +198,7 @@ func processCheckin(data *plexus.CheckinData) plexus.ServerResponse {
 		peer.Endpoint = data.Endpoint
 		publishUpdate = true
 	}
-	if err := boltdb.Save(peer, peer.WGPublicKey, "peers"); err != nil {
+	if err := boltdb.Save(peer, peer.WGPublicKey, peerTable); err != nil {
 		slog.Error("peer checkin save", "error", err)
 		response.Error = true
 		response.Message = "could not save peer" + err.Error()
@@ -232,7 +232,7 @@ func configHandler(subject string) plexus.ServerResponse {
 func processConnectionData(data *plexus.CheckinData) {
 	slog.Debug("received connectivity stats", "device", data.ID)
 	for _, conn := range data.Connections {
-		network, err := boltdb.Get[plexus.Network](conn.Network, "networks")
+		network, err := boltdb.Get[plexus.Network](conn.Network, networkTable)
 		if err != nil {
 			slog.Error("connectivity data received for invalid network", "network", conn.Network)
 			continue
@@ -246,7 +246,7 @@ func processConnectionData(data *plexus.CheckinData) {
 			updatedPeers = append(updatedPeers, peer)
 		}
 		network.Peers = updatedPeers
-		boltdb.Save(network, network.Name, "networks")
+		boltdb.Save(network, network.Name, networkTable)
 	}
 }
 
@@ -255,7 +255,7 @@ func processLeave(request *plexus.AgentRequest) plexus.ServerResponse {
 	errResponse := plexus.ServerResponse{Error: true}
 	response := plexus.ServerResponse{}
 	slog.Debug("leave handler", "peer", request.Peer.WGPublicKey, "network", request.Network)
-	network, err := boltdb.Get[plexus.Network](request.Network, "networks")
+	network, err := boltdb.Get[plexus.Network](request.Network, networkTable)
 	if err != nil {
 		slog.Error("get network to leave", "error", err)
 		errResponse.Message = err.Error()
@@ -268,7 +268,7 @@ func processLeave(request *plexus.AgentRequest) plexus.ServerResponse {
 		}
 		found = true
 		network.Peers = slices.Delete(network.Peers, i, i+1)
-		if err := boltdb.Save(network, network.Name, "networks"); err != nil {
+		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 			slog.Error("save delete peer", "error", err)
 			errResponse.Message = err.Error()
 			return errResponse
@@ -314,7 +314,7 @@ func processUpdate(request *plexus.AgentRequest) plexus.ServerResponse {
 func connectToNetwork(request *plexus.JoinRequest) plexus.ServerResponse {
 	errResponse := plexus.ServerResponse{Error: true}
 	response := plexus.ServerResponse{}
-	_, err := boltdb.Get[plexus.Peer](request.Peer.WGPublicKey, "peers")
+	_, err := boltdb.Get[plexus.Peer](request.Peer.WGPublicKey, peerTable)
 	if errors.Is(err, boltdb.ErrNoResults) {
 		if err := saveNewPeer(request.Peer); err != nil {
 			errResponse.Message = err.Error()
@@ -336,7 +336,7 @@ func connectToNetwork(request *plexus.JoinRequest) plexus.ServerResponse {
 }
 
 func publishNetworkPeerUpdate(peer plexus.Peer) error {
-	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	networks, err := boltdb.GetAll[plexus.Network](networkTable)
 	if err != nil {
 		return err
 	}

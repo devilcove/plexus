@@ -29,7 +29,7 @@ func deleteInterface(name string) error {
 
 func deleteAllInterfaces() {
 	slog.Debug("deleting all interfaces")
-	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	networks, err := boltdb.GetAll[plexus.Network](networkTable)
 	if err != nil {
 		slog.Error("retrieve networks", "error", err)
 		return
@@ -45,7 +45,7 @@ func deleteAllInterfaces() {
 }
 
 func startAllInterfaces(self plexus.Device) {
-	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	networks, err := boltdb.GetAll[plexus.Network](networkTable)
 	if err != nil {
 		slog.Error("get networks", "error", err)
 		return
@@ -211,7 +211,7 @@ func getFreePort(start int) (int, error) {
 
 func getConnectivity(server string) []plexus.ConnectivityData {
 	results := []plexus.ConnectivityData{}
-	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	networks, err := boltdb.GetAll[plexus.Network](networkTable)
 	if err != nil {
 		slog.Error("get networks", "error", err)
 		return results

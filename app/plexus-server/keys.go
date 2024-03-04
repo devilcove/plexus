@@ -53,7 +53,7 @@ func addKey(c *gin.Context) {
 	if key.Expires.IsZero() {
 		key.Expires = time.Now().Add(keyExpiry)
 	}
-	existing, err := boltdb.Get[plexus.Key](key.Name, "keys")
+	existing, err := boltdb.Get[plexus.Key](key.Name, keyTable)
 	if err != nil && !errors.Is(err, boltdb.ErrNoResults) {
 		processError(c, http.StatusInternalServerError, "retrieve key"+err.Error())
 		return
@@ -62,7 +62,7 @@ func addKey(c *gin.Context) {
 		processError(c, http.StatusBadRequest, "key exists with name:"+existing.Name)
 		return
 	}
-	if err := boltdb.Save(key, key.Name, "keys"); err != nil {
+	if err := boltdb.Save(key, key.Name, keyTable); err != nil {
 		processError(c, http.StatusInternalServerError, "saving key "+err.Error())
 		return
 	}
@@ -70,18 +70,18 @@ func addKey(c *gin.Context) {
 }
 
 func displayKeys(c *gin.Context) {
-	keys, err := boltdb.GetAll[plexus.Key]("keys")
+	keys, err := boltdb.GetAll[plexus.Key](keyTable)
 	if err != nil {
 		processError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	c.HTML(http.StatusOK, "keys", keys)
+	c.HTML(http.StatusOK, keyTable, keys)
 
 }
 
 func deleteKey(c *gin.Context) {
 	keyid := c.Param("id")
-	key, err := boltdb.Get[plexus.Key](keyid, "keys")
+	key, err := boltdb.Get[plexus.Key](keyid, keyTable)
 	if err != nil {
 		processError(c, http.StatusBadRequest, "key does not exist")
 		return
@@ -125,7 +125,7 @@ func newValue(name string) (string, error) {
 }
 
 func decrementKeyUsage(name string) error {
-	key, err := boltdb.Get[plexus.Key](name, "keys")
+	key, err := boltdb.Get[plexus.Key](name, keyTable)
 	if err != nil {
 		return err
 	}
@@ -133,7 +133,7 @@ func decrementKeyUsage(name string) error {
 		return removeKey(key)
 	}
 	key.Usage = key.Usage - 1
-	if err := boltdb.Save(key, key.Name, "keys"); err != nil {
+	if err := boltdb.Save(key, key.Name, keyTable); err != nil {
 		return err
 	}
 	return nil
@@ -141,7 +141,7 @@ func decrementKeyUsage(name string) error {
 
 func expireKeys() {
 	slog.Debug("checking for expired keys")
-	keys, err := boltdb.GetAll[plexus.Key]("keys")
+	keys, err := boltdb.GetAll[plexus.Key](keyTable)
 	if err != nil {
 		slog.Error("get keys", "error", err)
 	}
@@ -155,7 +155,7 @@ func expireKeys() {
 
 func removeKey(key plexus.Key) error {
 	var errs error
-	if err := boltdb.Delete[plexus.Key](key.Name, "keys"); err != nil {
+	if err := boltdb.Delete[plexus.Key](key.Name, keyTable); err != nil {
 		slog.Error("delete key from db", "error", err)
 		errors.Join(errs, err)
 	}

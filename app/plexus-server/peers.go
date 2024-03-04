@@ -15,7 +15,7 @@ import (
 
 func displayPeers(c *gin.Context) {
 	displayPeers := []plexus.Peer{}
-	peers, err := boltdb.GetAll[plexus.Peer]("peers")
+	peers, err := boltdb.GetAll[plexus.Peer](peerTable)
 	if err != nil {
 		processError(c, http.StatusInternalServerError, err.Error())
 		return
@@ -27,12 +27,12 @@ func displayPeers(c *gin.Context) {
 		}
 		displayPeers = append(displayPeers, peer)
 	}
-	c.HTML(http.StatusOK, "peers", displayPeers)
+	c.HTML(http.StatusOK, peerTable, displayPeers)
 }
 
 func peerDetails(c *gin.Context) {
 	id := c.Param("id")
-	peer, err := boltdb.Get[plexus.Peer](id, "peers")
+	peer, err := boltdb.Get[plexus.Peer](id, peerTable)
 	if err != nil {
 		processError(c, http.StatusInternalServerError, err.Error())
 		return
@@ -42,12 +42,12 @@ func peerDetails(c *gin.Context) {
 
 func deletePeer(c *gin.Context) {
 	id := c.Param("id")
-	peer, err := boltdb.Get[plexus.Peer](id, "peers")
+	peer, err := boltdb.Get[plexus.Peer](id, peerTable)
 	if err != nil {
 		processError(c, http.StatusBadRequest, id+" "+err.Error())
 		return
 	}
-	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	networks, err := boltdb.GetAll[plexus.Network](networkTable)
 	if err != nil {
 		processError(c, http.StatusInternalServerError, "get networks "+err.Error())
 		return
@@ -73,12 +73,12 @@ func deletePeer(c *gin.Context) {
 			}
 		}
 		if found {
-			if err := boltdb.Save(network, network.Name, "networks"); err != nil {
+			if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 				slog.Error("save network during peer deletion", "error", err)
 			}
 		}
 	}
-	if err := boltdb.Delete[plexus.Peer](peer.WGPublicKey, "peers"); err != nil {
+	if err := boltdb.Delete[plexus.Peer](peer.WGPublicKey, peerTable); err != nil {
 		processError(c, http.StatusInternalServerError, "delete peer "+peer.Name+""+err.Error())
 		return
 	}
@@ -91,7 +91,7 @@ func deletePeer(c *gin.Context) {
 
 func getDeviceUsers() []*server.NkeyUser {
 	devices := []*server.NkeyUser{}
-	peers, err := boltdb.GetAll[plexus.Peer]("peers")
+	peers, err := boltdb.GetAll[plexus.Peer](peerTable)
 	if err != nil {
 		slog.Error("retrive peers", "error", err)
 		return devices
@@ -119,7 +119,7 @@ func deletePeerFromBroker(key string) {
 }
 
 func pingPeers() {
-	peers, err := boltdb.GetAll[plexus.Peer]("peers")
+	peers, err := boltdb.GetAll[plexus.Peer](peerTable)
 	if err != nil {
 		slog.Error("get peers")
 		return
@@ -142,7 +142,7 @@ func savePeer(peer plexus.Peer) {
 	if err := boltdb.Save(peer, peer.WGPublicKey, "peer"); err != nil {
 		slog.Error("save peer", "peer", peer.Name, "error", err)
 	}
-	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	networks, err := boltdb.GetAll[plexus.Network](networkTable)
 	if err != nil {
 		slog.Error("get networks", "error", err)
 	}
@@ -151,7 +151,7 @@ func savePeer(peer plexus.Peer) {
 			if netPeer.WGPublicKey == peer.WGPublicKey {
 				network.Peers[i].NatsConnected = peer.NatsConnected
 				slog.Debug("saving network peer", "network", network.Name, "peer", netPeer.HostName, "key", netPeer.WGPublicKey)
-				if err := boltdb.Save(network, network.Name, "networks"); err != nil {
+				if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 					slog.Error("save network", "network", network.Name, "error", err)
 				}
 			}

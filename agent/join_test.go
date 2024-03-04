@@ -47,10 +47,10 @@ func TestCheckPort(t *testing.T) {
 }
 
 func TestNewDevice(t *testing.T) {
-	err := boltdb.Initialize("./test.db", []string{"devices"})
+	err := boltdb.Initialize("./test.db", []string{deviceTable})
 	assert.Nil(t, err)
 	device := plexus.Device{}
-	err = boltdb.Delete[plexus.Device]("self", "devices")
+	err = boltdb.Delete[plexus.Device]("self", deviceTable)
 	assert.Nil(t, err)
 	hostname, err := os.Hostname()
 	assert.Nil(t, err)

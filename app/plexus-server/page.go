@@ -42,7 +42,7 @@ func displayMain(c *gin.Context) {
 	if loggedin == nil {
 		page.NeedsLogin = true
 	}
-	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	networks, err := boltdb.GetAll[plexus.Network](networkTable)
 	if err != nil {
 		slog.Error("get networks for main display", "error", err)
 	}
@@ -83,7 +83,7 @@ func login(c *gin.Context) {
 }
 
 func validateUser(visitor *plexus.User) bool {
-	user, err := boltdb.Get[plexus.User](visitor.Username, "users")
+	user, err := boltdb.Get[plexus.User](visitor.Username, userTable)
 	if err != nil {
 		slog.Error("no such user", "user", visitor.Username, "error", err)
 		return false
@@ -114,7 +114,7 @@ func logout(c *gin.Context) {
 
 func initialize() Page {
 	networks := []string{}
-	allNetworks, err := boltdb.GetAll[plexus.Network]("networks")
+	allNetworks, err := boltdb.GetAll[plexus.Network](networkTable)
 	if err != nil {
 		slog.Error("get networks during page init", "error", err)
 	}
@@ -140,7 +140,7 @@ func getPage(user any) Page {
 	}
 	if page, ok := pages[user.(string)]; ok {
 		page.DefaultDate = time.Now().Local().Format("2006-01-02")
-		networks, err := boltdb.GetAll[plexus.Network]("networks")
+		networks, err := boltdb.GetAll[plexus.Network](networkTable)
 		if err != nil {
 			slog.Error("get networks", "error", err)
 		}

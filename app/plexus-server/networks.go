@@ -52,7 +52,7 @@ func addNetwork(c *gin.Context) {
 		processError(c, http.StatusBadRequest, errs.Error())
 		return
 	}
-	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	networks, err := boltdb.GetAll[plexus.Network](networkTable)
 	if err != nil {
 		processError(c, http.StatusInternalServerError, "database error "+err.Error())
 		return
@@ -68,7 +68,7 @@ func addNetwork(c *gin.Context) {
 		}
 	}
 	slog.Info("network validation complete ... saving", "network", network)
-	if err := boltdb.Save(network, network.Name, "networks"); err != nil {
+	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 		processError(c, http.StatusInternalServerError, "unable to save network "+err.Error())
 		return
 	}
@@ -79,20 +79,20 @@ func displayNetworks(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get("user")
 	page := getPage(user)
-	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	networks, err := boltdb.GetAll[plexus.Network](networkTable)
 	if err != nil {
 		processError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	page.Data = networks
 	session.Save()
-	c.HTML(http.StatusOK, "networks", page)
+	c.HTML(http.StatusOK, networkTable, page)
 }
 
 func getAvailablePeers(network plexus.Network) []plexus.Peer {
 	taken := make(map[string]bool)
 	peers := []plexus.Peer{}
-	allPeers, err := boltdb.GetAll[plexus.Peer]("peers")
+	allPeers, err := boltdb.GetAll[plexus.Peer](peerTable)
 	if err != nil {
 		slog.Error("get peers", "error", err)
 		return allPeers
@@ -113,7 +113,7 @@ func networkAddPeer(c *gin.Context) {
 	network := c.Param("id")
 	peerID := c.Param("peer")
 	slog.Debug("adding peer to network", "peer", peerID, "network", network)
-	peer, err := boltdb.Get[plexus.Peer](peerID, "peers")
+	peer, err := boltdb.Get[plexus.Peer](peerID, peerTable)
 	if err != nil {
 		processError(c, http.StatusInternalServerError, err.Error())
 		return
@@ -133,13 +133,13 @@ func networkDetails(c *gin.Context) {
 		AvailablePeers []plexus.Peer
 	}{}
 	networkName := c.Param("id")
-	network, err := boltdb.Get[plexus.Network](networkName, "networks")
+	network, err := boltdb.Get[plexus.Network](networkName, networkTable)
 	if err != nil {
 		processError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 	for _, peer := range network.Peers {
-		p, err := boltdb.Get[plexus.Peer](peer.WGPublicKey, "peers")
+		p, err := boltdb.Get[plexus.Peer](peer.WGPublicKey, peerTable)
 		if err != nil {
 			slog.Error("could not obtains peer for network details", "peer", peer.WGPublicKey, "network", network, "error", err)
 			continue
@@ -156,7 +156,7 @@ func networkDetails(c *gin.Context) {
 
 func deleteNetwork(c *gin.Context) {
 	network := c.Param("id")
-	if err := boltdb.Delete[plexus.Network](network, "networks"); err != nil {
+	if err := boltdb.Delete[plexus.Network](network, networkTable); err != nil {
 		if errors.Is(err, boltdb.ErrNoResults) {
 			processError(c, http.StatusBadRequest, "network does not exist")
 			return
@@ -188,7 +188,7 @@ func validateNetworkAddress(address net.IPNet) bool {
 func removePeerFromNetwork(c *gin.Context) {
 	netName := c.Param("id")
 	peerid := c.Param("peer")
-	network, err := boltdb.Get[plexus.Network](netName, "networks")
+	network, err := boltdb.Get[plexus.Network](netName, networkTable)
 	if err != nil {
 		processError(c, http.StatusBadRequest, "invalid network"+err.Error())
 		return
@@ -199,7 +199,7 @@ func removePeerFromNetwork(c *gin.Context) {
 			found = true
 			slog.Info("deleting peer", "peer", peer.WGPublicKey, "network", network.Name)
 			network.Peers = slices.Delete(network.Peers, i, i+1)
-			if err := boltdb.Save(network, network.Name, "networks"); err != nil {
+			if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 				slog.Error("save network after peer deletion", "error", err)
 				processError(c, http.StatusInternalServerError, err.Error())
 				return
@@ -232,7 +232,7 @@ func removePeerFromNetwork(c *gin.Context) {
 
 func getNetworksForPeer(id string) ([]plexus.Network, error) {
 	response := []plexus.Network{}
-	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	networks, err := boltdb.GetAll[plexus.Network](networkTable)
 	if err != nil {
 		return response, err
 	}
@@ -255,7 +255,7 @@ func displayAddRelay(c *gin.Context) {
 	data.Network = c.Param("id")
 	relay := c.Param("peer")
 	slog.Debug("add relay", "network", data.Network, "relay", relay)
-	network, err := boltdb.Get[plexus.Network](data.Network, "networks")
+	network, err := boltdb.Get[plexus.Network](data.Network, networkTable)
 	if err != nil {
 		processError(c, http.StatusBadGateway, err.Error())
 		return
@@ -277,7 +277,7 @@ func addRelay(c *gin.Context) {
 	netID := c.Param("id")
 	relayID := c.Param("peer")
 	relayedIDs := c.PostFormArray("relayed")
-	network, err := boltdb.Get[plexus.Network](netID, "networks")
+	network, err := boltdb.Get[plexus.Network](netID, networkTable)
 	if err != nil {
 		processError(c, http.StatusBadRequest, err.Error())
 		return
@@ -299,7 +299,7 @@ func addRelay(c *gin.Context) {
 		peers = append(peers, peer)
 	}
 	network.Peers = peers
-	if err := boltdb.Save(network, network.Name, "networks"); err != nil {
+	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 		processError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -314,7 +314,7 @@ func deleteRelay(c *gin.Context) {
 	netName := c.Param("id")
 	peerID := c.Param("peer")
 	slog.Info("delete relay", "network", netName, "relay", peerID)
-	network, err := boltdb.Get[plexus.Network](netName, "networks")
+	network, err := boltdb.Get[plexus.Network](netName, networkTable)
 	if err != nil {
 		processError(c, http.StatusBadRequest, err.Error())
 		return
@@ -346,7 +346,7 @@ func deleteRelay(c *gin.Context) {
 		updatedPeers = append(updatedPeers, peer)
 	}
 	network.Peers = updatedPeers
-	if err := boltdb.Save(network, network.Name, "networks"); err != nil {
+	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 		processError(c, http.StatusBadRequest, "failed to save update network peers "+err.Error())
 		return
 	}
@@ -359,7 +359,7 @@ func deleteRelay(c *gin.Context) {
 func networkPeerDetails(c *gin.Context) {
 	netName := c.Param("id")
 	peerID := c.Param("peer")
-	network, err := boltdb.Get[plexus.Network](netName, "networks")
+	network, err := boltdb.Get[plexus.Network](netName, networkTable)
 	if err != nil {
 		processError(c, http.StatusBadRequest, err.Error())
 		return

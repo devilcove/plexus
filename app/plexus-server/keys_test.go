@@ -172,7 +172,7 @@ func TestAddKey(t *testing.T) {
 		body, err := io.ReadAll(w.Body)
 		assert.Nil(t, err)
 		assert.Contains(t, string(body), "<h1>Plexus Keys</h1>")
-		keys, err := boltdb.GetAll[plexus.Key]("keys")
+		keys, err := boltdb.GetAll[plexus.Key](keyTable)
 		assert.Nil(t, err)
 		assert.Equal(t, time.Now().Add(24*time.Hour).Format("2006-01-02 03-04"), keys[0].Expires.Format("2006-01-02 03-04"))
 	})
@@ -276,9 +276,9 @@ func TestUpdateKey(t *testing.T) {
 		Name:  "two",
 		Usage: 10,
 	}
-	err := boltdb.Save(key1, key1.Name, "keys")
+	err := boltdb.Save(key1, key1.Name, keyTable)
 	assert.Nil(t, err)
-	err = boltdb.Save(key2, key2.Name, "keys")
+	err = boltdb.Save(key2, key2.Name, keyTable)
 	assert.Nil(t, err)
 	t.Run("keyDoesNotExist", func(t *testing.T) {
 		err := decrementKeyUsage("doesnotexist")
@@ -288,7 +288,7 @@ func TestUpdateKey(t *testing.T) {
 	t.Run("deleteKey", func(t *testing.T) {
 		err := decrementKeyUsage(key1.Name)
 		assert.Nil(t, err)
-		newKey, err := boltdb.Get[plexus.Key](key1.Name, "keys")
+		newKey, err := boltdb.Get[plexus.Key](key1.Name, keyTable)
 		assert.Equal(t, plexus.Key{}, newKey)
 		assert.True(t, errors.Is(err, boltdb.ErrNoResults))
 	})
@@ -302,12 +302,12 @@ func TestUpdateKey(t *testing.T) {
 
 func deleteAllKeys() error {
 	var errs error
-	keys, err := boltdb.GetAll[plexus.Key]("keys")
+	keys, err := boltdb.GetAll[plexus.Key](keyTable)
 	if err != nil {
 		return err
 	}
 	for _, key := range keys {
-		if err := boltdb.Delete[plexus.Key](key.Name, "keys"); err != nil {
+		if err := boltdb.Delete[plexus.Key](key.Name, keyTable); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}

@@ -49,7 +49,7 @@ func registerPeer(request *plexus.RegisterRequest) plexus.ServerResponse {
 	}
 	if !slices.Contains(self.Servers, loginKey.URL) {
 		self.Servers = append(self.Servers, loginKey.URL)
-		if err := boltdb.Save(self, "self", "devices"); err != nil {
+		if err := boltdb.Save(self, "self", deviceTable); err != nil {
 			log.Println(err)
 			errResp.Message = err.Error()
 			return errResp
@@ -63,7 +63,7 @@ func registerPeer(request *plexus.RegisterRequest) plexus.ServerResponse {
 }
 
 func newDevice() (plexus.Device, error) {
-	device, err := boltdb.Get[plexus.Device]("self", "devices")
+	device, err := boltdb.Get[plexus.Device]("self", deviceTable)
 	if err == nil {
 		return device, nil
 	}
@@ -79,7 +79,7 @@ func newDevice() (plexus.Device, error) {
 		Seed:         seed,
 		WGPrivateKey: privKey.String(),
 	}
-	err = boltdb.Save(device, "self", "devices")
+	err = boltdb.Save(device, "self", deviceTable)
 	return device, err
 }
 

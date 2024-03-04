@@ -30,7 +30,7 @@ func checkDefaultUser(user, pass string) error {
 		Password: password,
 		IsAdmin:  true,
 		Updated:  time.Now(),
-	}, user, "users"); err != nil {
+	}, user, userTable); err != nil {
 		slog.Error("create default user", "error", err)
 		return err
 	}
@@ -43,7 +43,7 @@ func adminExist() bool {
 	var found bool
 	db := boltdb.Connection()
 	if err := db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte("users"))
+		b := tx.Bucket([]byte(userTable))
 		if b == nil {
 			return boltdb.ErrNoResults
 		}
@@ -70,7 +70,7 @@ func hashPassword(password string) (string, error) {
 
 func getNatsUsers(c *gin.Context) {
 	nats := []plexus.NatsUser{}
-	peers, _ := boltdb.GetAll[plexus.Peer]("peers")
+	peers, _ := boltdb.GetAll[plexus.Peer](peerTable)
 
 	for _, nkey := range natsOptions.Nkeys {
 		//fmt.Println(nkey.Permissions.Publish.Allow)

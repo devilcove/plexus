@@ -21,7 +21,7 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	_ = boltdb.Initialize("./test.db", []string{"users", "keys", "networks", "peers", "settings", "keypairs"})
+	_ = boltdb.Initialize("./test.db", []string{userTable, keyTable, networkTable, peerTable, settingTable, "keypairs"})
 	plexus.SetLogging("DEBUG")
 	defer boltdb.Close()
 	//checkDefaultUser()
@@ -166,13 +166,13 @@ func TestLogout(t *testing.T) {
 }
 
 func deleteAllUsers(deleteAll bool) (errs error) {
-	users, err := boltdb.GetAll[plexus.User]("users")
+	users, err := boltdb.GetAll[plexus.User](userTable)
 	if err != nil {
 		return err
 	}
 	for _, user := range users {
 		if user.Username != "admin" || deleteAll == true {
-			if err := boltdb.Delete[plexus.User](user.Username, "users"); err != nil {
+			if err := boltdb.Delete[plexus.User](user.Username, userTable); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -202,7 +202,7 @@ func testLogin(data plexus.User) (*http.Cookie, error) {
 
 func createTestUser(user plexus.User) error {
 	user.Password, _ = hashPassword(user.Password)
-	if err := boltdb.Save(&user, user.Username, "users"); err != nil {
+	if err := boltdb.Save(&user, user.Username, userTable); err != nil {
 		return err
 	}
 	return nil

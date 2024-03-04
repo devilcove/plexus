@@ -189,7 +189,7 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 
 func getTokenUsers() []*server.NkeyUser {
 	users := []*server.NkeyUser{}
-	keys, err := boltdb.GetAll[plexus.Key]("keys")
+	keys, err := boltdb.GetAll[plexus.Key](keyTable)
 	if err != nil {
 		slog.Error("unable to retrieve keys", "error", err)
 	}

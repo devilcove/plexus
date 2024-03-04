@@ -20,7 +20,7 @@ func Run() {
 	if err := plexus.WritePID(os.Getenv("HOME")+"/.cache/plexus-agent.pid", os.Getpid()); err != nil {
 		slog.Error("failed to write pid to file", "error", err)
 	}
-	if err := boltdb.Initialize(os.Getenv("HOME")+"/.local/share/plexus/plexus-agent.db", []string{"devices", "networks"}); err != nil {
+	if err := boltdb.Initialize(os.Getenv("HOME")+"/.local/share/plexus/plexus-agent.db", []string{deviceTable, networkTable}); err != nil {
 		slog.Error("failed to initialize database", "error", err)
 		return
 	}
@@ -113,7 +113,7 @@ func checkin() {
 	slog.Debug("checkin")
 	checkinData := plexus.CheckinData{}
 	serverResponse := plexus.ServerResponse{}
-	self, err := boltdb.Get[plexus.Device]("self", "devices")
+	self, err := boltdb.Get[plexus.Device]("self", deviceTable)
 	if err != nil {
 		slog.Error("get device", "error", err)
 		return
@@ -151,7 +151,7 @@ func closeServerConnections() {
 }
 
 func sendDeviceUpdate() {
-	self, err := boltdb.Get[plexus.Device]("self", "devices")
+	self, err := boltdb.Get[plexus.Device]("self", deviceTable)
 	if err != nil {
 		slog.Error("get device", "error", err)
 		return

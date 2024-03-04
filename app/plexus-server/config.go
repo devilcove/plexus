@@ -26,6 +26,14 @@ type configuration struct {
 	Tables    []string
 }
 
+const (
+	userTable    = "users"
+	keyTable     = "keys"
+	networkTable = "networks"
+	peerTable    = "peers"
+	settingTable = "settings"
+)
+
 var (
 	config       configuration
 	ErrServerURL = errors.New("invalid server URL")
@@ -46,12 +54,12 @@ func configureServer() (*slog.Logger, error) {
 	viper.SetDefault("adminname", "admin")
 	viper.SetDefault("adminpass", "password")
 	viper.SetDefault("verbosity", "INFO")
-	viper.SetDefault("fqdn", "localhost")
-	viper.SetDefault("secure", false)
+	//viper.SetDefault("fqdn", "localhost")
+	viper.SetDefault("secure", true)
 	viper.SetDefault("port", "8080")
 	viper.SetDefault("email", "")
 	viper.SetDefault("dbfile", "plexus-server.db")
-	viper.SetDefault("tables", []string{"users", "keys", "networks", "peers", "settings"})
+	viper.SetDefault("tables", []string{userTable, keyTable, networkTable, peerTable, settingTable})
 	viper.SetDefault("dbpath", os.Getenv("HOME")+"/.local/share/plexus/")
 	viper.SetConfigFile(os.Getenv("HOME") + "/.config/plexus-server/config")
 	viper.SetConfigType("yaml")

@@ -48,11 +48,11 @@ func subcribe(ec *nats.EncodedConn) {
 	})
 	ec.Subscribe("status", func(subject, reply string, data any) {
 		slog.Debug("status request received")
-		networks, err := boltdb.GetAll[plexus.Network]("networks")
+		networks, err := boltdb.GetAll[plexus.Network](networkTable)
 		if err != nil {
 			slog.Error("get networks", "error", err)
 		}
-		self, err := boltdb.Get[plexus.Device]("self", "devices")
+		self, err := boltdb.Get[plexus.Device]("self", deviceTable)
 		if err != nil {
 			slog.Error("get device", "error", err)
 		}
@@ -111,7 +111,7 @@ func subcribe(ec *nats.EncodedConn) {
 		if err := ec.Publish(reply, resp); err != nil {
 			slog.Error("pub reply to reload request", "error", err)
 		}
-		self, err := boltdb.Get[plexus.Device]("self", "devices")
+		self, err := boltdb.Get[plexus.Device]("self", deviceTable)
 		if err != nil {
 			slog.Error("get device", "error", err)
 			return
@@ -121,7 +121,7 @@ func subcribe(ec *nats.EncodedConn) {
 		addNewNetworks(self, resp.Networks)
 	})
 	ec.Subscribe("reset", func(sub, reply string, request *plexus.ResetRequest) {
-		self, err := boltdb.Get[plexus.Device]("self", "devices")
+		self, err := boltdb.Get[plexus.Device]("self", deviceTable)
 		if err != nil {
 			slog.Error(err.Error())
 			if err := ec.Publish(reply, plexus.ServerResponse{Error: true, Message: err.Error()}); err != nil {
@@ -129,7 +129,7 @@ func subcribe(ec *nats.EncodedConn) {
 			}
 			return
 		}
-		network, err := boltdb.Get[plexus.Network](request.Network, "networks")
+		network, err := boltdb.Get[plexus.Network](request.Network, networkTable)
 		if err != nil {
 			slog.Error(err.Error())
 			if err := ec.Publish(reply, plexus.ServerResponse{Error: true, Message: err.Error()}); err != nil {
@@ -153,7 +153,7 @@ func subcribe(ec *nats.EncodedConn) {
 		slog.Debug("version request")
 		response := plexus.VersionResponse{}
 		serverResponse := plexus.ServerResponse{}
-		self, err := boltdb.Get[plexus.Device]("self", "devices")
+		self, err := boltdb.Get[plexus.Device]("self", deviceTable)
 		if err != nil {
 			slog.Error("get device", "error", err)
 			if err := ec.Publish(reply, response); err != nil {
@@ -201,7 +201,7 @@ func ConnectToAgentBroker() (*nats.EncodedConn, error) {
 func connectToServers() {
 	serverMap = make(map[string]serverData)
 	networkMap = make(map[string]netMap)
-	self, err := boltdb.Get[plexus.Device]("self", "devices")
+	self, err := boltdb.Get[plexus.Device]("self", deviceTable)
 	if err != nil {
 		slog.Error("unable to read device", "error", err)
 		return
@@ -244,7 +244,7 @@ func connectToServers() {
 		serverMap[server] = serverData
 
 	}
-	networks, err := boltdb.GetAll[plexus.Network]("networks")
+	networks, err := boltdb.GetAll[plexus.Network](networkTable)
 	if err != nil {
 		slog.Error("unable to read networks", "error", err)
 	}
@@ -268,13 +268,13 @@ func processLeave(request plexus.AgentRequest) plexus.ServerResponse {
 	slog.Debug("leave", "network", request.Network)
 	response := plexus.ServerResponse{}
 	errResponse := plexus.ServerResponse{Error: true}
-	network, err := boltdb.Get[plexus.Network](request.Network, "networks")
+	network, err := boltdb.Get[plexus.Network](request.Network, networkTable)
 	if err != nil {
 		slog.Debug(err.Error())
 		errResponse.Message = err.Error()
 		return errResponse
 	}
-	self, err := boltdb.Get[plexus.Device]("self", "devices")
+	self, err := boltdb.Get[plexus.Device]("self", deviceTable)
 	if err != nil {
 		slog.Debug(err.Error())
 		errResponse.Message = err.Error()
@@ -300,13 +300,13 @@ func processJoin(request plexus.AgentRequest) plexus.ServerResponse {
 	slog.Debug("join", "network", request.Network, "server", request.Server)
 	response := plexus.ServerResponse{}
 	errResponse := plexus.ServerResponse{Error: true}
-	_, err := boltdb.Get[plexus.Network](request.Network, "networks")
+	_, err := boltdb.Get[plexus.Network](request.Network, networkTable)
 	if err == nil {
 		slog.Warn("already connected to network")
 		errResponse.Message = "already connected to network"
 		return errResponse
 	}
-	self, err := boltdb.Get[plexus.Device]("self", "devices")
+	self, err := boltdb.Get[plexus.Device]("self", deviceTable)
 	if err != nil {
 		slog.Debug(err.Error())
 		errResponse.Message = err.Error()
@@ -331,7 +331,7 @@ func processJoin(request plexus.AgentRequest) plexus.ServerResponse {
 }
 
 func connectToNetwork(network plexus.Network) error {
-	self, err := boltdb.Get[plexus.Device]("self", "devices")
+	self, err := boltdb.Get[plexus.Device]("self", deviceTable)
 	if err != nil {
 		return err
 	}
@@ -342,7 +342,7 @@ func connectToNetwork(network plexus.Network) error {
 }
 
 func addNewNetworks(self plexus.Device, networks []plexus.Network) {
-	existingNetworks, err := boltdb.GetAll[plexus.Network]("networks")
+	existingNetworks, err := boltdb.GetAll[plexus.Network](networkTable)
 	if err != nil {
 		slog.Error("get existing networks", "error", err)
 	}
@@ -363,13 +363,13 @@ func addNewNetworks(self plexus.Device, networks []plexus.Network) {
 				break
 			}
 		}
-		if err := boltdb.Save(network, network.Name, "networks"); err != nil {
+		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 			slog.Error("error saving network", "name", network.Name, "error", err)
 		}
 		if !slices.Contains(self.Servers, network.ServerURL) {
 			slog.Debug("adding new server", "server", network.ServerURL)
 			self.Servers = append(self.Servers, network.ServerURL)
-			if err := boltdb.Save(self, "self", "devices"); err != nil {
+			if err := boltdb.Save(self, "self", deviceTable); err != nil {
 				slog.Error("update device with new server", "error", err)
 			}
 		} else {
@@ -412,7 +412,7 @@ func createRegistationConnection(key plexus.KeyValue) (*nats.EncodedConn, error)
 func reload(data *plexus.ReloadRequest) plexus.ServerResponse {
 	response := plexus.ServerResponse{Error: true}
 	serverResponse := plexus.ServerResponse{}
-	self, err := boltdb.Get[plexus.Device]("self", "devices")
+	self, err := boltdb.Get[plexus.Device]("self", deviceTable)
 	if err != nil {
 		slog.Error("get device", "error", err)
 		response.Message = err.Error()
