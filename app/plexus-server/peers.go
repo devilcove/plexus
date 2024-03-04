@@ -126,12 +126,18 @@ func pingPeers() {
 	}
 	for _, peer := range peers {
 		current := peer.NatsConnected
-		if err := encodedConn.Publish(peer.WGPublicKey, plexus.AgentRequest{Action: plexus.Ping}); err != nil {
+		pong := plexus.PingResponse{}
+		slog.Debug("sending ping to peer", "peer", peer.Name, "id", peer.WGPublicKey)
+		if err := encodedConn.Request(peer.WGPublicKey, plexus.DeviceUpdate{Action: plexus.Ping}, &pong, natsTimeout); err != nil {
 			peer.NatsConnected = false
-		} else {
+		}
+		if pong.Message == "pong" {
 			peer.NatsConnected = true
+		} else {
+			peer.NatsConnected = false
 		}
 		if peer.NatsConnected != current {
+			slog.Info("nats connection status changed", "peer", peer.Name, "ID", peer.WGPublicKey, "new status", peer.NatsConnected)
 			savePeer(peer)
 		}
 	}
@@ -139,7 +145,7 @@ func pingPeers() {
 
 func savePeer(peer plexus.Peer) {
 	slog.Debug("saving peer", "peer", peer.Name, "key", peer.WGPublicKey)
-	if err := boltdb.Save(peer, peer.WGPublicKey, "peer"); err != nil {
+	if err := boltdb.Save(peer, peer.WGPublicKey, peerTable); err != nil {
 		slog.Error("save peer", "peer", peer.Name, "error", err)
 	}
 	networks, err := boltdb.GetAll[plexus.Network](networkTable)

@@ -24,6 +24,7 @@ func devicePermissions(id string) *server.Permissions {
 				"update." + id,
 				"config." + id,
 				"leave." + id,
+				"_INBOX.>",
 			},
 		},
 		Subscribe: &server.SubjectPermission{

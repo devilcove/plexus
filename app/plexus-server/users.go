@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"slices"
@@ -77,12 +76,11 @@ func getNatsUsers(c *gin.Context) {
 		if slices.Contains(nkey.Permissions.Subscribe.Allow, "networks.>") {
 			user := plexus.NatsUser{
 				Kind:      "plexus-agent",
-				Subscribe: []string{"networks.>", "updates.<id>"},
-				Publish:   []string{"checkin.<id>", "update.<id>"},
+				Subscribe: []string{"networks.>", "<id>"},
+				Publish:   []string{"checkin.<id>", "<id>"},
 			}
 			for _, peer := range peers {
 				if peer.PubNkey == nkey.Nkey {
-					fmt.Println("nkey match", "peer", peer.Name, "key", peer.PubNkey)
 					user.Name = peer.Name
 				}
 			}
@@ -90,7 +88,6 @@ func getNatsUsers(c *gin.Context) {
 			continue
 		}
 		if slices.Contains(nkey.Permissions.Publish.Allow, ">") {
-			fmt.Println("admin user", nkey.Nkey)
 			user := plexus.NatsUser{
 				Kind:      "server",
 				Name:      "-",
@@ -101,7 +98,6 @@ func getNatsUsers(c *gin.Context) {
 			continue
 		}
 		if slices.Contains(nkey.Permissions.Publish.Allow, "register") {
-			fmt.Println("Key user", nkey.Nkey)
 			user := plexus.NatsUser{
 				Kind:      "registation key",
 				Name:      "-",

@@ -230,6 +230,7 @@ func connectToServers() {
 					slog.Error("connect to network", "error", err)
 				}
 			case plexus.Ping:
+				slog.Debug("received ping from server", "server", server)
 				if err := ec.Publish(reply, plexus.PingResponse{Message: "pong"}); err != nil {
 					slog.Error("publish pong", "error", err)
 				}
