@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"net"
+	"net/mail"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/devilcove/boltdb"
@@ -72,11 +75,17 @@ func configureServer() (*slog.Logger, error) {
 		return nil, err
 	}
 	logger := plexus.SetLogging(config.Verbosity)
-	if config.Secure && config.FQDN == "localhost" {
-		return logger, errors.New("secure server requires FQDN")
-	}
-	if config.Secure && config.Email == "" {
-		return logger, errors.New("email address required")
+	if config.Secure {
+		if config.FQDN == "" {
+			return logger, errors.New("secure server requires FQDN")
+		}
+		if net.ParseIP(config.FQDN) != nil {
+			return logger, errors.New("cannot use IP address with secure")
+		}
+		if !emailValid(config.Email) {
+			return logger, errors.New("valid email address required")
+		}
+
 	}
 	// initalize database
 	if err := os.MkdirAll(config.DBPath, os.ModePerm); err != nil {
@@ -91,4 +100,15 @@ func configureServer() (*slog.Logger, error) {
 		return logger, err
 	}
 	return logger, nil
+}
+
+func emailValid(email string) bool {
+	_, err := mail.ParseAddress(email)
+	if err != nil {
+		return false
+	}
+	if strings.Contains(email, "example.com") {
+		return false
+	}
+	return true
 }
