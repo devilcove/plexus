@@ -219,13 +219,14 @@ func connectToServers() {
 			slog.Error("network subscription failed", "error", err)
 		}
 		updates, err := ec.Subscribe(self.WGPublicKey, func(subject, reply string, data *plexus.DeviceUpdate) {
-			slog.Info("device update", "command", data.Action.String())
 			switch data.Action {
 			case plexus.LeaveServer:
+				slog.Info("leave server", "server", data.Network.ServerURL)
 				delete(serverMap, data.Network.ServerURL)
 				ec.Close()
 				deleteServer(data.Network.ServerURL)
 			case plexus.JoinNetwork:
+				slog.Info("join network", "network", data.Network, "server", data.Network.ServerURL)
 				if err := connectToNetwork(data.Network); err != nil {
 					slog.Error("connect to network", "error", err)
 				}
@@ -253,7 +254,7 @@ func connectToServers() {
 		iface := network.Interface
 		_, ok := serverMap[network.ServerURL]
 		if !ok {
-			slog.Error("network server not in list of servers", "network server", "network.ServerURL", "servers", self.Servers)
+			slog.Error("network server not in list of servers", "network server", network.ServerURL, "servers", self.Servers)
 			continue
 		}
 		networkMap[network.Name] = netMap{
@@ -261,8 +262,6 @@ func connectToServers() {
 		}
 	}
 	log.Println("server connection", serverMap, len(serverMap), networkMap)
-	//slog.Debug("server connection", "servermap", serverMap,
-	//"length", len(serverMap), "networkmap", networkMap)
 }
 
 func processLeave(request plexus.AgentRequest) plexus.ServerResponse {
