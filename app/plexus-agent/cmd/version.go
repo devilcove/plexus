@@ -32,32 +32,30 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "display version information",
 	Long: `display version information
-	long flag displays debug.BuildSettings version control key values `,
+	and optionally server(s) and agent version`,
 	Run: func(cmd *cobra.Command, args []string) {
-		long, err := cmd.Flags().GetBool("long")
-		cobra.CheckErr(err)
-		ec, err := agent.ConnectToAgentBroker()
-		cobra.CheckErr(err)
-		response := plexus.VersionResponse{}
-		// need longer timeout is case of server timeout
-		cobra.CheckErr(ec.Request("version", long, &response, agent.NatsLongTimeout))
-		fmt.Println("Servers")
-		for _, server := range response.Servers {
-			fmt.Printf("  %s\n", server.Name)
-			fmt.Printf("        %s\n", server.Version)
-		}
-		fmt.Printf("Agent:  %s\n", response.Agent)
-		fmt.Printf("Binary: %s", version)
 		if long {
-			fmt.Print(": ")
-			info, _ := debug.ReadBuildInfo()
-			for _, setting := range info.Settings {
-				if strings.Contains(setting.Key, "vcs") {
-					fmt.Printf("%s ", setting.Value)
-				}
+			ec, err := agent.ConnectToAgentBroker()
+			cobra.CheckErr(err)
+			response := plexus.VersionResponse{}
+			// need longer timeout is case of server timeout
+			cobra.CheckErr(ec.Request("version", long, &response, agent.NatsLongTimeout))
+			fmt.Println("Servers")
+			for _, server := range response.Servers {
+				fmt.Printf("  %s\n", server.Name)
+				fmt.Printf("        %s\n", server.Version)
 			}
-			fmt.Print("\n")
+			fmt.Printf("Agent:  %s\n", response.Agent)
+			fmt.Printf("Binary: ")
 		}
+		fmt.Printf("%s: ", version)
+		info, _ := debug.ReadBuildInfo()
+		for _, setting := range info.Settings {
+			if strings.Contains(setting.Key, "vcs") {
+				fmt.Printf("%s ", setting.Value)
+			}
+		}
+		fmt.Print("\n")
 	},
 }
 
@@ -72,5 +70,5 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	versionCmd.Flags().BoolP("long", "l", false, "display additional details")
+	versionCmd.Flags().BoolVarP(&long, "long", "l", false, "display server(s)/agent version infomation")
 }
