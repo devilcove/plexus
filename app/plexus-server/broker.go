@@ -18,27 +18,13 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	slog.Info("Starting broker...")
 	//create admin user
-	admin, err := nkeys.CreateUser()
-	if err != nil {
-		slog.Error("could not create admin user", "error", err)
-		brokerfail <- 1
-		return
-	}
-	adminPublicKey, err := admin.PublicKey()
+	adminKey := getAdminKey()
+	adminPublicKey, err := adminKey.PublicKey()
 	if err != nil {
 		slog.Error("could not create admin public key", "error", err)
 		brokerfail <- 1
 		return
 	}
-	seed, err := admin.Seed()
-	if err == nil {
-		if err := os.WriteFile("/tmp/seed", seed, os.ModePerm); err != nil {
-			slog.Error("could not save seed", "error", err)
-		}
-	} else {
-		slog.Error("seed", "error", err)
-	}
-
 	//TODO :: add users
 	// users := GetUsers()
 	tokensUsers := getTokenUsers()
@@ -57,7 +43,6 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 				},
 			},
 		},
-		//Users: users
 	}
 	natsOptions.Nkeys = append(natsOptions.Nkeys, tokensUsers...)
 	natsOptions.Nkeys = append(natsOptions.Nkeys, deviceUsers...)
@@ -71,14 +56,13 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 		slog.Error("not ready for connection", "error", err)
 		return
 	}
-	sign := func(nonce []byte) ([]byte, error) {
-		return admin.Sign(nonce)
-	}
 	connectOpts := nats.Options{
-		Url:         "nats://localhost:4222",
-		Nkey:        adminPublicKey,
-		Name:        "nats-test-nkey",
-		SignatureCB: sign,
+		Url:  "nats://localhost:4222",
+		Nkey: adminPublicKey,
+		Name: "nats-test-nkey",
+		SignatureCB: func(nonce []byte) ([]byte, error) {
+			return adminKey.Sign(nonce)
+		},
 	}
 	natsConn, err = connectOpts.Connect()
 	if err != nil {
@@ -218,4 +202,34 @@ func createNkeyUser(token string) *server.NkeyUser {
 		Nkey:        pk,
 		Permissions: registerPermissions(),
 	}
+}
+
+func getAdminKey() nkeys.KeyPair {
+	seed, err := os.ReadFile(path + "server.seed")
+	if err != nil {
+		return createAdminNKeyPair()
+	}
+	kp, err := nkeys.FromSeed(seed)
+	if err != nil {
+		return createAdminNKeyPair()
+	}
+	return kp
+}
+
+func createAdminNKeyPair() nkeys.KeyPair {
+	admin, err := nkeys.CreateUser()
+	if err != nil {
+		slog.Error("could not create admin nkey pair", "error", err)
+		brokerfail <- 1
+		return admin
+	}
+	seed, err := admin.Seed()
+	if err != nil {
+		slog.Error("admin seed creation", "error", err)
+		return admin
+	}
+	if err := os.WriteFile(path+"server.seed", seed, os.ModePerm); err != nil {
+		slog.Error("save admin seed", "error", err)
+	}
+	return admin
 }

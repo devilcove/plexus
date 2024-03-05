@@ -79,7 +79,7 @@ func newDevice() (plexus.Device, error) {
 		Seed:         seed,
 		WGPrivateKey: privKey.String(),
 	}
-	if err := os.WriteFile(path+"agent-seed", []byte(seed), os.ModePerm); err != nil {
+	if err := os.WriteFile(path+"agent.seed", []byte(seed), os.ModePerm); err != nil {
 		slog.Error("save seed", "error", err)
 	}
 	err = boltdb.Save(device, "self", deviceTable)

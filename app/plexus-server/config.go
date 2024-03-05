@@ -43,6 +43,7 @@ var (
 	ErrServerURL = errors.New("invalid server URL")
 	sessionAge   = 60 * 60 * 24
 	version      = "v0.1.0"
+	path         = "/var/lib/plexus/"
 )
 
 const (
@@ -65,8 +66,8 @@ func configureServer() (*slog.Logger, error) {
 	viper.SetDefault("sessionsecret", "secret")
 	viper.SetDefault("dbfile", "plexus-server.db")
 	viper.SetDefault("tables", []string{userTable, keyTable, networkTable, peerTable, settingTable})
-	viper.SetDefault("dbpath", os.Getenv("HOME")+"/.local/share/plexus/")
-	viper.SetConfigFile(os.Getenv("HOME") + "/.config/plexus-server/config")
+	viper.SetDefault("dbpath", path)
+	viper.SetConfigFile("/etc/plexus/config")
 	viper.SetConfigType("yaml")
 	if err := viper.ReadInConfig(); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, err
