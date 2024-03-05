@@ -20,6 +20,7 @@ const (
 	version             = "v0.1.0"
 	networkTable        = "networks"
 	deviceTable         = "devices"
+	path                = "/var/lib/plexus/"
 )
 
 var (

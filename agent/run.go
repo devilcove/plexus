@@ -17,10 +17,7 @@ import (
 var ()
 
 func Run() {
-	if err := plexus.WritePID(os.Getenv("HOME")+"/.cache/plexus-agent.pid", os.Getpid()); err != nil {
-		slog.Error("failed to write pid to file", "error", err)
-	}
-	if err := boltdb.Initialize(os.Getenv("HOME")+"/.local/share/plexus/plexus-agent.db", []string{deviceTable, networkTable}); err != nil {
+	if err := boltdb.Initialize(path+"plexus-agent.db", []string{deviceTable, networkTable}); err != nil {
 		slog.Error("failed to initialize database", "error", err)
 		return
 	}
