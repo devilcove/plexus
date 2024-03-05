@@ -3,9 +3,9 @@ package main
 import (
 	"embed"
 	"fmt"
+	"html/template"
 	"log/slog"
 	"net/http"
-	"os"
 	"path/filepath"
 	"runtime"
 
@@ -14,34 +14,28 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-//go:embed: images/*
+//go:embed images/* assets/* html/*
 var f embed.FS
 
 func setupRouter() *gin.Engine {
-	//gin.SetMode(gin.ReleaseMode)
-	secret, ok := os.LookupEnv("SESSION_SECRET")
-	if !ok {
-		secret = "secret"
-	}
-	store := cookie.NewStore([]byte(secret))
+	store := cookie.NewStore([]byte(config.SessionSecret))
 	session := sessions.Sessions("plexus", store)
 	if config.Verbosity != "DEBUG" {
 		gin.SetMode(gin.ReleaseMode)
 	}
-	router := gin.Default()
-	router.LoadHTMLGlob("html/*.html")
-	router.Static("images", "./images")
-	router.Static("assets", "./assets")
-	router.StaticFile("favicon.ico", "./images/icon.svg")
 
-	//router.GET("/images/*filepath", func(c *gin.Context) {
-	//fmt.Println(c.Request.URL.Path)
-	//c.FileFromFS(c.Request.URL.Path, http.FS(f))
-	//c.File(c.Request.URL.Path)
-	//})
-	//router.SetHTMLTemplate(template.Must(template.New("").Parse("html/*")))
+	router := gin.Default()
+	templates := template.Must(template.ParseFS(f, "html/*"))
+	router.SetHTMLTemplate(templates)
+	router.GET("/images/*filepath", func(c *gin.Context) {
+		c.FileFromFS(c.Request.URL.Path, http.FS(f))
+	})
+	router.GET("/assets/*filepath", func(c *gin.Context) {
+		c.FileFromFS(c.Request.URL.Path, http.FS(f))
+	})
 	_ = router.SetTrustedProxies(nil)
 	router.Use(gin.Recovery(), session)
+
 	router.GET("/", displayMain)
 	router.POST("/", login)
 	router.GET("/logout", logout)
