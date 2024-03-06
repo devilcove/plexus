@@ -1,11 +1,11 @@
 [Unit]
 Description=Plexus Agent
-After=network-online-target
+After=network-online.target
 
 [Service]
 User=plexus
 Type=simple
-ExecStart=/bin/plexus-agent run
+ExecStart=/usr/local/bin/plexus-agent run
 Restart=on-success
 
 [Install]
