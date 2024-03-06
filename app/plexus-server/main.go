@@ -79,7 +79,7 @@ func start(ctx context.Context, wg *sync.WaitGroup, logger *slog.Logger) {
 func web(ctx context.Context, wg *sync.WaitGroup, logger *slog.Logger) {
 	defer wg.Done()
 	slog.Info("Starting web server...")
-	router := setupRouter()
+	router := setupRouter(logger)
 	if config.Secure {
 		certmagic.DefaultACME.Agreed = true
 		certmagic.DefaultACME.Email = config.Email

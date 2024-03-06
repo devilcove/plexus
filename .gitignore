@@ -8,4 +8,4 @@ test.db
 time.db
 **/launch.json
 devops/experiment/*
-devops/*
+devops/plexus-update

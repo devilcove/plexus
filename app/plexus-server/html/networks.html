@@ -4,9 +4,11 @@
 <!-- [html-validate-disable no-dup-id]-->
 <!-- [html-validate-disable no-inline-style]-->
 <!-- Network Nav Bar-->
-<div id="error" class="w3-red"></div>
+<div id="error" class="w3-red" hx-get="/networks/" hx-trigger="every 1m" 
+    hx-target="#content" hx-target-error="#error"></div>
 <div class="w3-bar w3-theme-d5">
-    <button class="w3-button" type="button" hx-get="networks/add" hx-target="#content" hx-target-error="#error">
+    <button class="w3-button" type="button" 
+        hx-get="networks/add" hx-target="#content" hx-target-error="#error">
         <i class="fa fa-network-wired"></i>
         Create New Network</button>
 </div>

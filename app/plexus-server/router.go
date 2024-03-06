@@ -12,19 +12,20 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
+	sloggin "github.com/samber/slog-gin"
 )
 
 //go:embed images/* assets/* html/*
 var f embed.FS
 
-func setupRouter() *gin.Engine {
+func setupRouter(logger *slog.Logger) *gin.Engine {
 	store := cookie.NewStore([]byte(config.SessionSecret))
 	session := sessions.Sessions("plexus", store)
 	if config.Verbosity != "DEBUG" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	router := gin.Default()
+	router := gin.New()
 	templates := template.Must(template.ParseFS(f, "html/*"))
 	router.SetHTMLTemplate(templates)
 	router.GET("/images/*filepath", func(c *gin.Context) {
@@ -34,7 +35,7 @@ func setupRouter() *gin.Engine {
 		c.FileFromFS(c.Request.URL.Path, http.FS(f))
 	})
 	_ = router.SetTrustedProxies(nil)
-	router.Use(gin.Recovery(), session)
+	router.Use(gin.Recovery(), session, sloggin.New(logger))
 
 	router.GET("/", displayMain)
 	router.POST("/", login)
