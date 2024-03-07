@@ -24,12 +24,12 @@ func registerPeer(request *plexus.RegisterRequest) plexus.ServerResponse {
 	loginKey, err := plexus.DecodeToken(request.Token)
 	if err != nil {
 		log.Println(err)
-		errResp.Message = err.Error()
+		errResp.Message = "invalid registration key: " + err.Error()
 		return errResp
 	}
 	ec, err := createRegistationConnection(loginKey)
 	if err != nil {
-		errResp.Message = err.Error()
+		errResp.Message = "invalid registration key: " + err.Error()
 		return errResp
 	}
 	self, err := newDevice()

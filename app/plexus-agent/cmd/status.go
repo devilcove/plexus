@@ -44,7 +44,7 @@ var statusCmd = &cobra.Command{
 		//networks := []plexus.Network{}
 		cobra.CheckErr(ec.Request("status", nil, &status, agent.NatsTimeout))
 		if len(status.Servers) == 0 {
-			fmt.Println("not connect to any servers")
+			fmt.Println("agent running... not connected to any servers")
 			return
 		}
 		fmt.Println("Servers")

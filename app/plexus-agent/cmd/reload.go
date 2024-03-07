@@ -32,7 +32,11 @@ var reloadCmd = &cobra.Command{
 	Long: `reload network configurations(s)
 from single or all servers`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("reload called with server", server)
+		if server != "" {
+			fmt.Println("reloading data from server", server)
+		} else {
+			fmt.Println("reloading data from all connected servers")
+		}
 		request := plexus.ReloadRequest{
 			Server: server,
 		}

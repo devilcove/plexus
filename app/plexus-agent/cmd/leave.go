@@ -25,12 +25,12 @@ import (
 
 // leaveCmd represents the leave command
 var leaveCmd = &cobra.Command{
-	Use:   "leave",
+	Use:   "leave network",
 	Args:  cobra.ExactArgs(1),
 	Short: "leave network",
 	Long:  "leave network",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("leave called")
+		fmt.Println("leaving network", args[0])
 		var response plexus.LeaveResponse
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
@@ -49,14 +49,4 @@ var leaveCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(leaveCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// leaveCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	leaveCmd.Flags().StringP("network", "n", "", "name of network to leave")
 }

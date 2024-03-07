@@ -1,6 +1,8 @@
 package agent
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"log/slog"
 	"runtime/debug"
@@ -130,6 +132,12 @@ func subcribe(ec *nats.EncodedConn) {
 			return
 		}
 		network, err := boltdb.Get[plexus.Network](request.Network, networkTable)
+		if errors.Is(err, boltdb.ErrNoResults) {
+			if err := ec.Publish(reply, plexus.ServerResponse{Error: true, Message: "no such network"}); err != nil {
+				slog.Error(err.Error())
+			}
+			return
+		}
 		if err != nil {
 			slog.Error(err.Error())
 			if err := ec.Publish(reply, plexus.ServerResponse{Error: true, Message: err.Error()}); err != nil {
@@ -143,7 +151,6 @@ func subcribe(ec *nats.EncodedConn) {
 				slog.Error(err.Error())
 			}
 			return
-
 		}
 		if err := ec.Publish(reply, plexus.ServerResponse{Message: "interface reset"}); err != nil {
 			slog.Error(err.Error())
@@ -269,9 +276,13 @@ func processLeave(request plexus.AgentRequest) plexus.ServerResponse {
 	response := plexus.ServerResponse{}
 	errResponse := plexus.ServerResponse{Error: true}
 	network, err := boltdb.Get[plexus.Network](request.Network, networkTable)
+	if errors.Is(err, boltdb.ErrNoResults) {
+		errResponse.Message = "no such network"
+		return errResponse
+	}
 	if err != nil {
 		slog.Debug(err.Error())
-		errResponse.Message = err.Error()
+		errResponse.Message = fmt.Sprintf("%v, %v", err, errors.Is(err, boltdb.ErrExists))
 		return errResponse
 	}
 	self, err := boltdb.Get[plexus.Device]("self", deviceTable)
@@ -429,6 +440,10 @@ func reload(data *plexus.ReloadRequest) plexus.ServerResponse {
 			return response
 		}
 		return serverResponse
+	}
+	if len(serverMap) == 0 {
+		response.Message = "not connected to any plexus servers"
+		return response
 	}
 	for name, server := range serverMap {
 		if err := server.EC.Request("config."+self.WGPublicKey, nil, &serverResponse, NatsTimeout); err != nil {

@@ -25,13 +25,18 @@ import (
 
 // loglevelCmd represents the loglevel command
 var loglevelCmd = &cobra.Command{
-	Use:   "loglevel level",
-	Args:  cobra.ExactArgs(1),
-	Short: "set log level of daemon",
+	Use:       "loglevel level",
+	Args:      cobra.ExactArgs(1),
+	ValidArgs: []string{"error", "warn", "info", "debug"},
+	Short:     "set log level of daemon (error, warn, info, debug)",
 	Long: `set log level of damemon
-DEBUG, INFO, WARN, or ERROR (upper or lowercase)
+debug, info, warn, or error 
 .`,
 	Run: func(cmd *cobra.Command, args []string) {
+		if err := cobra.OnlyValidArgs(cmd, args); err != nil {
+			fmt.Println(err)
+			cmd.Usage()
+		}
 		fmt.Println("setting daemon log level to", args[0])
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
