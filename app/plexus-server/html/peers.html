@@ -6,7 +6,6 @@
 <div class="grid6">
     <div class="w3-theme-l3">Name</div>
     <div class="w3-theme-l3">Endpoint</div>
-    <div class="w3-theme-l3">Port</div>
     <div class="w3-theme-l3">Version</div>
     <div class="w3-theme-l3">Status</div>
     <div class="w3-theme-l3">Delete</div>
@@ -14,7 +13,6 @@
     <div><button class="w3-button w3-theme" type="button" hx-get="peers/{{.WGPublicKey}}" hx-target="#content"
             hx-target-error="#error">{{.Name}}</button></div>
     <div>{{.Endpoint}}</div>
-    <div>{{.PublicListenPort}}</div>
     <div>{{.Version}}</div>
     {{if .NatsConnected}}
     <div><i class="fas fa-cogs w3-green w3-large"></i></div>

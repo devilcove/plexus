@@ -107,7 +107,7 @@
             <i class="fas fa-traffic-light w3-red w3-large w3-margin-top"></i>{{.Connectivity}}
             {{end}}
         </div>
-        <div class="w3-margin-top">{{.Address.IP}}</div>
+        <div class="w3-margin-top">{{.Address.IP}}:{{.PublicListenPort}}</div>
         <div>
             <button class="w3-button w3-theme" type="button" hx-delete="networks/peers/{{$network}}/{{.WGPublicKey}}"
                 hx-target="#content" hx-target-error="#error" hx-confirm="Remove Peer from Network?">
