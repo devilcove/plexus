@@ -42,15 +42,23 @@ func peerDetails(c *gin.Context) {
 
 func deletePeer(c *gin.Context) {
 	id := c.Param("id")
-	peer, err := boltdb.Get[plexus.Peer](id, peerTable)
+	peer, err := discardPeer(id)
 	if err != nil {
 		processError(c, http.StatusBadRequest, id+" "+err.Error())
 		return
 	}
+	deletePeerFromBroker(peer.PubNkey)
+	displayPeers(c)
+}
+
+func discardPeer(id string) (plexus.Peer, error) {
+	peer, err := boltdb.Get[plexus.Peer](id, peerTable)
+	if err != nil {
+		return peer, err
+	}
 	networks, err := boltdb.GetAll[plexus.Network](networkTable)
 	if err != nil {
-		processError(c, http.StatusInternalServerError, "get networks "+err.Error())
-		return
+		return peer, err
 	}
 	for _, network := range networks {
 		found := false
@@ -79,14 +87,12 @@ func deletePeer(c *gin.Context) {
 		}
 	}
 	if err := boltdb.Delete[plexus.Peer](peer.WGPublicKey, peerTable); err != nil {
-		processError(c, http.StatusInternalServerError, "delete peer "+peer.Name+""+err.Error())
-		return
+		return peer, err
 	}
 	if err := encodedConn.Publish(peer.WGPublicKey, plexus.DeviceUpdate{Action: plexus.LeaveServer}); err != nil {
 		slog.Error("publish peer deletion", "error", err)
 	}
-	deletePeerFromBroker(peer.PubNkey)
-	displayPeers(c)
+	return peer, nil
 }
 
 func getDeviceUsers() []*server.NkeyUser {

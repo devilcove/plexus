@@ -90,6 +90,8 @@ func subcribe(ec *nats.EncodedConn) {
 			response = processJoin(data)
 		case plexus.LeaveNetwork:
 			response = processLeave(data)
+		case plexus.LeaveServer:
+			response = processLeaveServer(data)
 		default:
 			response.Error = true
 			response.Message = "invalid request"
@@ -304,6 +306,46 @@ func processLeave(request plexus.AgentRequest) plexus.ServerResponse {
 		return errResponse
 	}
 	slog.Debug("leave complete")
+	return response
+}
+
+func processLeaveServer(request plexus.AgentRequest) plexus.ServerResponse {
+	slog.Debug("leave", "server", request.Server)
+	response := plexus.ServerResponse{}
+	errResponse := plexus.ServerResponse{Error: true}
+	self, err := boltdb.Get[plexus.Device]("self", deviceTable)
+	if err != nil {
+		slog.Debug(err.Error())
+		errResponse.Message = err.Error()
+		return errResponse
+	}
+	if !slices.Contains(self.Servers, request.Server) {
+		errResponse.Message = "not registered with server"
+		return errResponse
+	}
+	server, ok := serverMap[request.Server]
+	if !ok {
+		ec, err := connectToServer(self, request.Server)
+		if err != nil {
+			errResponse.Message = "unable to connect to server: " + err.Error()
+			return errResponse
+		}
+		server.EC = ec
+	}
+	if err := server.EC.Request(self.WGPublicKey, request, &response, NatsTimeout); err != nil {
+		errResponse.Message = "error publishing request to server: " + err.Error()
+		return errResponse
+	}
+	for i, server := range self.Servers {
+		if server == request.Server {
+			self.Servers = slices.Delete(self.Servers, i, i+1)
+			break
+		}
+	}
+	delete(serverMap, request.Server)
+	if err := boltdb.Save(self, "self", deviceTable); err != nil {
+		slog.Error("save device", "error", err)
+	}
 	return response
 }
 

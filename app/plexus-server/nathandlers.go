@@ -304,6 +304,12 @@ func processUpdate(request *plexus.AgentRequest) plexus.ServerResponse {
 		return connectToNetwork(connect)
 	case plexus.Version:
 		return serverVersion(request.Args)
+	case plexus.LeaveServer:
+		peer, err := discardPeer(request.Args)
+		slog.Error("discard peer", "error", err)
+		deletePeerFromBroker(peer.PubNkey)
+		// with peer deleted, reply won't get sent so can return anything
+		return plexus.ServerResponse{}
 	default:
 		return plexus.ServerResponse{
 			Error:   true,
