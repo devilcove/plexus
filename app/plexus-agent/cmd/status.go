@@ -40,8 +40,8 @@ var statusCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
-		status := plexus.StatusResponse{}
-		//networks := []plexus.Network{}
+		status := agent.StatusResponse{}
+		//networks := []Network{}
 		cobra.CheckErr(ec.Request("status", nil, &status, agent.NatsTimeout))
 		if len(status.Servers) == 0 {
 			fmt.Println("agent running... not connected to any servers")
@@ -136,7 +136,7 @@ func init() {
 	statusCmd.Flags().BoolVarP(&long, "long", "l", false, "display additional network detail")
 }
 
-func showRelayedPeers(relayed []string, network plexus.Network) {
+func showRelayedPeers(relayed []string, network agent.Network) {
 	for _, peer := range network.Peers {
 		if slices.Contains(relayed, peer.WGPublicKey) {
 			fmt.Printf("\t\t relayed: %s %s %v\n", peer.WGPublicKey, peer.HostName, peer.Address.IP)

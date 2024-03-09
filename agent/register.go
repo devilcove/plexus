@@ -62,8 +62,8 @@ func registerPeer(request *plexus.RegisterRequest) plexus.ServerResponse {
 	return resp
 }
 
-func newDevice() (plexus.Device, error) {
-	device, err := boltdb.Get[plexus.Device]("self", deviceTable)
+func newDevice() (Device, error) {
+	device, err := boltdb.Get[Device]("self", deviceTable)
 	if err == nil {
 		return device, nil
 	}
@@ -74,7 +74,7 @@ func newDevice() (plexus.Device, error) {
 	if err != nil {
 		return device, err
 	}
-	device = plexus.Device{
+	device = Device{
 		Peer:         *peer,
 		Seed:         seed,
 		WGPrivateKey: privKey.String(),
@@ -117,15 +117,15 @@ func createPeer() (*plexus.Peer, *wgtypes.Key, string, error) {
 		return nil, nil, empty, err
 	}
 	peer := &plexus.Peer{
-		WGPublicKey:      pubKey.String(),
-		PubNkey:          nkey,
-		Name:             name,
-		Version:          "v0.1.0",
-		ListenPort:       port,
-		PublicListenPort: stunAddr.Port,
-		Endpoint:         stunAddr.IP.String(),
-		OS:               runtime.GOOS,
-		Updated:          time.Now(),
+		WGPublicKey: pubKey.String(),
+		PubNkey:     nkey,
+		Name:        name,
+		Version:     "v0.1.0",
+		//ListenPort:       port,
+		//PublicListenPort: stunAddr.Port,
+		Endpoint: stunAddr.IP.String(),
+		OS:       runtime.GOOS,
+		Updated:  time.Now(),
 	}
 	return peer, privKey, string(seed), nil
 }

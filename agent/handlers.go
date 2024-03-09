@@ -10,7 +10,7 @@ import (
 )
 
 func deleteServer(server string) {
-	self, err := boltdb.Get[plexus.Device]("self", deviceTable)
+	self, err := boltdb.Get[Device]("self", deviceTable)
 	if err != nil {
 		slog.Error("unable to read device", "error", err)
 		return
@@ -28,7 +28,7 @@ func deleteServer(server string) {
 func networkUpdates(subject string, update plexus.NetworkUpdate) {
 	networkName := subject[9:]
 	slog.Info("network update for", "network", networkName, "type", update.Action.String(), "peer", update.Peer)
-	network, err := boltdb.Get[plexus.Network](networkName, networkTable)
+	network, err := boltdb.Get[Network](networkName, networkTable)
 	if err != nil {
 		if errors.Is(err, boltdb.ErrNoResults) {
 			slog.Info("received update for invalid network ... ignoring", "network", networkName)
@@ -37,7 +37,7 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 		slog.Error("unable to read networks", "error", err)
 		return
 	}
-	self, err := boltdb.Get[plexus.Device]("self", deviceTable)
+	self, err := boltdb.Get[Device]("self", deviceTable)
 	if err != nil {
 		slog.Error("unable to read devices", "error", err)
 		return
@@ -51,7 +51,7 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 	case plexus.DeletePeer:
 		if update.Peer.WGPublicKey == self.Peer.WGPublicKey {
 			slog.Info("self delete --> delete network", "network", networkName)
-			if err := boltdb.Delete[plexus.Network](network.Name, networkTable); err != nil {
+			if err := boltdb.Delete[Network](network.Name, networkTable); err != nil {
 				slog.Error("delete network", "error", err)
 			}
 			slog.Info("delete interface", "network", network.Name, "interface", networkMap[network.Name].Interface)
@@ -119,7 +119,7 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 
 	case plexus.DeleteNetwork:
 		slog.Info("delete network")
-		if err := boltdb.Delete[plexus.Network](network.Name, networkTable); err != nil {
+		if err := boltdb.Delete[Network](network.Name, networkTable); err != nil {
 			slog.Error("delete network", "error", err)
 		}
 		deleteInterface(networkMap[network.Name].Interface)

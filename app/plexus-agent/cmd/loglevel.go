@@ -17,6 +17,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/devilcove/plexus"
 	"github.com/devilcove/plexus/agent"
@@ -27,7 +28,7 @@ import (
 var loglevelCmd = &cobra.Command{
 	Use:       "loglevel level",
 	Args:      cobra.ExactArgs(1),
-	ValidArgs: []string{"error", "warn", "info", "debug"},
+	ValidArgs: []string{"error", "warn", "info", "debug", "ERROR", "WARN", "INFO", "DEBUG"},
 	Short:     "set log level of daemon (error, warn, info, debug)",
 	Long: `set log level of damemon
 debug, info, warn, or error 
@@ -40,7 +41,7 @@ debug, info, warn, or error
 		fmt.Println("setting daemon log level to", args[0])
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
-		cobra.CheckErr(ec.Publish("loglevel", plexus.LevelRequest{Level: args[0]}))
+		cobra.CheckErr(ec.Publish("loglevel", plexus.LevelRequest{Level: strings.ToLower(args[0])}))
 		cobra.CheckErr(ec.Flush())
 		cobra.CheckErr(ec.Drain())
 	},

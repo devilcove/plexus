@@ -118,7 +118,11 @@ func networkAddPeer(c *gin.Context) {
 		processError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if _, err := addPeerToNetwork(peer, network); err != nil {
+	if _, err := addPeerToNetwork(plexus.NetworkPeer{
+		WGPublicKey: peer.WGPublicKey,
+		HostName:    peer.Name,
+		Endpoint:    peer.Endpoint,
+	}, network); err != nil {
 		processError(c, http.StatusInternalServerError, err.Error())
 		return
 	}

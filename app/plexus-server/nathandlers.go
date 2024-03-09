@@ -93,7 +93,7 @@ func addNKeyUser(peer plexus.Peer) error {
 	return nil
 }
 
-func addPeerToNetwork(peer plexus.Peer, network string) (plexus.Network, error) {
+func addPeerToNetwork(peer plexus.NetworkPeer, network string) (plexus.Network, error) {
 	netToUpdate, err := boltdb.Get[plexus.Network](network, networkTable)
 	if err != nil {
 		return netToUpdate, err
@@ -109,30 +109,25 @@ func addPeerToNetwork(peer plexus.Peer, network string) (plexus.Network, error) 
 		return netToUpdate, fmt.Errorf("unable to get ip for peer %s %s %v", peer.WGPublicKey, network, err)
 	}
 	slog.Debug("setting ip to", "ip", addr)
+	peer.Address = net.IPNet{
+		IP:   addr,
+		Mask: netToUpdate.Net.Mask,
+	}
 	update := plexus.NetworkUpdate{
 		Action: plexus.AddPeer,
-		Peer: plexus.NetworkPeer{
-			WGPublicKey:      peer.WGPublicKey,
-			HostName:         peer.Name,
-			PublicListenPort: peer.PublicListenPort,
-			Endpoint:         peer.Endpoint,
-			Address: net.IPNet{
-				IP:   addr,
-				Mask: netToUpdate.Net.Mask,
-			},
-		},
+		Peer:   peer,
 	}
 	netToUpdate.Peers = append(netToUpdate.Peers, update.Peer)
 	if err := boltdb.Save(netToUpdate, netToUpdate.Name, networkTable); err != nil {
 		slog.Error("save updated network", "error", err)
 		return netToUpdate, err
 	}
-	slog.Debug("publish device update", "name", peer.Name)
+	slog.Debug("publish device update", "name", peer.HostName)
 	if err := encodedConn.Publish(peer.WGPublicKey, plexus.DeviceUpdate{
 		Action:  plexus.JoinNetwork,
 		Network: netToUpdate,
 	}); err != nil {
-		slog.Error("publish device update", "peer", peer.Name, "error", err)
+		slog.Error("publish device update", "peer", peer.HostName, "error", err)
 		return netToUpdate, err
 	}
 	slog.Debug("publish network update", "network", network, "update", update)
@@ -187,14 +182,14 @@ func processCheckin(data *plexus.CheckinData) plexus.ServerResponse {
 	if peer.Version != data.Version {
 		peer.Version = data.Version
 	}
-	if peer.PublicListenPort != data.PublicListenPort {
-		peer.PublicListenPort = data.PublicListenPort
-		publishUpdate = true
-	}
-	if peer.ListenPort != data.ListenPort {
-		peer.ListenPort = data.ListenPort
-		publishUpdate = true
-	}
+	//if peer.PublicListenPort != data.PublicListenPort {
+	//	peer.PublicListenPort = data.PublicListenPort
+	//	publishUpdate = true
+	//}
+	//if peer.ListenPort != data.ListenPort {
+	//	peer.ListenPort = data.ListenPort
+	//	publishUpdate = true
+	//}
 	if peer.Endpoint != data.Endpoint {
 		peer.Endpoint = data.Endpoint
 		publishUpdate = true
@@ -296,12 +291,13 @@ func processLeave(request *plexus.AgentRequest) plexus.ServerResponse {
 
 func processUpdate(request *plexus.AgentRequest) plexus.ServerResponse {
 	switch request.Action {
+	case plexus.GetConfig:
+		//handled in calling func
+		return plexus.ServerResponse{}
+	case plexus.Checkin:
+		return processCheckin(&request.CheckinData)
 	case plexus.JoinNetwork:
-		connect := &plexus.JoinRequest{
-			Network: request.Network,
-			Peer:    request.Peer,
-		}
-		return connectToNetwork(connect)
+		return connectToNetwork(request)
 	case plexus.Version:
 		return serverVersion(request.Args)
 	case plexus.LeaveServer:
@@ -310,6 +306,8 @@ func processUpdate(request *plexus.AgentRequest) plexus.ServerResponse {
 		deletePeerFromBroker(peer.PubNkey)
 		// with peer deleted, reply won't get sent so can return anything
 		return plexus.ServerResponse{}
+	case plexus.LeaveNetwork:
+		return processLeave(request)
 	default:
 		return plexus.ServerResponse{
 			Error:   true,
@@ -318,21 +316,15 @@ func processUpdate(request *plexus.AgentRequest) plexus.ServerResponse {
 	}
 }
 
-func connectToNetwork(request *plexus.JoinRequest) plexus.ServerResponse {
+func connectToNetwork(request *plexus.AgentRequest) plexus.ServerResponse {
 	errResponse := plexus.ServerResponse{Error: true}
 	response := plexus.ServerResponse{}
 	_, err := boltdb.Get[plexus.Peer](request.Peer.WGPublicKey, peerTable)
-	if errors.Is(err, boltdb.ErrNoResults) {
-		if err := saveNewPeer(request.Peer); err != nil {
-			errResponse.Message = err.Error()
-			return errResponse
-		}
-		if err := addNKeyUser(request.Peer); err != nil {
-			errResponse.Message = err.Error()
-			return errResponse
-		}
+	if err == nil {
+		errResponse.Message = "no such peer"
+		return errResponse
 	}
-	network, err := addPeerToNetwork(request.Peer, request.Network)
+	network, err := addPeerToNetwork(request.NetworkPeer, request.Network)
 	if err != nil {
 		errResponse.Message = err.Error()
 		return errResponse
@@ -350,7 +342,7 @@ func publishNetworkPeerUpdate(peer plexus.Peer) error {
 	for i, network := range networks {
 		for j, netPeer := range network.Peers {
 			if netPeer.WGPublicKey == peer.WGPublicKey {
-				netPeer.PublicListenPort = peer.PublicListenPort
+				//netPeer.PublicListenPort = peer.PublicListenPort
 				netPeer.Endpoint = peer.Endpoint
 				networks[i].Peers[j] = netPeer
 				data := plexus.NetworkUpdate{

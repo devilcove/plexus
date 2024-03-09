@@ -50,18 +50,20 @@ func subcribe(ec *nats.EncodedConn) {
 	})
 	ec.Subscribe("status", func(subject, reply string, data any) {
 		slog.Debug("status request received")
-		networks, err := boltdb.GetAll[plexus.Network](networkTable)
+		networks, err := boltdb.GetAll[Network](networkTable)
 		if err != nil {
 			slog.Error("get networks", "error", err)
 		}
-		self, err := boltdb.Get[plexus.Device]("self", deviceTable)
+		self, err := boltdb.Get[Device]("self", deviceTable)
 		if err != nil {
 			slog.Error("get device", "error", err)
 		}
-		servers := []plexus.ServerConnection{}
+		servers := []ServerConnection{}
 		for _, serverName := range self.Servers {
-			server := plexus.ServerConnection{Server: serverName}
-			data, ok := serverMap[serverName]
+			server := ServerConnection{Server: serverName}
+			serverMap.mutex.RLock()
+			defer serverMap.mutex.RUnlock()
+			data, ok := serverMap.data[serverName]
 			if !ok {
 				server.Connected = "connection undefined"
 				servers = append(servers, server)
@@ -74,10 +76,10 @@ func subcribe(ec *nats.EncodedConn) {
 			}
 			servers = append(servers, server)
 		}
-		status := plexus.StatusResponse{
-			Servers:    servers,
-			Networks:   networks,
-			ListenPort: self.PublicListenPort,
+		status := StatusResponse{
+			Servers:  servers,
+			Networks: networks,
+			//ListenPort: self.PublicListenPort,
 		}
 		if err := ec.Publish(reply, status); err != nil {
 			slog.Error("status response", "error", err)
@@ -115,7 +117,7 @@ func subcribe(ec *nats.EncodedConn) {
 		if err := ec.Publish(reply, resp); err != nil {
 			slog.Error("pub reply to reload request", "error", err)
 		}
-		self, err := boltdb.Get[plexus.Device]("self", deviceTable)
+		self, err := boltdb.Get[Device]("self", deviceTable)
 		if err != nil {
 			slog.Error("get device", "error", err)
 			return
@@ -125,7 +127,7 @@ func subcribe(ec *nats.EncodedConn) {
 		addNewNetworks(self, resp.Networks)
 	})
 	ec.Subscribe("reset", func(sub, reply string, request *plexus.ResetRequest) {
-		self, err := boltdb.Get[plexus.Device]("self", deviceTable)
+		self, err := boltdb.Get[Device]("self", deviceTable)
 		if err != nil {
 			slog.Error(err.Error())
 			if err := ec.Publish(reply, plexus.ServerResponse{Error: true, Message: err.Error()}); err != nil {
@@ -133,7 +135,7 @@ func subcribe(ec *nats.EncodedConn) {
 			}
 			return
 		}
-		network, err := boltdb.Get[plexus.Network](request.Network, networkTable)
+		network, err := boltdb.Get[Network](request.Network, networkTable)
 		if errors.Is(err, boltdb.ErrNoResults) {
 			if err := ec.Publish(reply, plexus.ServerResponse{Error: true, Message: "no such network"}); err != nil {
 				slog.Error(err.Error())
@@ -162,7 +164,7 @@ func subcribe(ec *nats.EncodedConn) {
 		slog.Debug("version request")
 		response := plexus.VersionResponse{}
 		serverResponse := plexus.ServerResponse{}
-		self, err := boltdb.Get[plexus.Device]("self", deviceTable)
+		self, err := boltdb.Get[Device]("self", deviceTable)
 		if err != nil {
 			slog.Error("get device", "error", err)
 			if err := ec.Publish(reply, response); err != nil {
@@ -170,7 +172,10 @@ func subcribe(ec *nats.EncodedConn) {
 			}
 			return
 		}
-		for server, data := range serverMap {
+		serverMap.mutex.RLock()
+		defer serverMap.mutex.RUnlock()
+		slog.Debug("checking servers")
+		for server, data := range serverMap.data {
 			slog.Debug("checking version of server", "server", server)
 			if err := data.EC.Request("update."+self.WGPublicKey, plexus.AgentRequest{Action: plexus.Version, Args: strconv.FormatBool(*long)}, &serverResponse, NatsTimeout); err != nil {
 				slog.Error("version request", "server", server, "error", err)
@@ -179,12 +184,10 @@ func subcribe(ec *nats.EncodedConn) {
 			response.Servers = append(response.Servers, serverResponse.Version)
 		}
 		response.Agent = version + ": "
-		if *long {
-			info, _ := debug.ReadBuildInfo()
-			for _, setting := range info.Settings {
-				if strings.Contains(setting.Key, "vcs") {
-					response.Agent = response.Agent + setting.Value + " "
-				}
+		info, _ := debug.ReadBuildInfo()
+		for _, setting := range info.Settings {
+			if strings.Contains(setting.Key, "vcs") {
+				response.Agent = response.Agent + setting.Value + " "
 			}
 		}
 		if err := ec.Publish(reply, response); err != nil {
@@ -208,9 +211,10 @@ func ConnectToAgentBroker() (*nats.EncodedConn, error) {
 }
 
 func connectToServers() {
-	serverMap = make(map[string]serverData)
+	serverMap.mutex.Lock()
+	defer serverMap.mutex.Unlock()
 	networkMap = make(map[string]netMap)
-	self, err := boltdb.Get[plexus.Device]("self", deviceTable)
+	self, err := boltdb.Get[Device]("self", deviceTable)
 	if err != nil {
 		slog.Error("unable to read device", "error", err)
 		return
@@ -231,7 +235,7 @@ func connectToServers() {
 			switch data.Action {
 			case plexus.LeaveServer:
 				slog.Info("leave server", "server", data.Network.ServerURL)
-				delete(serverMap, data.Network.ServerURL)
+				delete(serverMap.data, data.Network.ServerURL)
 				ec.Close()
 				deleteServer(data.Network.ServerURL)
 			case plexus.JoinNetwork:
@@ -252,16 +256,16 @@ func connectToServers() {
 			slog.Error("device subscription failed", "error", err)
 		}
 		serverData.Subscriptions = []*nats.Subscription{networkUpdates, updates}
-		serverMap[server] = serverData
+		serverMap.data[server] = serverData
 
 	}
-	networks, err := boltdb.GetAll[plexus.Network](networkTable)
+	networks, err := boltdb.GetAll[Network](networkTable)
 	if err != nil {
 		slog.Error("unable to read networks", "error", err)
 	}
 	for _, network := range networks {
 		iface := network.Interface
-		_, ok := serverMap[network.ServerURL]
+		_, ok := serverMap.data[network.ServerURL]
 		if !ok {
 			slog.Error("network server not in list of servers", "network server", network.ServerURL, "servers", self.Servers)
 			continue
@@ -270,31 +274,39 @@ func connectToServers() {
 			Interface: iface,
 		}
 	}
-	log.Println("server connection", serverMap, len(serverMap), networkMap)
+	log.Println("server connection", serverMap, len(serverMap.data), networkMap)
 }
 
 func processLeave(request plexus.AgentRequest) plexus.ServerResponse {
 	slog.Debug("leave", "network", request.Network)
+	serverMap.mutex.RLock()
+	defer serverMap.mutex.RUnlock()
 	response := plexus.ServerResponse{}
 	errResponse := plexus.ServerResponse{Error: true}
-	network, err := boltdb.Get[plexus.Network](request.Network, networkTable)
-	if errors.Is(err, boltdb.ErrNoResults) {
-		errResponse.Message = "no such network"
-		return errResponse
-	}
+	network, err := boltdb.Get[Network](request.Network, networkTable)
 	if err != nil {
 		slog.Debug(err.Error())
 		errResponse.Message = fmt.Sprintf("%v, %v", err, errors.Is(err, boltdb.ErrExists))
 		return errResponse
 	}
-	self, err := boltdb.Get[plexus.Device]("self", deviceTable)
+	if err := deleteInterface(network.Interface); err != nil {
+		slog.Debug("delete interface", "error", err)
+		errResponse.Message = "failed to delete interface: " + err.Error()
+		return errResponse
+	}
+	if err := boltdb.Delete[Network](request.Network, networkTable); err != nil {
+		slog.Debug(err.Error())
+		errResponse.Message = fmt.Sprintf("%v, %v", err, errors.Is(err, boltdb.ErrExists))
+		return errResponse
+	}
+	self, err := boltdb.Get[Device]("self", deviceTable)
 	if err != nil {
 		slog.Debug(err.Error())
 		errResponse.Message = err.Error()
 		return errResponse
 	}
 	request.Peer.WGPublicKey = self.WGPublicKey
-	server, ok := serverMap[network.ServerURL]
+	server, ok := serverMap.data[request.Network]
 	if !ok {
 		slog.Debug(networkNotMapped)
 		errResponse.Message = networkNotMapped
@@ -311,9 +323,11 @@ func processLeave(request plexus.AgentRequest) plexus.ServerResponse {
 
 func processLeaveServer(request plexus.AgentRequest) plexus.ServerResponse {
 	slog.Debug("leave", "server", request.Server)
+	serverMap.mutex.Lock()
+	defer serverMap.mutex.Unlock()
 	response := plexus.ServerResponse{}
 	errResponse := plexus.ServerResponse{Error: true}
-	self, err := boltdb.Get[plexus.Device]("self", deviceTable)
+	self, err := boltdb.Get[Device]("self", deviceTable)
 	if err != nil {
 		slog.Debug(err.Error())
 		errResponse.Message = err.Error()
@@ -323,7 +337,7 @@ func processLeaveServer(request plexus.AgentRequest) plexus.ServerResponse {
 		errResponse.Message = "not registered with server"
 		return errResponse
 	}
-	server, ok := serverMap[request.Server]
+	server, ok := serverMap.data[request.Server]
 	if !ok {
 		ec, err := connectToServer(self, request.Server)
 		if err != nil {
@@ -342,7 +356,7 @@ func processLeaveServer(request plexus.AgentRequest) plexus.ServerResponse {
 			break
 		}
 	}
-	delete(serverMap, request.Server)
+	delete(serverMap.data, request.Server)
 	if err := boltdb.Save(self, "self", deviceTable); err != nil {
 		slog.Error("save device", "error", err)
 	}
@@ -353,38 +367,53 @@ func processJoin(request plexus.AgentRequest) plexus.ServerResponse {
 	slog.Debug("join", "network", request.Network, "server", request.Server)
 	response := plexus.ServerResponse{}
 	errResponse := plexus.ServerResponse{Error: true}
-	_, err := boltdb.Get[plexus.Network](request.Network, networkTable)
+	_, err := boltdb.Get[Network](request.Network, networkTable)
 	if err == nil {
 		slog.Warn("already connected to network")
 		errResponse.Message = "already connected to network"
 		return errResponse
 	}
-	self, err := boltdb.Get[plexus.Device]("self", deviceTable)
+	self, err := boltdb.Get[Device]("self", deviceTable)
 	if err != nil {
 		slog.Debug(err.Error())
 		errResponse.Message = err.Error()
 		return errResponse
 	}
-	serverEC, err := connectToServer(self, request.Server)
+	request.NetworkPeer, err = newNetworkPeer(&self)
 	if err != nil {
+		slog.Debug("create network peer", "error", err)
+		errResponse.Message = "unable to create network peer: " + err.Error()
+		return errResponse
+	}
+	slog.Debug("obtaining lock")
+	serverMap.mutex.RLock()
+	defer serverMap.mutex.RUnlock()
+	slog.Debug("got lock")
+	server, ok := serverMap.data[request.Server]
+	if !ok {
+		slog.Debug("not connected to server", "server", request.Server)
+		errResponse.Message = "not connected to server"
+		return errResponse
+	}
+	slog.Debug("sending join request to server")
+	if err := server.EC.Request("update."+self.WGPublicKey, request, &response, NatsTimeout); err != nil {
 		slog.Debug(err.Error())
 		errResponse.Message = err.Error()
 		return errResponse
 	}
-	request.Peer = self.Peer
-	if err := serverEC.Request("update."+self.WGPublicKey, request, &response, NatsTimeout); err != nil {
-		slog.Debug(err.Error())
-		errResponse.Message = err.Error()
+	slog.Debug("adding network", "networks", response.Networks)
+	if len(response.Networks) == 0 {
+		slog.Debug("empty network response from server")
+		errResponse.Message = "no network obtained from server"
 		return errResponse
 	}
-	serverEC.Close()
 	addNewNetworks(self, response.Networks)
 	connectToServers()
 	return response
 }
 
 func connectToNetwork(network plexus.Network) error {
-	self, err := boltdb.Get[plexus.Device]("self", deviceTable)
+	self, err := boltdb.Get[Device]("self", deviceTable)
 	if err != nil {
 		return err
 	}
@@ -394,8 +423,8 @@ func connectToNetwork(network plexus.Network) error {
 	return nil
 }
 
-func addNewNetworks(self plexus.Device, networks []plexus.Network) {
-	existingNetworks, err := boltdb.GetAll[plexus.Network](networkTable)
+func addNewNetworks(self Device, serverNets []plexus.Network) {
+	existingNetworks, err := boltdb.GetAll[Network](networkTable)
 	if err != nil {
 		slog.Error("get existing networks", "error", err)
 	}
@@ -403,7 +432,9 @@ func addNewNetworks(self plexus.Device, networks []plexus.Network) {
 	for _, existing := range existingNetworks {
 		takenInterfaces = append(takenInterfaces, existing.InterfaceSuffix)
 	}
-	for _, network := range networks {
+	slog.Debug("taken interfaces", "taken", takenInterfaces)
+	for _, serverNet := range serverNets {
+		network := toAgentNetwork(serverNet)
 		network.ListenPort, err = getFreePort(defaultWGPort)
 		if err != nil {
 			slog.Debug(err.Error())
@@ -416,6 +447,7 @@ func addNewNetworks(self plexus.Device, networks []plexus.Network) {
 				break
 			}
 		}
+		slog.Debug("saving network", "network", network.Name)
 		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 			slog.Error("error saving network", "name", network.Name, "error", err)
 		}
@@ -426,7 +458,7 @@ func addNewNetworks(self plexus.Device, networks []plexus.Network) {
 				slog.Error("update device with new server", "error", err)
 			}
 		} else {
-			slog.Debug("server already exists in server list", "server", network.ServerURL, "list", self.Servers)
+			slog.Debug("server already exists in server list", "server", serverNet.ServerURL, "list", self.Servers)
 		}
 		if err := startInterface(self, network); err != nil {
 			slog.Error("start new interface", "error", err)
@@ -465,14 +497,16 @@ func createRegistationConnection(key plexus.KeyValue) (*nats.EncodedConn, error)
 func reload(data *plexus.ReloadRequest) plexus.ServerResponse {
 	response := plexus.ServerResponse{Error: true}
 	serverResponse := plexus.ServerResponse{}
-	self, err := boltdb.Get[plexus.Device]("self", deviceTable)
+	serverMap.mutex.RLock()
+	defer serverMap.mutex.RUnlock()
+	self, err := boltdb.Get[Device]("self", deviceTable)
 	if err != nil {
 		slog.Error("get device", "error", err)
 		response.Message = err.Error()
 		return response
 	}
 	if data.Server != "" {
-		server, ok := serverMap[data.Server]
+		server, ok := serverMap.data[data.Server]
 		if !ok {
 			response.Message = "invalid server"
 			return response
@@ -483,11 +517,11 @@ func reload(data *plexus.ReloadRequest) plexus.ServerResponse {
 		}
 		return serverResponse
 	}
-	if len(serverMap) == 0 {
+	if len(serverMap.data) == 0 {
 		response.Message = "not connected to any plexus servers"
 		return response
 	}
-	for name, server := range serverMap {
+	for name, server := range serverMap.data {
 		if err := server.EC.Request("config."+self.WGPublicKey, nil, &serverResponse, NatsTimeout); err != nil {
 			response.Message += "error from server" + name + err.Error()
 			continue

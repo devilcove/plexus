@@ -74,6 +74,7 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 		slog.Error("nats encoded connect", "error", err)
 		brokerfail <- 1
 	}
+
 	// register handler
 	registerSub, err := encodedConn.Subscribe("register", func(subj, reply string, request *plexus.ServerRegisterRequest) {
 		response := registerHandler(request)
@@ -88,18 +89,21 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 	if err != nil {
 		slog.Error("subscribe register", "error", err)
 	}
-	checkinSub, err := encodedConn.Subscribe("checkin.*", func(subj, reply string, request *plexus.CheckinData) {
-		slog.Debug("checkin", "peer", request.ID)
-		response := processCheckin(request)
-		if err := encodedConn.Publish(reply, response); err != nil {
-			slog.Error("publish checkin response", err)
-		}
-	})
-	if err != nil {
-		slog.Error("subscribe checkin", "error", err)
-	}
+	//checkinSub, err := encodedConn.Subscribe("checkin.*", func(subj, reply string, request *plexus.CheckinData) {
+	//	slog.Debug("checkin", "peer", request.ID)
+	//	response := processCheckin(request)
+	//	if err := encodedConn.Publish(reply, response); err != nil {
+	//		slog.Error("publish checkin response", err)
+	//	}
+	//})
+	//if err != nil {
+	//	slog.Error("subscribe checkin", "error", err)
+	//}
 	updateSub, err := encodedConn.Subscribe("update.*", func(subj, reply string, request *plexus.AgentRequest) {
 		response := processUpdate(request)
+		if request.Action == plexus.GetConfig {
+			response = configHandler(subj)
+		}
 		slog.Debug("pubish update rely", "respone", response)
 		if err := encodedConn.Publish(reply, response); err != nil {
 			slog.Error("update", "error", err)
@@ -108,25 +112,25 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 	if err != nil {
 		slog.Error("subscribe update", "error", err)
 	}
-	configSub, err := encodedConn.Subscribe("config.*", func(sub, reply string, request any) {
-		response := configHandler(sub)
-		if err := encodedConn.Publish(reply, response); err != nil {
-			slog.Error("pub response to config request", "error", err)
-		}
-	})
-	if err != nil {
-		slog.Error("subcribe config", "error", err)
-	}
-	leaveSub, err := encodedConn.Subscribe("leave.*", func(subj, reply string, request *plexus.AgentRequest) {
-		response := processLeave(request)
-		slog.Debug("publish leave reply", "response", response)
-		if err := encodedConn.Publish(reply, response); err != nil {
-			slog.Error("leave reply", "error", err)
-		}
-	})
-	if err != nil {
-		slog.Error("subscribe leave", "error", err)
-	}
+	//configSub, err := encodedConn.Subscribe("config.*", func(sub, reply string, request any) {
+	//response := configHandler(sub)
+	//	if err := encodedConn.Publish(reply, response); err != nil {
+	//		slog.Error("pub response to config request", "error", err)
+	//	}
+	//})
+	//if err != nil {
+	//	slog.Error("subcribe config", "error", err)
+	//}
+	//leaveSub, err := encodedConn.Subscribe("leave.*", func(subj, reply string, request *plexus.AgentRequest) {
+	//	response := processLeave(request)
+	//	slog.Debug("publish leave reply", "response", response)
+	//	if err := encodedConn.Publish(reply, response); err != nil {
+	//		slog.Error("leave reply", "error", err)
+	//	}
+	//})
+	//if err != nil {
+	//	slog.Error("subscribe leave", "error", err)
+	//}
 
 	slog.Info("broker started")
 	pingTicker := time.NewTicker(pingTick)
@@ -137,10 +141,10 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 			pingTicker.Stop()
 			keyTicker.Stop()
 			registerSub.Drain()
-			checkinSub.Drain()
+			//checkinSub.Drain()
 			updateSub.Drain()
-			configSub.Drain()
-			leaveSub.Drain()
+			//configSub.Drain()
+			//leaveSub.Drain()
 			return
 		case token := <-newDevice:
 			slog.Info("new login device", "device", token)

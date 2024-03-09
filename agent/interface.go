@@ -29,7 +29,7 @@ func deleteInterface(name string) error {
 
 func deleteAllInterfaces() {
 	slog.Debug("deleting all interfaces")
-	networks, err := boltdb.GetAll[plexus.Network](networkTable)
+	networks, err := boltdb.GetAll[Network](networkTable)
 	if err != nil {
 		slog.Error("retrieve networks", "error", err)
 		return
@@ -44,8 +44,8 @@ func deleteAllInterfaces() {
 	}
 }
 
-func startAllInterfaces(self plexus.Device) {
-	networks, err := boltdb.GetAll[plexus.Network](networkTable)
+func startAllInterfaces(self Device) {
+	networks, err := boltdb.GetAll[Network](networkTable)
 	if err != nil {
 		slog.Error("get networks", "error", err)
 		return
@@ -59,7 +59,7 @@ func startAllInterfaces(self plexus.Device) {
 }
 
 // func startInterfaces(ctx context.Context, wg *sync.WaitGroup) {
-func startInterface(self plexus.Device, network plexus.Network) error {
+func startInterface(self Device, network Network) error {
 	slog.Info("starting interface", "interface", network.Interface, "network", network.Name)
 	address := netlink.Addr{}
 	for _, peer := range network.Peers {
@@ -90,6 +90,25 @@ func startInterface(self plexus.Device, network plexus.Network) error {
 	if err != nil {
 		return err
 	}
+	addressChanged, portChanged, err := stunCheck(&self, &network, port)
+	if err != nil {
+		slog.Error("stun error", "error", err)
+	}
+	if port != network.ListenPort {
+		portChanged = true
+	}
+	if addressChanged {
+		if err := boltdb.Save(self, "self", deviceTable); err != nil {
+			return err
+		}
+		go sendDeviceUpdate(&self)
+	}
+	if portChanged {
+		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+			return err
+		}
+		go sendPeerUpdate(&self, &network)
+	}
 	config := wgtypes.Config{
 		PrivateKey:   &privKey,
 		ListenPort:   &port,
@@ -105,7 +124,7 @@ func startInterface(self plexus.Device, network plexus.Network) error {
 	return nil
 }
 
-func resetPeersOnNetworkInterface(self plexus.Device, network plexus.Network) error {
+func resetPeersOnNetworkInterface(self Device, network Network) error {
 	slog.Info("resetting peers", "interface", network.Interface, "network", network.Name)
 	iface, err := plexus.Get(network.Interface)
 	if err != nil {
@@ -211,7 +230,7 @@ func getFreePort(start int) (int, error) {
 
 func getConnectivity(server string) []plexus.ConnectivityData {
 	results := []plexus.ConnectivityData{}
-	networks, err := boltdb.GetAll[plexus.Network](networkTable)
+	networks, err := boltdb.GetAll[Network](networkTable)
 	if err != nil {
 		slog.Error("get networks", "error", err)
 		return results
@@ -265,7 +284,7 @@ func getAllowedIPs(relay plexus.NetworkPeer, peers []plexus.NetworkPeer) []net.I
 	return allowed
 }
 
-func getWGPeers(self plexus.Device, network plexus.Network) []wgtypes.PeerConfig {
+func getWGPeers(self Device, network Network) []wgtypes.PeerConfig {
 	keepalive := defaultKeepalive
 	peers := []wgtypes.PeerConfig{}
 	for _, peer := range network.Peers {
@@ -327,7 +346,7 @@ func getWGPeers(self plexus.Device, network plexus.Network) []wgtypes.PeerConfig
 	return peers
 }
 
-func selfRelayedPeers(self plexus.Device, network plexus.Network) []wgtypes.PeerConfig {
+func selfRelayedPeers(self Device, network Network) []wgtypes.PeerConfig {
 	keepalive := defaultKeepalive
 	for _, peer := range network.Peers {
 		if slices.Contains(peer.RelayedPeers, self.WGPublicKey) {
@@ -353,20 +372,20 @@ func selfRelayedPeers(self plexus.Device, network plexus.Network) []wgtypes.Peer
 	return []wgtypes.PeerConfig{}
 }
 
-func stunCheck(self plexus.Device, port int) (bool, string, int) {
-	changed := false
+func stunCheck(self *Device, network *Network, port int) (bool, bool, error) {
+	endpointChanged := false
+	portChanged := false
 	stunAddr, err := getPublicAddPort(port)
 	if err != nil {
-		slog.Error("stun", "error", err)
-		return false, "", 0
+		return endpointChanged, portChanged, err
 	}
 	if stunAddr.IP.String() != self.Endpoint {
-		changed = true
+		endpointChanged = true
 		self.Endpoint = stunAddr.String()
-		self.PublicListenPort = stunAddr.Port
-		if err := boltdb.Save(self, "self", "device"); err != nil {
-			slog.Error("update self", "error", err)
-		}
 	}
-	return changed, self.Endpoint, self.PublicListenPort
+	if network.PublicListenPort != stunAddr.Port {
+		network.PublicListenPort = stunAddr.Port
+		portChanged = true
+	}
+	return endpointChanged, portChanged, nil
 }

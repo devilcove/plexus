@@ -14,22 +14,26 @@ import (
 type Action int
 
 const (
-	DeletePeer Action = iota
-	AddPeer
-	UpdatePeer
-	AddRelay
-	DeleteRelay
-	DeleteNetwork
-	JoinNetwork
-	LeaveNetwork
-	LeaveServer
-	Ping
-	Version
+	DeletePeer        Action = iota //0
+	AddPeer                         //1
+	UpdatePeer                      //2
+	UpdateNetworkPeer               //3
+	AddRelay                        //4
+	DeleteRelay                     //5
+	DeleteNetwork                   //6
+	JoinNetwork                     //7
+	LeaveNetwork                    //8
+	LeaveServer                     //9
+	Ping                            //10
+	Version                         //11
+	Checkin                         //12
+	GetConfig                       //13
 )
 
 func (i Action) String() string {
-	return [...]string{"DeletePeer", "AddPeer", "UpdatePeer", "AddRelay", "DelteRely",
-		"DeleteNetwork", "JoinNetwork", "LeaveNetwork", "LeaveServer", "Ping", "Version"}[i]
+	return [...]string{"DeletePeer", "AddPeer", "UpdatePeer", "UpdateNetworkPeer", "AddRelay", "DelteRely",
+		"DeleteNetwork", "JoinNetwork", "LeaveNetwork", "LeaveServer", "Ping", "Version",
+		"Checkin", "GetConfig"}[i]
 }
 
 type Settings struct {
@@ -63,21 +67,18 @@ type NatsUser struct {
 	Publish   []string
 }
 type Network struct {
-	Name            string `form:"name"`
-	ServerURL       string
-	Net             net.IPNet
-	AddressString   string `form:"addressstring"`
-	ListenPort      int    //only used by agent
-	Interface       string // only used by agent
-	InterfaceSuffix int    // only used by agent
-	Connected       bool
-	Peers           []NetworkPeer
+	Name          string `form:"name"`
+	ServerURL     string
+	Net           net.IPNet
+	AddressString string `form:"addressstring"`
+	Peers         []NetworkPeer
 }
 
 type NetworkPeer struct {
 	WGPublicKey      string
 	HostName         string
 	Address          net.IPNet
+	ListenPort       int
 	PublicListenPort int
 	Endpoint         string
 	NatsConnected    bool
@@ -102,28 +103,28 @@ type KeyValue struct {
 }
 
 type Peer struct {
-	WGPublicKey      string
-	PubNkey          string
-	Version          string
+	WGPublicKey string
+	PubNkey     string
+	Version     string
+	Name        string
+	OS          string
+	//ListenPort       int
+	//PublicListenPort int
+	Endpoint      string
+	Updated       time.Time
+	NatsConnected bool
+}
+
+type NetworkPorts struct {
 	Name             string
-	OS               string
 	ListenPort       int
 	PublicListenPort int
 	Endpoint         string
-	Updated          time.Time
-	NatsConnected    bool
 }
 
-type Device struct {
-	Peer
-	WGPrivateKey string
-	Seed         string
-	Servers      []string
-}
-
-type ServerClients struct {
-	Name    string
-	PubNKey string
+type ListenPorts struct {
+	Public  int
+	Private int
 }
 
 type ServerRegisterRequest struct {
@@ -156,11 +157,13 @@ type LeaveRequest struct {
 }
 
 type AgentRequest struct {
-	Network string
-	Server  string
-	Peer    Peer
-	Action  Action
-	Args    string
+	Network     string
+	Server      string
+	Peer        Peer
+	NetworkPeer NetworkPeer
+	Action      Action
+	CheckinData CheckinData
+	Args        string
 }
 
 type VersionResponse struct {
@@ -204,17 +207,6 @@ type CheckinData struct {
 	PublicListenPort int
 	Endpoint         string
 	Connections      []ConnectivityData
-}
-
-type StatusResponse struct {
-	Servers    []ServerConnection
-	Networks   []Network
-	ListenPort int
-}
-
-type ServerConnection struct {
-	Server    string
-	Connected string
 }
 
 type PingResponse struct {

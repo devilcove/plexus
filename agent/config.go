@@ -2,6 +2,7 @@ package agent
 
 import (
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/nats-io/nats.go"
@@ -27,11 +28,24 @@ var (
 	Config Configuration
 	// networkMap containss the interface name and reset channel for networks
 	networkMap map[string]netMap
-	serverMap  map[string]serverData
+	//serverMap      map[string]serverData
+	serverMap serverConnections
 	//errors
 	ErrNetNotMapped = errors.New("network not mapped to server")
 	ErrConnected    = errors.New("network connected")
 )
+
+type serverConnections struct {
+	data  map[string]serverData
+	mutex *sync.RWMutex
+}
+
+func initServerMap() serverConnections {
+	serverMap = serverConnections{
+		data:  make(map[string]serverData),
+		mutex: &sync.RWMutex{}}
+	return serverMap
+}
 
 type Configuration struct {
 	NatsPort  int
