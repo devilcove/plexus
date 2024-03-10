@@ -317,7 +317,7 @@ func processLeave(request plexus.AgentRequest) plexus.ServerResponse {
 		return errResponse
 	}
 	request.Peer.WGPublicKey = self.WGPublicKey
-	server, ok := serverMap.data[request.Network]
+	server, ok := serverMap.data[network.ServerURL]
 	if !ok {
 		slog.Debug(networkNotMapped)
 		errResponse.Message = networkNotMapped
@@ -391,12 +391,6 @@ func processJoin(request plexus.AgentRequest) plexus.ServerResponse {
 		return errResponse
 	}
 	request.Peer = self.Peer
-	//request.NetworkPeer, err = newNetworkPeer(&self)
-	//if err != nil {
-	//	slog.Debug("create network peer", "error", err)
-	//	errResponse.Message = "unable to create network peer: " + err.Error()
-	//	return errResponse
-	//}
 	slog.Debug("obtaining lock")
 	serverMap.mutex.RLock()
 	defer serverMap.mutex.RUnlock()
