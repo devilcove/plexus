@@ -243,6 +243,17 @@ func connectToServers() {
 				if err := connectToNetwork(data.Network); err != nil {
 					slog.Error("connect to network", "error", err)
 				}
+			case plexus.SendListenPorts:
+				slog.Info("server requested listen ports")
+				response, err := getNewListenPorts(data.Network)
+				if err != nil {
+					slog.Error(err.Error())
+					return
+				}
+				if err := ec.Publish(reply, response); err != nil {
+					slog.Error("publish reply to SendListenPorts", "error", err)
+				}
+				slog.Debug("sent listenports to server", "public", response.PublicListenPort, "private", response.ListenPort)
 			case plexus.Ping:
 				slog.Debug("received ping from server", "server", server)
 				if err := ec.Publish(reply, plexus.PingResponse{Message: "pong"}); err != nil {
@@ -408,7 +419,6 @@ func processJoin(request plexus.AgentRequest) plexus.ServerResponse {
 		return errResponse
 	}
 	addNewNetworks(self, response.Networks)
-	connectToServers()
 	return response
 }
 
@@ -419,7 +429,7 @@ func connectToNetwork(network plexus.Network) error {
 	}
 	networks := []plexus.Network{network}
 	addNewNetworks(self, networks)
-	connectToServers()
+	//connectToServers()
 	return nil
 }
 

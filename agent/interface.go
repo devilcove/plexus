@@ -101,13 +101,13 @@ func startInterface(self Device, network Network) error {
 		if err := boltdb.Save(self, "self", deviceTable); err != nil {
 			return err
 		}
-		go sendDeviceUpdate(&self)
+		go publishDeviceUpdate(&self)
 	}
 	if portChanged {
 		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 			return err
 		}
-		go sendPeerUpdate(&self, &network)
+		go publishPeerUpdate(&self, &network)
 	}
 	config := wgtypes.Config{
 		PrivateKey:   &privKey,
@@ -388,4 +388,41 @@ func stunCheck(self *Device, network *Network, port int) (bool, bool, error) {
 		portChanged = true
 	}
 	return endpointChanged, portChanged, nil
+}
+
+func getNewListenPorts(serverNetwork plexus.Network) (plexus.NetworkPeer, error) {
+	network := Network{
+		serverNetwork,
+		0,
+		0,
+		"temp",
+		0,
+	}
+	port, err := getFreePort(defaultWGPort)
+	if err != nil {
+		return plexus.NetworkPeer{}, err
+	}
+	self, err := boltdb.Get[Device]("self", deviceTable)
+	if err != nil {
+		return plexus.NetworkPeer{}, err
+	}
+	endpointChanged, _, err := stunCheck(&self, &network, port)
+	if err != nil {
+		return plexus.NetworkPeer{}, err
+	}
+	if endpointChanged {
+		go func() {
+			publishDeviceUpdate(&self)
+			if err := boltdb.Save(self, "self", deviceTable); err != nil {
+				slog.Error("save device", "error", err)
+			}
+		}()
+	}
+	return plexus.NetworkPeer{
+		WGPublicKey:      self.WGPublicKey,
+		HostName:         self.Name,
+		ListenPort:       port,
+		PublicListenPort: network.PublicListenPort,
+	}, nil
+
 }

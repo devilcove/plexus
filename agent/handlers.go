@@ -54,8 +54,10 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 			if err := boltdb.Delete[Network](network.Name, networkTable); err != nil {
 				slog.Error("delete network", "error", err)
 			}
-			slog.Info("delete interface", "network", network.Name, "interface", networkMap[network.Name].Interface)
-			deleteInterface(networkMap[network.Name].Interface)
+			slog.Info("delete interface", "network", network.Name, "interface", network.Interface)
+			if err := deleteInterface(network.Interface); err != nil {
+				slog.Error("deleting interface", "interface", network.Interface, "error", err)
+			}
 			return
 		}
 		for i, oldpeer := range network.Peers {
@@ -122,7 +124,9 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 		if err := boltdb.Delete[Network](network.Name, networkTable); err != nil {
 			slog.Error("delete network", "error", err)
 		}
-		deleteInterface(networkMap[network.Name].Interface)
+		if err := deleteInterface(networkMap[network.Name].Interface); err != nil {
+			slog.Error("delete interfadce", "interface", network.Interface, "errror", err)
+		}
 		return
 	default:
 		slog.Info("invalid network update type")

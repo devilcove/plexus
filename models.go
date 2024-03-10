@@ -28,12 +28,13 @@ const (
 	Version                         //11
 	Checkin                         //12
 	GetConfig                       //13
+	SendListenPorts                 //14
 )
 
 func (i Action) String() string {
 	return [...]string{"DeletePeer", "AddPeer", "UpdatePeer", "UpdateNetworkPeer", "AddRelay", "DelteRely",
 		"DeleteNetwork", "JoinNetwork", "LeaveNetwork", "LeaveServer", "Ping", "Version",
-		"Checkin", "GetConfig"}[i]
+		"Checkin", "GetConfig", "SendListenPorts"}[i]
 }
 
 type Settings struct {

@@ -118,11 +118,17 @@ func networkAddPeer(c *gin.Context) {
 		processError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if _, err := addPeerToNetwork(plexus.NetworkPeer{
-		WGPublicKey: peer.WGPublicKey,
-		HostName:    peer.Name,
-		Endpoint:    peer.Endpoint,
-	}, network); err != nil {
+	netPeer := plexus.NetworkPeer{}
+	if err := encodedConn.Request(peer.WGPublicKey, plexus.DeviceUpdate{
+		Action: plexus.SendListenPorts,
+		Network: plexus.Network{
+			Name: network,
+		},
+	}, &netPeer, natsTimeout); err != nil {
+		processError(c, http.StatusInternalServerError, "peer not responding "+err.Error())
+		return
+	}
+	if _, err := addPeerToNetwork(netPeer, network); err != nil {
 		processError(c, http.StatusInternalServerError, err.Error())
 		return
 	}

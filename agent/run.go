@@ -42,6 +42,7 @@ func Run() {
 			slog.Info("stopping tickers")
 			checkinTicker.Stop()
 			//serverTicker.Stop()
+			closeServerConnections()
 			slog.Info("shutdown nats server")
 			ec.Drain()
 			go ns.Shutdown()

@@ -6,7 +6,7 @@ import (
 	"github.com/devilcove/plexus"
 )
 
-func sendDeviceUpdate(self *Device) {
+func publishDeviceUpdate(self *Device) {
 	serverMap.mutex.RLock()
 	defer serverMap.mutex.RUnlock()
 	for _, server := range self.Servers {
@@ -34,7 +34,7 @@ func sendDeviceUpdate(self *Device) {
 	}
 }
 
-func sendPeerUpdate(self *Device, network *Network) {
+func publishPeerUpdate(self *Device, network *Network) {
 	serverMap.mutex.RLock()
 	defer serverMap.mutex.RUnlock()
 	conn, ok := serverMap.data[network.ServerURL]

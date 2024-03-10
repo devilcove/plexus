@@ -58,7 +58,7 @@ func registerPeer(request *plexus.RegisterRequest) plexus.ServerResponse {
 	slog.Debug("server response to join request", "response", resp)
 	addNewNetworks(self, resp.Networks)
 	// reset nats connection
-	connectToServers()
+	//connectToServers()
 	return resp
 }
 
