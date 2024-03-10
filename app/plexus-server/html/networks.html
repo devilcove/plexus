@@ -149,16 +149,16 @@
             <h3>Add Peer to Network {{.Name}}</h3>
             <div class="grid3">
                 <div class="w3-theme-l3">Name</div>
-                <div class="w3-theme-l3">Port</div>
                 <div class="w3-theme-l3">Endpoint</div>
+                <div class="w3-theme-l3">Connected</div>
                 {{range .AvailablePeers}}
                 <div>
                     <button class="w3-button w3-theme" type="button"
                         hx-post="/networks/addPeer/{{$network}}/{{.WGPublicKey}}" hx-target="#content"
                         hx-target-error="#error">{{.Name}}</button>
                 </div>
-                <div>{{.PublicListenPort}}</div>
                 <div>{{.Endpoint}}</div>
+                <div>{{.NatsConnected}}</div>
                 {{end}}
             </div>
             <br><br>

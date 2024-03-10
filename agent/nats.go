@@ -390,12 +390,13 @@ func processJoin(request plexus.AgentRequest) plexus.ServerResponse {
 		errResponse.Message = err.Error()
 		return errResponse
 	}
-	request.NetworkPeer, err = newNetworkPeer(&self)
-	if err != nil {
-		slog.Debug("create network peer", "error", err)
-		errResponse.Message = "unable to create network peer: " + err.Error()
-		return errResponse
-	}
+	request.Peer = self.Peer
+	//request.NetworkPeer, err = newNetworkPeer(&self)
+	//if err != nil {
+	//	slog.Debug("create network peer", "error", err)
+	//	errResponse.Message = "unable to create network peer: " + err.Error()
+	//	return errResponse
+	//}
 	slog.Debug("obtaining lock")
 	serverMap.mutex.RLock()
 	defer serverMap.mutex.RUnlock()

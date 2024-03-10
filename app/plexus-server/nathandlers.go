@@ -93,11 +93,25 @@ func addNKeyUser(peer plexus.Peer) error {
 	return nil
 }
 
-func addPeerToNetwork(peer plexus.NetworkPeer, network string) (plexus.Network, error) {
+func addPeerToNetwork(peerID, network string) (plexus.Network, error) {
 	netToUpdate, err := boltdb.Get[plexus.Network](network, networkTable)
 	if err != nil {
 		return netToUpdate, err
 	}
+	peer, err := boltdb.Get[plexus.Peer](peerID, peerTable)
+	if err != nil {
+		return netToUpdate, err
+	}
+	netPeer := plexus.NetworkPeer{}
+	if err := encodedConn.Request(peer.WGPublicKey, plexus.DeviceUpdate{
+		Action: plexus.SendListenPorts,
+		Network: plexus.Network{
+			Name: network,
+		},
+	}, &netPeer, natsTimeout); err != nil {
+		return netToUpdate, err
+	}
+	netPeer.Endpoint = peer.Endpoint
 	// check if peer is already part of network
 	for _, existing := range netToUpdate.Peers {
 		if existing.WGPublicKey == peer.WGPublicKey {
@@ -109,25 +123,25 @@ func addPeerToNetwork(peer plexus.NetworkPeer, network string) (plexus.Network, 
 		return netToUpdate, fmt.Errorf("unable to get ip for peer %s %s %v", peer.WGPublicKey, network, err)
 	}
 	slog.Debug("setting ip to", "ip", addr)
-	peer.Address = net.IPNet{
+	netPeer.Address = net.IPNet{
 		IP:   addr,
 		Mask: netToUpdate.Net.Mask,
 	}
 	update := plexus.NetworkUpdate{
 		Action: plexus.AddPeer,
-		Peer:   peer,
+		Peer:   netPeer,
 	}
 	netToUpdate.Peers = append(netToUpdate.Peers, update.Peer)
 	if err := boltdb.Save(netToUpdate, netToUpdate.Name, networkTable); err != nil {
 		slog.Error("save updated network", "error", err)
 		return netToUpdate, err
 	}
-	slog.Debug("publish device update", "name", peer.HostName)
+	slog.Debug("publish device update", "name", netPeer.HostName)
 	if err := encodedConn.Publish(peer.WGPublicKey, plexus.DeviceUpdate{
 		Action:  plexus.JoinNetwork,
 		Network: netToUpdate,
 	}); err != nil {
-		slog.Error("publish device update", "peer", peer.HostName, "error", err)
+		slog.Error("publish device update", "peer", netPeer.HostName, "error", err)
 		return netToUpdate, err
 	}
 	slog.Debug("publish network update", "network", network, "update", update)
@@ -319,12 +333,8 @@ func processUpdate(request *plexus.AgentRequest) plexus.ServerResponse {
 func connectToNetwork(request *plexus.AgentRequest) plexus.ServerResponse {
 	errResponse := plexus.ServerResponse{Error: true}
 	response := plexus.ServerResponse{}
-	_, err := boltdb.Get[plexus.Peer](request.Peer.WGPublicKey, peerTable)
-	if err == nil {
-		errResponse.Message = "no such peer"
-		return errResponse
-	}
-	network, err := addPeerToNetwork(request.NetworkPeer, request.Network)
+	slog.Debug("join request", "peer", request.Peer.WGPublicKey, "network", request.Network)
+	network, err := addPeerToNetwork(request.Peer.WGPublicKey, request.Network)
 	if err != nil {
 		errResponse.Message = err.Error()
 		return errResponse

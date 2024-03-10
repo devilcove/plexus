@@ -18,7 +18,7 @@ import (
 
 func deleteInterface(name string) error {
 	slog.Info("deleting interface", "interface", name)
-	defer log.Println("delete inteface done")
+	defer log.Println("delete interface done")
 	link, err := netlink.LinkByName(name)
 	if err != nil {
 		return fmt.Errorf("interface does not exist %w", err)
