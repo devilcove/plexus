@@ -22,7 +22,6 @@ import (
 	"os"
 	"runtime/debug"
 
-	"github.com/devilcove/plexus"
 	"github.com/devilcove/plexus/agent"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -88,14 +87,6 @@ func initConfig() {
 		log.Println("viper.Unmarshal", err)
 	}
 	agent.Config = config
-	plexus.SetLogging(config.Verbosity)
 	slog.Debug("using configuration", "config", config)
 	debug.SetTraceback("single")
-}
-
-func checkErr(msg interface{}) {
-	if msg != nil {
-		slog.Error("fatal error", "Error:", msg)
-		os.Exit(1)
-	}
 }

@@ -17,6 +17,7 @@ import (
 var ()
 
 func Run() {
+	plexus.SetLogging(Config.Verbosity)
 	if err := boltdb.Initialize(path+"plexus-agent.db", []string{deviceTable, networkTable}); err != nil {
 		slog.Error("failed to initialize database", "error", err)
 		return
