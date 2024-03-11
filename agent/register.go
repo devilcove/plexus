@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"runtime"
-	"slices"
 	"strings"
 	"time"
 
@@ -19,8 +18,17 @@ import (
 )
 
 func registerPeer(request *plexus.RegisterRequest) plexus.ServerResponse {
-	log.Println("register request")
 	errResp := plexus.ServerResponse{Error: true}
+	self, err := newDevice()
+	if err != nil {
+		errResp.Message = err.Error()
+		return errResp
+	}
+	if self.Server != "" {
+		errResp.Message = "already registered with server " + self.Server
+		return errResp
+	}
+	log.Println("register request")
 	loginKey, err := plexus.DecodeToken(request.Token)
 	if err != nil {
 		log.Println(err)
@@ -30,11 +38,6 @@ func registerPeer(request *plexus.RegisterRequest) plexus.ServerResponse {
 	ec, err := createRegistationConnection(loginKey)
 	if err != nil {
 		errResp.Message = "invalid registration key: " + err.Error()
-		return errResp
-	}
-	self, err := newDevice()
-	if err != nil {
-		errResp.Message = err.Error()
 		return errResp
 	}
 	resp := plexus.ServerResponse{}
@@ -47,18 +50,16 @@ func registerPeer(request *plexus.RegisterRequest) plexus.ServerResponse {
 		errResp.Message = err.Error()
 		return errResp
 	}
-	if !slices.Contains(self.Servers, loginKey.URL) {
-		self.Servers = append(self.Servers, loginKey.URL)
-		if err := boltdb.Save(self, "self", deviceTable); err != nil {
-			log.Println(err)
-			errResp.Message = err.Error()
-			return errResp
-		}
+	self.Server = resp.ServerURL
+	if err := boltdb.Save(self, "self", deviceTable); err != nil {
+		slog.Error("save device", "error", err)
+		errResp.Message = "error saving device " + err.Error()
+		return errResp
 	}
 	slog.Debug("server response to join request", "response", resp)
 	addNewNetworks(self, resp.Networks)
 	// reset nats connection
-	//connectToServers()
+	connectToServer(self)
 	return resp
 }
 

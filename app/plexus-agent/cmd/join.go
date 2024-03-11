@@ -25,8 +25,8 @@ import (
 
 // joinCmd represents the connect command
 var joinCmd = &cobra.Command{
-	Use:   "join network server",
-	Args:  cobra.ExactArgs(2),
+	Use:   "join network",
+	Args:  cobra.ExactArgs(1),
 	Short: "join network",
 	Long:  `join network`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -37,7 +37,6 @@ var joinCmd = &cobra.Command{
 		defer ec.Close()
 		cobra.CheckErr(ec.Request("update", plexus.AgentRequest{
 			Network: args[0],
-			Server:  args[1],
 			Action:  plexus.JoinNetwork,
 		}, &response, agent.NatsTimeout))
 		if response.Error {

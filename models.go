@@ -69,7 +69,6 @@ type NatsUser struct {
 }
 type Network struct {
 	Name          string `form:"name"`
-	ServerURL     string
 	Net           net.IPNet
 	AddressString string `form:"addressstring"`
 	Peers         []NetworkPeer
@@ -147,10 +146,11 @@ type LeaveResponse struct {
 	Message string
 }
 type ServerResponse struct {
-	Message  string
-	Error    bool
-	Networks []Network
-	Version  ServerVersion
+	Message   string
+	Error     bool
+	Networks  []Network
+	Version   string
+	ServerURL string
 }
 
 type LeaveRequest struct {
@@ -168,13 +168,8 @@ type AgentRequest struct {
 }
 
 type VersionResponse struct {
-	Servers []ServerVersion
-	Agent   string
-}
-
-type ServerVersion struct {
-	Name    string
-	Version string
+	Server string
+	Agent  string
 }
 
 type NetworkUpdate struct {
@@ -184,6 +179,7 @@ type NetworkUpdate struct {
 
 type DeviceUpdate struct {
 	Action  Action
+	Server  string
 	Network Network
 }
 

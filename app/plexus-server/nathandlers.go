@@ -59,6 +59,7 @@ func registerHandler(request *plexus.ServerRegisterRequest) plexus.ServerRespons
 		return errResp
 	}
 	response.Message = "registration successful"
+	response.ServerURL = config.FQDN
 	return response
 }
 
@@ -103,6 +104,7 @@ func addPeerToNetwork(peerID, network string) (plexus.Network, error) {
 		return netToUpdate, err
 	}
 	netPeer := plexus.NetworkPeer{}
+	slog.Debug("requesting listenports from", "peer", peer.WGPublicKey)
 	if err := encodedConn.Request(peer.WGPublicKey, plexus.DeviceUpdate{
 		Action: plexus.SendListenPorts,
 		Network: plexus.Network{
@@ -111,6 +113,7 @@ func addPeerToNetwork(peerID, network string) (plexus.Network, error) {
 	}, &netPeer, natsTimeout); err != nil {
 		return netToUpdate, err
 	}
+	slog.Debug("listenports", "private", netPeer.ListenPort, "public", netPeer.PublicListenPort)
 	netPeer.Endpoint = peer.Endpoint
 	// check if peer is already part of network
 	for _, existing := range netToUpdate.Peers {
@@ -313,7 +316,7 @@ func processUpdate(request *plexus.AgentRequest) plexus.ServerResponse {
 	case plexus.JoinNetwork:
 		return connectToNetwork(request)
 	case plexus.Version:
-		return serverVersion(request.Args)
+		return serverVersion()
 	case plexus.LeaveServer:
 		peer, err := discardPeer(request.Args)
 		slog.Error("discard peer", "error", err)
@@ -322,6 +325,8 @@ func processUpdate(request *plexus.AgentRequest) plexus.ServerResponse {
 		return plexus.ServerResponse{}
 	case plexus.LeaveNetwork:
 		return processLeave(request)
+	case plexus.UpdateNetworkPeer:
+		return processUpdateNetworkPeer(request)
 	default:
 		return plexus.ServerResponse{
 			Error:   true,
@@ -336,6 +341,7 @@ func connectToNetwork(request *plexus.AgentRequest) plexus.ServerResponse {
 	slog.Debug("join request", "peer", request.Peer.WGPublicKey, "network", request.Network)
 	network, err := addPeerToNetwork(request.Peer.WGPublicKey, request.Network)
 	if err != nil {
+		slog.Debug("add peer to network", "error", err)
 		errResponse.Message = err.Error()
 		return errResponse
 	}
@@ -368,17 +374,12 @@ func publishNetworkPeerUpdate(peer plexus.Peer) error {
 	return nil
 }
 
-func serverVersion(long string) plexus.ServerResponse {
-	serverVersion := plexus.ServerVersion{
-		Name:    config.FQDN,
-		Version: version + ": ",
-	}
-	if long == "true" {
-		info, _ := debug.ReadBuildInfo()
-		for _, setting := range info.Settings {
-			if strings.Contains(setting.Key, "vcs") {
-				serverVersion.Version = serverVersion.Version + setting.Value + " "
-			}
+func serverVersion() plexus.ServerResponse {
+	serverVersion := version + ": "
+	info, _ := debug.ReadBuildInfo()
+	for _, setting := range info.Settings {
+		if strings.Contains(setting.Key, "vcs") {
+			serverVersion = serverVersion + setting.Value + " "
 		}
 	}
 	return plexus.ServerResponse{Version: serverVersion}

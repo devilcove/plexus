@@ -27,10 +27,9 @@ func Run() {
 	if err != nil {
 		slog.Error("new device", "error", err)
 	}
-	serverMap = initServerMap()
 	startAllInterfaces(self)
 	ns, ec := startAgentNatsServer()
-	connectToServers()
+	connectToServer(self)
 	checkinTicker := time.NewTicker(checkinTime)
 	//serverTicker := time.NewTicker(serverCheckTime)
 	for {
@@ -62,14 +61,14 @@ func Run() {
 	}
 }
 
-func connectToServer(self Device, server string) (*nats.EncodedConn, error) {
+func connectToServer(self Device) error {
 	kp, err := nkeys.FromSeed([]byte(self.Seed))
 	if err != nil {
-		return nil, err
+		return err
 	}
 	pk, err := kp.PublicKey()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	sign := func(nonce []byte) ([]byte, error) {
 		return kp.Sign(nonce)
@@ -95,12 +94,18 @@ func connectToServer(self Device, server string) (*nats.EncodedConn, error) {
 		}),
 		nats.Nkey(pk, sign),
 	}...)
-	slog.Debug("connecting to server", "url", server)
-	nc, err := nats.Connect(server, opts...)
+	slog.Debug("connecting to server", "url", self.Server)
+	nc, err := nats.Connect(self.Server, opts...)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return nats.NewEncodedConn(nc, nats.JSON_ENCODER)
+	serverEC, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
+	if err != nil {
+		return err
+	}
+	serverConn.Store(serverEC)
+	subcribeToServerTopics(self)
+	return nil
 }
 
 func checkin() {
@@ -118,34 +123,31 @@ func checkin() {
 	//checkinData.ListenPort = self.ListenPort
 	//checkinData.PublicListenPort = self.PublicListenPort
 	checkinData.Endpoint = self.Endpoint
-	serverMap.mutex.RLock()
-	defer serverMap.mutex.RUnlock()
-	for server, data := range serverMap.data {
-		if !data.EC.Conn.IsConnected() {
-			slog.Debug("not connected to server broker .... skipping checkin", "server", server)
-			continue
-		}
-		checkinData.Connections = getConnectivity(server)
-		if err := data.EC.Request("update."+self.WGPublicKey, plexus.AgentRequest{
-			Action:      plexus.Checkin,
-			CheckinData: checkinData,
-		}, &serverResponse, NatsTimeout); err != nil {
-			slog.Error("error publishing checkin ", "error", err)
-			continue
-		}
-		log.Println("checkin response from server", server, serverResponse.Error, serverResponse.Message)
+	serverEC := serverConn.Load()
+	if serverEC == nil {
+		slog.Debug("not connected to server broker .... skipping checkin")
+		return
 	}
+	if !serverEC.Conn.IsConnected() {
+		slog.Debug("not connected to server broker .... skipping checkin")
+		return
+	}
+	checkinData.Connections = getConnectivity()
+	if err := serverEC.Request("update."+self.WGPublicKey, plexus.AgentRequest{
+		Action:      plexus.Checkin,
+		CheckinData: checkinData,
+	}, &serverResponse, NatsTimeout); err != nil {
+		slog.Error("error publishing checkin ", "error", err)
+		return
+	}
+	log.Println("checkin response from server", serverResponse.Message, serverResponse.Error)
 }
 
 func closeServerConnections() {
-	serverMap.mutex.RLock()
-	defer serverMap.mutex.RUnlock()
-	for _, server := range serverMap.data {
-		for _, sub := range server.Subscriptions {
-			if err := sub.Drain(); err != nil {
-				slog.Error("drain subscription", "sub", sub.Subject, "error", err)
-			}
+	for _, sub := range subscriptions {
+		if err := sub.Drain(); err != nil {
+			slog.Error("drain subscription", "sub", sub.Subject, "error", err)
 		}
-		server.EC.Close()
 	}
+	serverConn.Load().Close()
 }

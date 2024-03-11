@@ -9,22 +9,6 @@ import (
 	"github.com/devilcove/plexus"
 )
 
-func deleteServer(server string) {
-	self, err := boltdb.Get[Device]("self", deviceTable)
-	if err != nil {
-		slog.Error("unable to read device", "error", err)
-		return
-	}
-	for i, serv := range self.Servers {
-		if serv == server {
-			self.Servers = slices.Delete(self.Servers, i, i+1)
-		}
-	}
-	if err := boltdb.Save(self, "self", deviceTable); err != nil {
-		slog.Error("save device", "error", err)
-	}
-}
-
 func networkUpdates(subject string, update plexus.NetworkUpdate) {
 	networkName := subject[9:]
 	slog.Info("network update for", "network", networkName, "type", update.Action.String(), "peer", update.Peer)
@@ -45,7 +29,7 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 	switch update.Action {
 	case plexus.AddPeer:
 		network.Peers = append(network.Peers, update.Peer)
-		if err := addPeertoInterface(networkMap[network.Name].Interface, update.Peer); err != nil {
+		if err := addPeertoInterface(network.Interface, update.Peer); err != nil {
 			slog.Error("add peer", "error", err)
 		}
 	case plexus.DeletePeer:
@@ -64,7 +48,7 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 			if oldpeer.WGPublicKey == update.Peer.WGPublicKey {
 				network.Peers = slices.Delete(network.Peers, i, i)
 			}
-			if err := deletePeerFromInterface(networkMap[network.Name].Interface, update.Peer); err != nil {
+			if err := deletePeerFromInterface(network.Interface, update.Peer); err != nil {
 				slog.Error("delete peer", "error", err)
 			}
 		}
@@ -74,7 +58,7 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 				network.Peers = slices.Replace(network.Peers, i, i+1, update.Peer)
 			}
 		}
-		if err := replacePeerInInterface(networkMap[networkName].Interface, update.Peer); err != nil {
+		if err := replacePeerInInterface(network.Interface, update.Peer); err != nil {
 			slog.Error("replace peer", "error", err)
 		}
 
@@ -124,7 +108,7 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 		if err := boltdb.Delete[Network](network.Name, networkTable); err != nil {
 			slog.Error("delete network", "error", err)
 		}
-		if err := deleteInterface(networkMap[network.Name].Interface); err != nil {
+		if err := deleteInterface(network.Interface); err != nil {
 			slog.Error("delete interfadce", "interface", network.Interface, "errror", err)
 		}
 		return

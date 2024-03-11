@@ -43,14 +43,12 @@ var statusCmd = &cobra.Command{
 		status := agent.StatusResponse{}
 		//networks := []Network{}
 		cobra.CheckErr(ec.Request("status", nil, &status, agent.NatsTimeout))
-		if len(status.Servers) == 0 {
-			fmt.Println("agent running... not connected to any servers")
+		if status.Server == "" {
+			fmt.Println("agent running... not connected to servers")
 			return
 		}
-		fmt.Println("Servers")
-		for _, server := range status.Servers {
-			fmt.Println("\t", server.Server, ":", server.Connected)
-		}
+		fmt.Println("Server")
+		fmt.Println("\t", status.Server, ":", status.Connected)
 		if len(status.Networks) == 0 {
 			fmt.Println("no networks")
 			return
@@ -72,7 +70,6 @@ var statusCmd = &cobra.Command{
 			}
 			fmt.Println("interface:", network.Interface)
 			fmt.Println("\t network name:", network.Name)
-			fmt.Println("\t server: ", network.ServerURL)
 			fmt.Println("\t public key:", wg.PrivateKey.PublicKey())
 			fmt.Println("\t listen port:", wg.ListenPort)
 			fmt.Println("\t public listen port:", network.PublicListenPort)

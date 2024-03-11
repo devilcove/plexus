@@ -23,23 +23,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var server string
-
 // reloadCmd represents the reload command
 var reloadCmd = &cobra.Command{
 	Use:   "reload",
 	Short: "reload network configuration(s)",
-	Long: `reload network configurations(s)
-from single or all servers`,
+	Long:  `reload network configurations(s)`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if server != "" {
-			fmt.Println("reloading data from server", server)
-		} else {
-			fmt.Println("reloading data from all connected servers")
-		}
-		request := plexus.ReloadRequest{
-			Server: server,
-		}
+		fmt.Println("reloading data from server")
+		request := plexus.ReloadRequest{}
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
 		resp := plexus.ServerResponse{}
@@ -54,15 +45,4 @@ from single or all servers`,
 
 func init() {
 	rootCmd.AddCommand(reloadCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// reloadCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	reloadCmd.Flags().StringVarP(&server, "server", "s", "", "server to query")
-
 }

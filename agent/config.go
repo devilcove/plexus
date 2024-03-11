@@ -2,7 +2,7 @@ package agent
 
 import (
 	"errors"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/nats-io/nats.go"
@@ -25,38 +25,15 @@ const (
 )
 
 var (
-	Config Configuration
-	// networkMap containss the interface name and reset channel for networks
-	networkMap map[string]netMap
-	//serverMap      map[string]serverData
-	serverMap serverConnections
+	Config        Configuration
+	serverConn    atomic.Pointer[nats.EncodedConn]
+	subscriptions []*nats.Subscription
 	//errors
 	ErrNetNotMapped = errors.New("network not mapped to server")
 	ErrConnected    = errors.New("network connected")
 )
 
-type serverConnections struct {
-	data  map[string]serverData
-	mutex *sync.RWMutex
-}
-
-func initServerMap() serverConnections {
-	serverMap = serverConnections{
-		data:  make(map[string]serverData),
-		mutex: &sync.RWMutex{}}
-	return serverMap
-}
-
 type Configuration struct {
 	NatsPort  int
 	Verbosity string
-}
-
-type serverData struct {
-	EC            *nats.EncodedConn
-	Subscriptions []*nats.Subscription
-}
-
-type netMap struct {
-	Interface string
 }

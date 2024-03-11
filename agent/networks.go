@@ -22,7 +22,6 @@ func deleteAllNetworks() {
 func toAgentNetwork(in plexus.Network) Network {
 	out := Network{}
 	out.Name = in.Name
-	out.ServerURL = in.ServerURL
 	out.Net = in.Net
 	out.Peers = in.Peers
 	return out

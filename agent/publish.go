@@ -7,44 +7,31 @@ import (
 )
 
 func publishDeviceUpdate(self *Device) {
-	serverMap.mutex.RLock()
-	defer serverMap.mutex.RUnlock()
-	for _, server := range self.Servers {
-		conn, ok := serverMap.data[server]
-		if !ok {
-			slog.Error("server not mapped", "server", server)
-			return
-		}
-		if err := conn.EC.Publish("update."+self.WGPublicKey, plexus.AgentRequest{
-			Action: plexus.UpdatePeer,
-			Peer: plexus.Peer{
-				WGPublicKey: self.WGPublicKey,
-				PubNkey:     self.PubNkey,
-				Version:     self.Version,
-				Name:        self.Name,
-				OS:          self.OS,
-				//ListenPort:       self.ListenPort,
-				//PublicListenPort: self.PublicListenPort,
-				Endpoint:      self.Endpoint,
-				NatsConnected: true,
-			},
-		}); err != nil {
-			slog.Error("publish device update", "error", err)
-		}
+	serverEC := serverConn.Load()
+	if err := serverEC.Publish("update."+self.WGPublicKey, plexus.AgentRequest{
+		Action: plexus.UpdatePeer,
+		Peer: plexus.Peer{
+			WGPublicKey: self.WGPublicKey,
+			PubNkey:     self.PubNkey,
+			Version:     self.Version,
+			Name:        self.Name,
+			OS:          self.OS,
+			//ListenPort:       self.ListenPort,
+			//PublicListenPort: self.PublicListenPort,
+			Endpoint:      self.Endpoint,
+			NatsConnected: true,
+		},
+	}); err != nil {
+		slog.Error("publish device update", "error", err)
 	}
 }
 
 func publishPeerUpdate(self *Device, network *Network) {
-	serverMap.mutex.RLock()
-	defer serverMap.mutex.RUnlock()
-	conn, ok := serverMap.data[network.ServerURL]
-	if !ok {
-		slog.Error("server not mapped", "server", network.ServerURL)
-		return
-	}
 	me := getSelfFromPeers(self, network.Peers)
-	if err := conn.EC.Publish("update."+self.WGPublicKey, plexus.AgentRequest{
-		Action: plexus.UpdateNetworkPeer,
+	serverEC := serverConn.Load()
+	if err := serverEC.Publish("update."+self.WGPublicKey, plexus.AgentRequest{
+		Action:  plexus.UpdateNetworkPeer,
+		Network: network.Name,
 		NetworkPeer: plexus.NetworkPeer{
 			WGPublicKey:      self.WGPublicKey,
 			HostName:         self.Name,

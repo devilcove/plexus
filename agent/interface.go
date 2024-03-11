@@ -51,7 +51,7 @@ func startAllInterfaces(self Device) {
 		return
 	}
 	for _, network := range networks {
-		slog.Debug("starting interface", "interface", network.Interface, "network", network.Name, "server", network.ServerURL)
+		slog.Debug("starting interface", "interface", network.Interface, "network", network.Name)
 		if err := startInterface(self, network); err != nil {
 			slog.Error("start interface", "network", network.Name, "interface", network.Interface, "error", err)
 		}
@@ -228,7 +228,7 @@ func getFreePort(start int) (int, error) {
 	return 0, errors.New("no free ports")
 }
 
-func getConnectivity(server string) []plexus.ConnectivityData {
+func getConnectivity() []plexus.ConnectivityData {
 	results := []plexus.ConnectivityData{}
 	networks, err := boltdb.GetAll[Network](networkTable)
 	if err != nil {
@@ -246,9 +246,6 @@ func getConnectivity(server string) []plexus.ConnectivityData {
 		return results
 	}
 	for _, network := range networks {
-		if network.ServerURL != server {
-			continue
-		}
 		data := plexus.ConnectivityData{
 			Network: network.Name,
 		}

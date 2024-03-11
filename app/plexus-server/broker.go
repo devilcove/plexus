@@ -100,11 +100,21 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 	//	slog.Error("subscribe checkin", "error", err)
 	//}
 	updateSub, err := encodedConn.Subscribe("update.*", func(subj, reply string, request *plexus.AgentRequest) {
+		peer := subj[7:]
+		if request.Peer.WGPublicKey != "" && request.Peer.WGPublicKey != peer {
+			slog.Error("invalid update requests", "subject", peer, "peer", request.Peer.WGPublicKey, "networkPeer", request.NetworkPeer.WGPublicKey)
+			return
+		}
+		if request.NetworkPeer.WGPublicKey != "" && request.NetworkPeer.WGPublicKey != peer {
+			slog.Error("invalid update requests", "subject", peer, "peer", request.Peer.WGPublicKey, "networkPeer", request.NetworkPeer.WGPublicKey)
+			return
+		}
+		slog.Debug("update request from", "peer", peer, "request", request.Action)
 		response := processUpdate(request)
 		if request.Action == plexus.GetConfig {
 			response = configHandler(subj)
 		}
-		slog.Debug("pubish update rely", "respone", response)
+		slog.Debug("publish update rely", "respone", response)
 		if err := encodedConn.Publish(reply, response); err != nil {
 			slog.Error("update", "error", err)
 		}

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/lmittmann/tint"
@@ -62,7 +63,7 @@ func SetLogging(v string) *slog.Logger {
 	_ = replace
 	//logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{AddSource: true, ReplaceAttr: replace, Level: logLevel}))
 	slog.SetDefault(logger)
-	switch v {
+	switch strings.ToUpper(v) {
 	case "DEBUG":
 		logLevel.Set(slog.LevelDebug)
 	case "INFO":
@@ -75,6 +76,6 @@ func SetLogging(v string) *slog.Logger {
 		logLevel.Set(slog.LevelInfo)
 	}
 	slog.SetLogLoggerLevel(slog.LevelDebug)
-	slog.Debug("Logging level set to", "level", logLevel.Level())
+	slog.Info("Logging level set to", "level", logLevel.Level())
 	return logger
 }

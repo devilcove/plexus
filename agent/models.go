@@ -14,13 +14,13 @@ type Device struct {
 	plexus.Peer
 	WGPrivateKey string
 	Seed         string
-	Servers      []string
+	Server       string
 }
 
 type StatusResponse struct {
-	Servers    []ServerConnection
-	Networks   []Network
-	ListenPort int
+	Server    string
+	Connected string
+	Networks  []Network
 }
 
 type ServerConnection struct {
