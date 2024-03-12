@@ -42,7 +42,7 @@ var statusCmd = &cobra.Command{
 		cobra.CheckErr(err)
 		status := agent.StatusResponse{}
 		//networks := []Network{}
-		cobra.CheckErr(ec.Request("status", nil, &status, agent.NatsTimeout))
+		cobra.CheckErr(ec.Request(agent.Agent+plexus.Status, nil, &status, agent.NatsTimeout))
 		if status.Server == "" {
 			fmt.Println("agent running... not connected to servers")
 			return

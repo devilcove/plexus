@@ -17,48 +17,39 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
-func registerPeer(request *plexus.RegisterRequest) plexus.ServerResponse {
-	errResp := plexus.ServerResponse{Error: true}
+func handleRegistration(request *plexus.RegisterRequest) plexus.MessageResponse {
 	self, err := newDevice()
 	if err != nil {
-		errResp.Message = err.Error()
-		return errResp
+		return plexus.MessageResponse{Message: "error: " + err.Error()}
 	}
 	if self.Server != "" {
-		errResp.Message = "already registered with server " + self.Server
-		return errResp
+		return plexus.MessageResponse{Message: "already registered with server " + self.Server}
 	}
 	log.Println("register request")
 	loginKey, err := plexus.DecodeToken(request.Token)
 	if err != nil {
 		log.Println(err)
-		errResp.Message = "invalid registration key: " + err.Error()
-		return errResp
+		return plexus.MessageResponse{Message: "invalid registration key: " + err.Error()}
 	}
 	ec, err := createRegistationConnection(loginKey)
 	if err != nil {
-		errResp.Message = "invalid registration key: " + err.Error()
-		return errResp
+		return plexus.MessageResponse{Message: "invalid registration key: " + err.Error()}
 	}
-	resp := plexus.ServerResponse{}
+	resp := plexus.MessageResponse{}
 	serverRequest := plexus.ServerRegisterRequest{
 		KeyName: loginKey.KeyName,
 		Peer:    self.Peer,
 	}
 	if err := ec.Request("register", serverRequest, &resp, NatsTimeout); err != nil {
 		log.Println(err)
-		errResp.Message = err.Error()
-		return errResp
+		return plexus.MessageResponse{Message: "error: " + err.Error()}
 	}
-	self.Server = resp.ServerURL
+	self.Server = ec.Conn.ConnectedUrl()
 	if err := boltdb.Save(self, "self", deviceTable); err != nil {
 		slog.Error("save device", "error", err)
-		errResp.Message = "error saving device " + err.Error()
-		return errResp
+		return plexus.MessageResponse{Message: "error saving device " + err.Error()}
 	}
 	slog.Debug("server response to join request", "response", resp)
-	addNewNetworks(self, resp.Networks)
-	// reset nats connection
 	connectToServer(self)
 	return resp
 }

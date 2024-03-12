@@ -11,31 +11,55 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type Action int
+//type Action int
+//
+//const (
+//	DeletePeer        Action = iota //0
+//	AddPeer                         //1
+//	UpdatePeer                      //2
+//	UpdateNetworkPeer               //3
+//	AddRelay                        //4
+//	DeleteRelay                     //5
+//	DeleteNetwork                   //6
+//	JoinNetwork                     //7
+//	LeaveNetwork                    //8
+//	LeaveServer                     //9
+//	Ping                            //10
+//	Version                         //11
+//	Checkin                         //12
+//	GetConfig                       //13
+//	SendListenPorts                 //14
+//)
 
+// nats topics
 const (
-	DeletePeer        Action = iota //0
-	AddPeer                         //1
-	UpdatePeer                      //2
-	UpdateNetworkPeer               //3
-	AddRelay                        //4
-	DeleteRelay                     //5
-	DeleteNetwork                   //6
-	JoinNetwork                     //7
-	LeaveNetwork                    //8
-	LeaveServer                     //9
-	Ping                            //10
-	Version                         //11
-	Checkin                         //12
-	GetConfig                       //13
-	SendListenPorts                 //14
+	DeletePeer        = ".deletePeer"
+	AddPeer           = ".addPeer"
+	UpdatePeer        = ".updatePeer"
+	UpdateNetworkPeer = ".updateNetworkPeer"
+	AddRelay          = ".addRelay"
+	DeleteRelay       = ".deleteRelay"
+	DeleteNetwork     = ".deleteNetwork"
+	JoinNetwork       = ".join"
+	LeaveNetwork      = ".leaveNetwork"
+	LeaveServer       = ".leaveServer"
+	LogLevel          = ".loglevel"
+	Ping              = ".ping"
+	Register          = ".register"
+	Reload            = ".reload"
+	Reset             = ".reset"
+	Status            = ".status"
+	Version           = ".version"
+	Checkin           = ".checkin"
+	GetConfig         = ".getConfig"
+	SendListenPorts   = ".listenPorts"
 )
 
-func (i Action) String() string {
-	return [...]string{"DeletePeer", "AddPeer", "UpdatePeer", "UpdateNetworkPeer", "AddRelay", "DelteRely",
-		"DeleteNetwork", "JoinNetwork", "LeaveNetwork", "LeaveServer", "Ping", "Version",
-		"Checkin", "GetConfig", "SendListenPorts"}[i]
-}
+//func (i Action) String() string {
+//	return [...]string{"DeletePeer", "AddPeer", "UpdatePeer", "UpdateNetworkPeer", "AddRelay", "DelteRely",
+//		"DeleteNetwork", "JoinNetwork", "LeaveNetwork", "LeaveServer", "Ping", "Version",
+//		"Checkin", "GetConfig", "SendListenPorts"}[i]
+//}
 
 type Settings struct {
 	Theme   string `json:"theme" form:"theme"`
@@ -52,6 +76,14 @@ func (e *ErrorMessage) Process(c *gin.Context) {
 	slog.Error(e.Message, "status", e.Status)
 	c.HTML(http.StatusOK, "error", e)
 	c.Abort()
+}
+
+type ErrorResponse struct {
+	Message string
+}
+
+type MessageResponse struct {
+	Message string
 }
 
 type User struct {
@@ -133,38 +165,27 @@ type ServerRegisterRequest struct {
 }
 
 type JoinRequest struct {
-	Network string
+	Network          string
+	ListenPort       int
+	PublicListenPort int
 	Peer
+}
+
+type ServerJoinRequest struct {
+	Network Network
+}
+
+type JoinResponse struct {
+	Message string
+	Network Network
 }
 
 type LevelRequest struct {
 	Level string
 }
 
-type LeaveResponse struct {
-	Error   bool
-	Message string
-}
-type ServerResponse struct {
-	Message   string
-	Error     bool
-	Networks  []Network
-	Version   string
-	ServerURL string
-}
-
 type LeaveRequest struct {
 	Network string
-}
-
-type AgentRequest struct {
-	Network     string
-	Server      string
-	Peer        Peer
-	NetworkPeer NetworkPeer
-	Action      Action
-	CheckinData CheckinData
-	Args        string
 }
 
 type VersionResponse struct {
@@ -173,12 +194,12 @@ type VersionResponse struct {
 }
 
 type NetworkUpdate struct {
-	Action Action
+	Action string
 	Peer   NetworkPeer
 }
 
 type DeviceUpdate struct {
-	Action  Action
+	Action  string
 	Server  string
 	Network Network
 }
@@ -197,6 +218,11 @@ type ConnectivityData struct {
 	Connectivity float64
 }
 
+type NetworkResponse struct {
+	Message  string
+	Networks []Network
+}
+
 type CheckinData struct {
 	ID               string
 	Version          string
@@ -210,12 +236,18 @@ type PingResponse struct {
 	Message string
 }
 
-type ReloadRequest struct {
-	Server string
-}
-
 type ResetRequest struct {
 	Network string
+}
+
+type ListenPortRequest struct {
+	Network string
+}
+
+type ListenPortResponse struct {
+	Message          string
+	ListenPort       int
+	PublicListenPort int
 }
 
 func DecodeToken(token string) (KeyValue, error) {

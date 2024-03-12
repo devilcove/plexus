@@ -69,59 +69,14 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 		slog.Error("nats connect", "error", err)
 		brokerfail <- 1
 	}
-	encodedConn, err = nats.NewEncodedConn(natsConn, nats.JSON_ENCODER)
+	eConn, err = nats.NewEncodedConn(natsConn, nats.JSON_ENCODER)
 	if err != nil {
 		slog.Error("nats encoded connect", "error", err)
 		brokerfail <- 1
 	}
 
-	// register handler
-	registerSub, err := encodedConn.Subscribe("register", func(subj, reply string, request *plexus.ServerRegisterRequest) {
-		response := registerHandler(request)
-		slog.Debug("publish register reply", "response", response)
-		if err := encodedConn.Publish(reply, response); err != nil {
-			slog.Error("publish register reply", "error", err)
-		}
-		if err := decrementKeyUsage(request.KeyName); err != nil {
-			slog.Error("decrement key usage", "error", err)
-		}
-	})
-	if err != nil {
-		slog.Error("subscribe register", "error", err)
-	}
-	//checkinSub, err := encodedConn.Subscribe("checkin.*", func(subj, reply string, request *plexus.CheckinData) {
-	//	slog.Debug("checkin", "peer", request.ID)
-	//	response := processCheckin(request)
-	//	if err := encodedConn.Publish(reply, response); err != nil {
-	//		slog.Error("publish checkin response", err)
-	//	}
-	//})
-	//if err != nil {
-	//	slog.Error("subscribe checkin", "error", err)
-	//}
-	updateSub, err := encodedConn.Subscribe("update.*", func(subj, reply string, request *plexus.AgentRequest) {
-		peer := subj[7:]
-		if request.Peer.WGPublicKey != "" && request.Peer.WGPublicKey != peer {
-			slog.Error("invalid update requests", "subject", peer, "peer", request.Peer.WGPublicKey, "networkPeer", request.NetworkPeer.WGPublicKey)
-			return
-		}
-		if request.NetworkPeer.WGPublicKey != "" && request.NetworkPeer.WGPublicKey != peer {
-			slog.Error("invalid update requests", "subject", peer, "peer", request.Peer.WGPublicKey, "networkPeer", request.NetworkPeer.WGPublicKey)
-			return
-		}
-		slog.Debug("update request from", "peer", peer, "request", request.Action)
-		response := processUpdate(request)
-		if request.Action == plexus.GetConfig {
-			response = configHandler(subj)
-		}
-		slog.Debug("publish update rely", "respone", response)
-		if err := encodedConn.Publish(reply, response); err != nil {
-			slog.Error("update", "error", err)
-		}
-	})
-	if err != nil {
-		slog.Error("subscribe update", "error", err)
-	}
+	subscrptions := serverSubcriptions()
+
 	//configSub, err := encodedConn.Subscribe("config.*", func(sub, reply string, request any) {
 	//response := configHandler(sub)
 	//	if err := encodedConn.Publish(reply, response); err != nil {
@@ -150,9 +105,12 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 		case <-ctx.Done():
 			pingTicker.Stop()
 			keyTicker.Stop()
-			registerSub.Drain()
+			for _, sub := range subscrptions {
+				sub.Drain()
+			}
+			//registerSub.Drain()
 			//checkinSub.Drain()
-			updateSub.Drain()
+			//updateSub.Drain()
 			//configSub.Drain()
 			//leaveSub.Drain()
 			return
@@ -246,4 +204,161 @@ func createAdminNKeyPair() nkeys.KeyPair {
 		slog.Error("save admin seed", "error", err)
 	}
 	return admin
+}
+
+func devicePermissions(id string) *server.Permissions {
+	return &server.Permissions{
+		Publish: &server.SubjectPermission{
+			Allow: []string{
+				id + ".>",
+			},
+		},
+		Subscribe: &server.SubjectPermission{
+			Allow: []string{"networks.>", id + ".>", "_INBOX.>"},
+		},
+		Response: &server.ResponsePermission{
+			MaxMsgs: 1,
+		},
+	}
+}
+
+func registerPermissions() *server.Permissions {
+	return &server.Permissions{
+		Publish: &server.SubjectPermission{
+			Allow: []string{"register"},
+		},
+		Subscribe: &server.SubjectPermission{
+			Allow: []string{"_INBOX.>"},
+		},
+	}
+}
+
+func serverSubcriptions() []*nats.Subscription {
+	subcriptions := []*nats.Subscription{}
+
+	//token subscriptions
+	// register handler
+	register, err := eConn.Subscribe("register", func(subj, reply string, request *plexus.ServerRegisterRequest) {
+		response := registerHandler(request)
+		slog.Debug("publish register reply", "response", response)
+		if err := eConn.Publish(reply, response); err != nil {
+			slog.Error("publish register reply", "error", err)
+		}
+		if err := decrementKeyUsage(request.KeyName); err != nil {
+			slog.Error("decrement key usage", "error", err)
+		}
+	})
+	if err != nil {
+		slog.Error("subscribe register", "error", err)
+	}
+	subcriptions = append(subcriptions, register)
+
+	//device subscriptions
+	//general
+	general, err := eConn.Subscribe(">", func(subj, repl string, request *any) {
+		slog.Debug("received request", "subject", subj, "message", request)
+	})
+	if err != nil {
+		slog.Error("subcribe general", "error", err)
+	}
+	subcriptions = append(subcriptions, general)
+
+	//checkin
+
+	checkin, err := eConn.Subscribe("*"+plexus.Checkin, func(subj, reply string, request *plexus.CheckinData) {
+		if len(subj) != 52 {
+			slog.Error("invalid subj", "subj", subj)
+			eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"})
+			return
+		}
+		if err := eConn.Publish(reply, processCheckin(request)); err != nil {
+			slog.Error("publish reply", "error", err)
+		}
+	})
+	if err != nil {
+		slog.Error("subcribe checkin", "error", err)
+	}
+	subcriptions = append(subcriptions, checkin)
+
+	//join
+	join, err := eConn.Subscribe("*"+plexus.JoinNetwork, func(subj, reply string, request *plexus.JoinRequest) {
+		if len(subj) != 49 {
+			slog.Error("invalid subj", "subj", subj)
+			eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"})
+			return
+		}
+		if err := eConn.Publish(reply, processJoin(subj[:44], request)); err != nil {
+			slog.Error("publish reply", "error", err)
+		}
+	})
+	if err != nil {
+		slog.Error("subcribe join", "error", err)
+	}
+	subcriptions = append(subcriptions, join)
+
+	//version
+	version, err := eConn.Subscribe("*"+plexus.Version, func(subj, reply string, request *any) {
+		if len(subj) != 52 {
+			slog.Error("invalid subj", "subj", subj)
+			eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"})
+			return
+		}
+		if err := eConn.Publish(reply, serverVersion()); err != nil {
+			slog.Error("publish reply", "error", err)
+		}
+	})
+	if err != nil {
+		slog.Error("subcribe version", "error", err)
+	}
+	subcriptions = append(subcriptions, version)
+
+	//leave
+	leave, err := eConn.Subscribe("*"+plexus.LeaveNetwork, func(subj, reply string, request *plexus.LeaveRequest) {
+		if len(subj) != 50 {
+			slog.Error("invalid subj", "subj", subj)
+			eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"})
+			return
+		}
+		if err := eConn.Publish(reply, processLeave(subj[:44], request)); err != nil {
+			slog.Error("publish reply", "error", err)
+		}
+	})
+	if err != nil {
+		slog.Error("subcribe leave", "error", err)
+	}
+	subcriptions = append(subcriptions, leave)
+
+	//leaveServer
+	leaveServer, err := eConn.Subscribe("*"+plexus.LeaveServer, func(subj, reply string, request *any) {
+		if len(subj) != 56 {
+			slog.Error("invalid subj", "subj", subj)
+			eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"})
+			return
+		}
+		if err := processLeaveServer(subj[:44]); err != nil {
+			slog.Error("leave server", "error", err)
+		}
+	})
+	if err != nil {
+		slog.Error("subcribe leave server", "error", err)
+	}
+	subcriptions = append(subcriptions, leaveServer)
+
+	//reload
+	reload, err := eConn.Subscribe("*"+plexus.Reload, func(subj, reply string, request *any) {
+		if len(subj) != 51 {
+			slog.Error("invalid subj", "subj", subj)
+			eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"})
+			return
+		}
+		if err := eConn.Publish(reply, processReload(subj[:44])); err != nil {
+			slog.Error("publish reply", "error", err)
+		}
+	})
+	if err != nil {
+		slog.Error("subcribe reload", "error", err)
+	}
+	subcriptions = append(subcriptions, reload)
+
+	return subcriptions
 }

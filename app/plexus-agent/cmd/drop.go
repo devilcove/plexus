@@ -25,23 +25,16 @@ import (
 
 // dropCmd represents the drop command
 var dropCmd = &cobra.Command{
-	Use:   "drop server",
-	Args:  cobra.ExactArgs(1),
+	Use:   "drop",
+	Args:  cobra.ExactArgs(0),
 	Short: "unregister from server",
 	Long:  `unregister from server. Also deletes networks controlled by server`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("leaving server", args[0])
-		var response plexus.ServerResponse
+		fmt.Println("leaving server")
+		var response plexus.MessageResponse
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
-		cobra.CheckErr(ec.Request("update", plexus.AgentRequest{
-			Action: plexus.LeaveServer,
-			Server: args[0],
-		},
-			&response, agent.NatsTimeout))
-		if response.Error {
-			fmt.Println("errors were encountered")
-		}
+		cobra.CheckErr(ec.Request(agent.Agent+plexus.LeaveServer, nil, &response, agent.NatsTimeout))
 		fmt.Println(response.Message)
 		ec.Close()
 	},

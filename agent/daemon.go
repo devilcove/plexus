@@ -29,7 +29,7 @@ func Run() {
 		slog.Error("new device", "error", err)
 	}
 	startAllInterfaces(self)
-	ns, ec := startAgentNatsServer()
+	ns, ec := startBroker()
 	connectToServer(self)
 	checkinTicker := time.NewTicker(checkinTime)
 	//serverTicker := time.NewTicker(serverCheckTime)
@@ -112,7 +112,7 @@ func connectToServer(self Device) error {
 func checkin() {
 	slog.Debug("checkin")
 	checkinData := plexus.CheckinData{}
-	serverResponse := plexus.ServerResponse{}
+	serverResponse := plexus.MessageResponse{}
 	self, err := boltdb.Get[Device]("self", deviceTable)
 	if err != nil {
 		slog.Error("get device", "error", err)
@@ -134,14 +134,11 @@ func checkin() {
 		return
 	}
 	checkinData.Connections = getConnectivity()
-	if err := serverEC.Request("update."+self.WGPublicKey, plexus.AgentRequest{
-		Action:      plexus.Checkin,
-		CheckinData: checkinData,
-	}, &serverResponse, NatsTimeout); err != nil {
+	if err := serverEC.Request(self.WGPublicKey+".checkin", checkinData, &serverResponse, NatsTimeout); err != nil {
 		slog.Error("error publishing checkin ", "error", err)
 		return
 	}
-	log.Println("checkin response from server", serverResponse.Message, serverResponse.Error)
+	log.Println("checkin response from server", serverResponse.Message)
 }
 
 func closeServerConnections() {
@@ -150,5 +147,8 @@ func closeServerConnections() {
 			slog.Error("drain subscription", "sub", sub.Subject, "error", err)
 		}
 	}
-	serverConn.Load().Close()
+	ec := serverConn.Load()
+	if ec != nil {
+		ec.Close()
+	}
 }

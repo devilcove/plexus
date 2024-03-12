@@ -112,7 +112,12 @@ func networkAddPeer(c *gin.Context) {
 	network := c.Param("id")
 	peerID := c.Param("peer")
 	slog.Debug("adding peer to network", "peer", peerID, "network", network)
-	if _, err := addPeerToNetwork(peerID, network); err != nil {
+	priv, pub, err := getListenPorts(peerID, network)
+	if err != nil {
+		processError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if _, err := addPeerToNetwork(peerID, network, priv, pub); err != nil {
 		processError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -159,7 +164,7 @@ func deleteNetwork(c *gin.Context) {
 		return
 	}
 	log.Println("deleting network", network)
-	if err := encodedConn.Publish("networks."+network, plexus.NetworkUpdate{
+	if err := eConn.Publish("networks."+network, plexus.NetworkUpdate{
 		Action: plexus.DeleteNetwork,
 	}); err != nil {
 		slog.Error("publish delete network", "error", err)
@@ -298,7 +303,7 @@ func addRelay(c *gin.Context) {
 		return
 	}
 	slog.Debug("publish network update - add relay", "network", network.Name, "relay", relayID)
-	if err := encodedConn.Publish("networks."+network.Name, update); err != nil {
+	if err := eConn.Publish("networks."+network.Name, update); err != nil {
 		slog.Error("publish new relay", "error", err)
 	}
 	networkDetails(c)
@@ -344,7 +349,7 @@ func deleteRelay(c *gin.Context) {
 		processError(c, http.StatusBadRequest, "failed to save update network peers "+err.Error())
 		return
 	}
-	if err := encodedConn.Publish("networks."+network.Name, update); err != nil {
+	if err := eConn.Publish("networks."+network.Name, update); err != nil {
 		slog.Error("publish new relay", "error", err)
 	}
 	networkDetails(c)

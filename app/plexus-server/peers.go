@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"slices"
@@ -90,7 +89,7 @@ func discardPeer(id string) (plexus.Peer, error) {
 	if err := boltdb.Delete[plexus.Peer](peer.WGPublicKey, peerTable); err != nil {
 		return peer, err
 	}
-	if err := encodedConn.Publish(peer.WGPublicKey, plexus.DeviceUpdate{Action: plexus.LeaveServer}); err != nil {
+	if err := eConn.Publish(peer.WGPublicKey, plexus.DeviceUpdate{Action: plexus.LeaveServer}); err != nil {
 		slog.Error("publish peer deletion", "error", err)
 	}
 	return peer, nil
@@ -135,7 +134,7 @@ func pingPeers() {
 		current := peer.NatsConnected
 		pong := plexus.PingResponse{}
 		slog.Debug("sending ping to peer", "peer", peer.Name, "id", peer.WGPublicKey)
-		if err := encodedConn.Request(peer.WGPublicKey, plexus.DeviceUpdate{Action: plexus.Ping}, &pong, natsTimeout); err != nil {
+		if err := eConn.Request(peer.WGPublicKey+".ping", nil, &pong, natsTimeout); err != nil {
 			peer.NatsConnected = false
 		}
 		if pong.Message == "pong" {
@@ -172,42 +171,42 @@ func savePeer(peer plexus.Peer) {
 	}
 }
 
-func processUpdateNetworkPeer(request *plexus.AgentRequest) plexus.ServerResponse {
-	network, err := boltdb.Get[plexus.Network](request.Network, networkTable)
-	if err != nil {
-		return plexus.ServerResponse{
-			Error:   true,
-			Message: "invalid network " + request.Network,
-		}
-	}
-	found := false
-	for i, peer := range network.Peers {
-		if peer.WGPublicKey == request.NetworkPeer.WGPublicKey {
-			network.Peers[i] = request.NetworkPeer
-			found = true
-			break
-		}
-	}
-	if !found {
-		return plexus.ServerResponse{
-			Error:   true,
-			Message: "invalid peer" + request.NetworkPeer.HostName,
-		}
-	}
-	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
-		return plexus.ServerResponse{
-			Error:   true,
-			Message: "network not updated: " + err.Error(),
-		}
-	}
-	slog.Debug("publishing network update", "network", request.Network, "action", plexus.UpdateNetworkPeer)
-	if err := encodedConn.Publish("network."+network.Name, plexus.NetworkUpdate{
-		Action: plexus.UpdateNetworkPeer,
-		Peer:   request.NetworkPeer,
-	}); err != nil {
-		slog.Error("publish network update", "error", err)
-	}
-	return plexus.ServerResponse{
-		Message: fmt.Sprintf("network %s update", request.Network),
-	}
-}
+//func processUpdate(request *plexus.AgentRequest) plexus.ServerResponse {
+//	network, err := boltdb.Get[plexus.Network](request.Network, networkTable)
+//	if err != nil {
+//		return plexus.ServerResponse{
+//			Error:   true,
+//			Message: "invalid network " + request.Network,
+//		}
+//	}
+//	found := false
+//	for i, peer := range network.Peers {
+//		if peer.WGPublicKey == request.NetworkPeer.WGPublicKey {
+//			network.Peers[i] = request.NetworkPeer
+//			found = true
+//			break
+//		}
+//	}
+//	if !found {
+//		return plexus.ServerResponse{
+//			Error:   true,
+//			Message: "invalid peer" + request.NetworkPeer.HostName,
+//		}
+//	}
+//	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+//		return plexus.ServerResponse{
+//			Error:   true,
+//			Message: "network not updated: " + err.Error(),
+//		}
+//	}
+//	slog.Debug("publishing network update", "network", request.Network, "action", plexus.UpdateNetworkPeer)
+//	if err := eConn.Publish("network."+network.Name, plexus.NetworkUpdate{
+//		Action: plexus.UpdateNetworkPeer,
+//		Peer:   request.NetworkPeer,
+//	}); err != nil {
+//		slog.Error("publish network update", "error", err)
+//	}
+//	return plexus.ServerResponse{
+//		Message: fmt.Sprintf("network %s update", request.Network),
+//	}
+//}

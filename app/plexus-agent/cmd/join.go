@@ -31,17 +31,13 @@ var joinCmd = &cobra.Command{
 	Long:  `join network`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("join called")
-		var response plexus.ServerResponse
+		var response plexus.JoinResponse
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
 		defer ec.Close()
-		cobra.CheckErr(ec.Request("update", plexus.AgentRequest{
+		cobra.CheckErr(ec.Request(agent.Agent+plexus.JoinNetwork, plexus.JoinRequest{
 			Network: args[0],
-			Action:  plexus.JoinNetwork,
 		}, &response, agent.NatsTimeout))
-		if response.Error {
-			fmt.Println("errors were encountered")
-		}
 		fmt.Println(response.Message)
 	},
 }

@@ -30,16 +30,11 @@ var reloadCmd = &cobra.Command{
 	Long:  `reload network configurations(s)`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("reloading data from server")
-		request := plexus.ReloadRequest{}
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
-		resp := plexus.ServerResponse{}
-		cobra.CheckErr(ec.Request("reload", request, &resp, agent.NatsTimeout))
-		if resp.Error {
-			fmt.Println("errors were encountered")
-		}
+		resp := plexus.MessageResponse{}
+		cobra.CheckErr(ec.Request(agent.Agent+plexus.Reload, nil, &resp, agent.NatsTimeout))
 		fmt.Println(resp.Message)
-
 	},
 }
 

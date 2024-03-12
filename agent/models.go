@@ -2,6 +2,8 @@ package agent
 
 import "github.com/devilcove/plexus"
 
+const Agent = "agent"
+
 type Network struct {
 	plexus.Network
 	ListenPort       int
@@ -19,7 +21,7 @@ type Device struct {
 
 type StatusResponse struct {
 	Server    string
-	Connected string
+	Connected bool
 	Networks  []Network
 }
 

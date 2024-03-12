@@ -31,18 +31,13 @@ var leaveCmd = &cobra.Command{
 	Long:  "leave network",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("leaving network", args[0])
-		var response plexus.LeaveResponse
+		var response plexus.MessageResponse
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
-		cobra.CheckErr(ec.Request("update", plexus.AgentRequest{
+		cobra.CheckErr(ec.Request(agent.Agent+plexus.LeaveNetwork, plexus.LeaveRequest{
 			Network: args[0],
-			Action:  plexus.LeaveNetwork,
 		}, &response, agent.NatsTimeout))
-		if response.Error {
-			fmt.Println("errors were encounterd")
-		}
 		fmt.Println(response.Message)
-		//cobra.CheckErr(ec.Flush())
 		ec.Close()
 	},
 }

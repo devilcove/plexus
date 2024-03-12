@@ -39,7 +39,10 @@ var versionCmd = &cobra.Command{
 			cobra.CheckErr(err)
 			response := plexus.VersionResponse{}
 			// need longer timeout is case of server timeout
-			cobra.CheckErr(ec.Request("version", long, &response, agent.NatsLongTimeout))
+			ec.Request(agent.Agent+plexus.Version, long, &response, agent.NatsLongTimeout)
+			if err != nil {
+				fmt.Println("error", err)
+			}
 			fmt.Printf("Server: %s\n", response.Server)
 			fmt.Printf("Agent:  %s\n", response.Agent)
 			fmt.Printf("Binary: ")
