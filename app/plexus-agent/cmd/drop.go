@@ -23,6 +23,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var force bool
+
 // dropCmd represents the drop command
 var dropCmd = &cobra.Command{
 	Use:   "drop",
@@ -34,7 +36,9 @@ var dropCmd = &cobra.Command{
 		var response plexus.MessageResponse
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
-		cobra.CheckErr(ec.Request(agent.Agent+plexus.LeaveServer, nil, &response, agent.NatsTimeout))
+		cobra.CheckErr(ec.Request(agent.Agent+plexus.LeaveServer, agent.LeaveServerRequest{
+			Force: force,
+		}, &response, agent.NatsTimeout))
 		fmt.Println(response.Message)
 		ec.Close()
 	},
@@ -42,4 +46,5 @@ var dropCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(dropCmd)
+	statusCmd.Flags().BoolVarP(&force, "force", "f", false, "force deletion even when not connected")
 }

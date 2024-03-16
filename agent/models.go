@@ -33,3 +33,7 @@ type ServerConnection struct {
 type NetData struct {
 	Name string
 }
+
+type LeaveServerRequest struct {
+	Force bool
+}
