@@ -32,7 +32,7 @@
 {{define "addKey"}}
 <div id="error" class="w3-red"></div>
 <h1>Create Key</h1>
-<form class="w3-container w3-card4" hx-post="/keys/add" hx-target="#content" hx-target-errors="#error">
+<form class="w3-container w3-card4" hx-post="/keys/add" hx-target="#content" hx-target-error="#error">
     <label>Key Name</label>
     <input class="w3-input" type="text" placeholder="key name (lowercase, chars and -)" name="name" required style="width:50%"><br>
     <label>Uses</label>
