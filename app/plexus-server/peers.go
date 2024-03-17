@@ -134,7 +134,7 @@ func pingPeers() {
 		current := peer.NatsConnected
 		pong := plexus.PingResponse{}
 		slog.Debug("sending ping to peer", "peer", peer.Name, "id", peer.WGPublicKey)
-		if err := eConn.Request(peer.WGPublicKey+".ping", nil, &pong, natsTimeout); err != nil {
+		if err := eConn.Request(plexus.Update+peer.WGPublicKey+".ping", nil, &pong, natsTimeout); err != nil {
 			peer.NatsConnected = false
 		}
 		if pong.Message == "pong" {

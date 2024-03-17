@@ -11,7 +11,7 @@ import (
 func getListenPorts(id, network string) (int, int, error) {
 	response := plexus.ListenPortResponse{}
 	slog.Debug("requesting listen port from peer", "id", id)
-	if err := eConn.Request(id+plexus.SendListenPorts, plexus.ListenPortRequest{
+	if err := eConn.Request(plexus.Update+id+plexus.SendListenPorts, plexus.ListenPortRequest{
 		Network: network,
 	}, &response, natsTimeout); err != nil {
 		return 0, 0, err
