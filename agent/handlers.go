@@ -180,7 +180,6 @@ func processStatus() StatusResponse {
 }
 
 func processJoin(request *plexus.JoinRequest) plexus.JoinResponse {
-	networks := []plexus.Network{}
 	slog.Debug("join", "network", request.Network)
 	response := plexus.JoinResponse{}
 	_, err := boltdb.Get[Network](request.Network, networkTable)
@@ -203,7 +202,14 @@ func processJoin(request *plexus.JoinRequest) plexus.JoinResponse {
 		slog.Debug(err.Error())
 		return plexus.JoinResponse{Message: "error:" + err.Error()}
 	}
-	addNewNetworks(self, append(networks, response.Network))
+	network, err := saveServerNetwork(response.Network)
+	if err != nil {
+		slog.Error("save network", "error", err)
+		return plexus.JoinResponse{Message: "error" + err.Error()}
+	}
+	if err := startInterface(self, network); err != nil {
+		response.Message = response.Message + "error starting interface " + err.Error()
+	}
 	return response
 }
 

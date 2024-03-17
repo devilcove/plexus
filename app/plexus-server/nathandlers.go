@@ -101,7 +101,7 @@ func addPeerToNetwork(peerID, network string, listenPort, publicListenPort int) 
 		return netToUpdate, err
 	}
 	slog.Debug("publish device update", "name", netPeer.HostName)
-	if err := eConn.Publish(peer.WGPublicKey, plexus.DeviceUpdate{
+	if err := eConn.Publish(plexus.Update+peer.WGPublicKey+plexus.JoinNetwork, plexus.DeviceUpdate{
 		Action:  plexus.JoinNetwork,
 		Network: netToUpdate,
 	}); err != nil {
@@ -109,7 +109,7 @@ func addPeerToNetwork(peerID, network string, listenPort, publicListenPort int) 
 		return netToUpdate, err
 	}
 	slog.Debug("publish network update", "network", network, "update", update)
-	if err := eConn.Publish("networks."+network, update); err != nil {
+	if err := eConn.Publish(plexus.Networks+network, update); err != nil {
 		slog.Error("publish new peer", "error", err)
 		return netToUpdate, err
 	}
@@ -241,7 +241,7 @@ func processLeave(id string, request *plexus.LeaveRequest) plexus.MessageRespons
 			Peer:   peer,
 		}
 		slog.Debug("publishing network update for peer leaving network", "network", request.Network, "peer", id)
-		if err := eConn.Publish("networks."+request.Network, update); err != nil {
+		if err := eConn.Publish(plexus.Networks+request.Network, update); err != nil {
 			slog.Error("publish network update", "error", err)
 			return plexus.MessageResponse{Message: "error: " + err.Error()}
 		}
@@ -285,7 +285,7 @@ func publishNetworkPeerUpdate(peer plexus.Peer) error {
 					Action: plexus.UpdatePeer,
 					Peer:   netPeer,
 				}
-				if err := eConn.Publish("networks."+network.Name, data); err != nil {
+				if err := eConn.Publish(plexus.Networks+network.Name, data); err != nil {
 					slog.Error("publish network update", "error", err)
 				}
 			}

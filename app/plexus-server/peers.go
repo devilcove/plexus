@@ -89,7 +89,7 @@ func discardPeer(id string) (plexus.Peer, error) {
 	if err := boltdb.Delete[plexus.Peer](peer.WGPublicKey, peerTable); err != nil {
 		return peer, err
 	}
-	if err := eConn.Publish(peer.WGPublicKey, plexus.DeviceUpdate{Action: plexus.LeaveServer}); err != nil {
+	if err := eConn.Publish(plexus.Update+peer.WGPublicKey+plexus.LeaveServer, plexus.DeviceUpdate{Action: plexus.LeaveServer}); err != nil {
 		slog.Error("publish peer deletion", "error", err)
 	}
 	return peer, nil

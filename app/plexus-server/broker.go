@@ -214,7 +214,7 @@ func devicePermissions(id string) *server.Permissions {
 			},
 		},
 		Subscribe: &server.SubjectPermission{
-			Allow: []string{"networks.>", id + ".>", "_INBOX.>"},
+			Allow: []string{"networks.>", plexus.Update + id + ".>", "_INBOX.>"},
 		},
 		Response: &server.ResponsePermission{
 			MaxMsgs: 1,

@@ -53,6 +53,9 @@ const (
 	Checkin           = ".checkin"
 	GetConfig         = ".getConfig"
 	SendListenPorts   = ".listenPorts"
+	Server            = "server."
+	Update            = "update."
+	Networks          = "networks."
 )
 
 //func (i Action) String() string {

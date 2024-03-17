@@ -164,7 +164,7 @@ func deleteNetwork(c *gin.Context) {
 		return
 	}
 	log.Println("deleting network", network)
-	if err := eConn.Publish("networks."+network, plexus.NetworkUpdate{
+	if err := eConn.Publish(plexus.Networks+network, plexus.NetworkUpdate{
 		Action: plexus.DeleteNetwork,
 	}); err != nil {
 		slog.Error("publish delete network", "error", err)
@@ -349,7 +349,7 @@ func deleteRelay(c *gin.Context) {
 		processError(c, http.StatusBadRequest, "failed to save update network peers "+err.Error())
 		return
 	}
-	if err := eConn.Publish("networks."+network.Name, update); err != nil {
+	if err := eConn.Publish(plexus.Networks+network.Name, update); err != nil {
 		slog.Error("publish new relay", "error", err)
 	}
 	networkDetails(c)

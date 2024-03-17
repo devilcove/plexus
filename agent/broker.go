@@ -5,8 +5,6 @@ import (
 	"log"
 	"log/slog"
 	"runtime/debug"
-	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/devilcove/boltdb"
@@ -107,7 +105,9 @@ func subcribe(ec *nats.EncodedConn) {
 		}
 		deleteAllNetworks()
 		deleteAllInterfaces()
-		addNewNetworks(self, resp.Networks)
+		saveServerNetworks(resp.Networks)
+		startAllInterfaces(self)
+		//addNewNetworks(self, resp.Networks)
 	})
 	ec.Subscribe(Agent+plexus.Reset, func(sub, reply string, request *plexus.ResetRequest) {
 		slog.Debug("reset request")
@@ -201,7 +201,7 @@ func subcribeToServerTopics(self Device) {
 	}
 	subscriptions = append(subscriptions, networkUpdates)
 
-	ping, err := serverEC.Subscribe(id+plexus.Ping, func(subj, reply string, data *any) {
+	ping, err := serverEC.Subscribe(plexus.Update+id+plexus.Ping, func(subj, reply string, data *any) {
 		if err := serverEC.Publish(reply, plexus.PingResponse{Message: "pong"}); err != nil {
 			slog.Error("publish pong", "error", err)
 		}
@@ -211,7 +211,7 @@ func subcribeToServerTopics(self Device) {
 	}
 	subscriptions = append(subscriptions, ping)
 
-	leaveServer, err := serverEC.Subscribe(id+plexus.LeaveServer, func(subj, reply string, data *any) {
+	leaveServer, err := serverEC.Subscribe(plexus.Update+id+plexus.LeaveServer, func(subj, reply string, data *any) {
 		slog.Info("leave server")
 		closeServerConnections()
 		deleteAllInterfaces()
@@ -222,10 +222,16 @@ func subcribeToServerTopics(self Device) {
 	}
 	subscriptions = append(subscriptions, leaveServer)
 
-	joinNet, err := serverEC.Subscribe(id+plexus.JoinNetwork, func(data *plexus.ServerJoinRequest) {
+	joinNet, err := serverEC.Subscribe(plexus.Update+id+plexus.JoinNetwork, func(data *plexus.ServerJoinRequest) {
 		slog.Info("join network", "network", data.Network)
-		if err := connectToNetwork(data.Network); err != nil {
-			slog.Error("join network", "error", err)
+		network, err := saveServerNetwork(data.Network)
+		if err != nil {
+			slog.Error("save network", "error", err)
+			return
+		}
+		if err := startInterface(self, network); err != nil {
+			slog.Error("error starting interace", "interface", network.Interface, "network", network.Name, "error", err)
+			return
 		}
 	})
 	if err != nil {
@@ -233,7 +239,7 @@ func subcribeToServerTopics(self Device) {
 	}
 	subscriptions = append(subscriptions, joinNet)
 
-	sendListenPorts, err := serverEC.Subscribe(id+plexus.SendListenPorts,
+	sendListenPorts, err := serverEC.Subscribe(plexus.Update+id+plexus.SendListenPorts,
 		func(subj, reply string, data plexus.ListenPortRequest) {
 			slog.Info("new listen ports", "network", data.Network)
 			response, err := getNewListenPorts(data.Network)
@@ -250,51 +256,6 @@ func subcribeToServerTopics(self Device) {
 		slog.Error("send listen port subscription", "error", err)
 	}
 	subscriptions = append(subscriptions, sendListenPorts)
-}
-
-func connectToNetwork(network plexus.Network) error {
-	self, err := boltdb.Get[Device]("self", deviceTable)
-	if err != nil {
-		return err
-	}
-	networks := []plexus.Network{network}
-	addNewNetworks(self, networks)
-	//connectToServers()
-	return nil
-}
-
-func addNewNetworks(self Device, serverNets []plexus.Network) {
-	existingNetworks, err := boltdb.GetAll[Network](networkTable)
-	if err != nil {
-		slog.Error("get existing networks", "error", err)
-	}
-	takenInterfaces := []int{}
-	for _, existing := range existingNetworks {
-		takenInterfaces = append(takenInterfaces, existing.InterfaceSuffix)
-	}
-	slog.Debug("taken interfaces", "taken", takenInterfaces)
-	for _, serverNet := range serverNets {
-		network := toAgentNetwork(serverNet)
-		network.ListenPort, err = getFreePort(defaultWGPort)
-		if err != nil {
-			slog.Debug(err.Error())
-		}
-		for i := range maxNetworks {
-			if !slices.Contains(takenInterfaces, i) {
-				network.InterfaceSuffix = i
-				network.Interface = "plexus" + strconv.Itoa(i)
-				takenInterfaces = append(takenInterfaces, i)
-				break
-			}
-		}
-		slog.Debug("saving network", "network", network.Name)
-		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
-			slog.Error("error saving network", "name", network.Name, "error", err)
-		}
-		if err := startInterface(self, network); err != nil {
-			slog.Error("start new interface", "error", err)
-		}
-	}
 }
 
 func createRegistationConnection(key plexus.KeyValue) (*nats.EncodedConn, error) {
