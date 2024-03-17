@@ -17,17 +17,16 @@ import (
 )
 
 type configuration struct {
-	AdminName     string
-	AdminPass     string
-	FQDN          string
-	Secure        bool
-	Port          string
-	Email         string
-	Verbosity     string
-	SessionSecret string
-	DBPath        string
-	DBFile        string
-	Tables        []string
+	AdminName string
+	AdminPass string
+	FQDN      string
+	Secure    bool
+	Port      string
+	Email     string
+	Verbosity string
+	DBPath    string
+	DBFile    string
+	Tables    []string
 }
 
 const (
@@ -63,7 +62,6 @@ func configureServer() (*slog.Logger, error) {
 	viper.SetDefault("secure", true)
 	viper.SetDefault("port", "8080")
 	viper.SetDefault("email", "")
-	viper.SetDefault("sessionsecret", "secret")
 	viper.SetDefault("dbfile", "plexus-server.db")
 	viper.SetDefault("tables", []string{userTable, keyTable, networkTable, peerTable, settingTable})
 	viper.SetDefault("dbpath", path)

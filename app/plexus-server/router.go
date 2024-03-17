@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"embed"
 	"fmt"
 	"html/template"
@@ -19,7 +20,13 @@ import (
 var f embed.FS
 
 func setupRouter(logger *slog.Logger) *gin.Engine {
-	store := cookie.NewStore([]byte(config.SessionSecret))
+	authKey, encryptKey, err := sessionKeys()
+	if err != nil {
+		slog.Error("failed to generate session keys ..... using fallback")
+		authKey = []byte("12345678901234567890123456789012")
+		encryptKey = []byte("12345678901234567890123456789012")
+	}
+	store := cookie.NewStore(authKey, encryptKey)
 	session := sessions.Sessions("plexus", store)
 	if config.Verbosity != "DEBUG" {
 		gin.SetMode(gin.ReleaseMode)
@@ -127,4 +134,18 @@ func auth(c *gin.Context) {
 		c.Abort()
 		return
 	}
+}
+
+func sessionKeys() ([]byte, []byte, error) {
+	authKey := make([]byte, 32)
+	encryptKey := make([]byte, 32)
+	_, err := rand.Read(authKey)
+	if err != nil {
+		return authKey, encryptKey, err
+	}
+	_, err = rand.Read(encryptKey)
+	if err != nil {
+		return authKey, encryptKey, err
+	}
+	return authKey, encryptKey, nil
 }
