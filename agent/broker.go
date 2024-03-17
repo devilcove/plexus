@@ -44,9 +44,9 @@ func startBroker() (*server.Server, *nats.EncodedConn) {
 }
 
 func subcribe(ec *nats.EncodedConn) {
-	ec.Subscribe(">", func(subj string, msg *any) {
-		slog.Debug("received nats message", "subject", subj, "data", *msg)
-	})
+	//ec.Subscribe(">", func(subj string, msg *any) {
+	//slog.Debug("received nats message", "subject", subj, "data", *msg)
+	//})
 	ec.Subscribe(Agent+plexus.Status, func(subject, reply string, data any) {
 		slog.Debug("status request received")
 		if err := ec.Publish(reply, processStatus()); err != nil {
@@ -235,6 +235,7 @@ func subcribeToServerTopics(self Device) {
 
 	sendListenPorts, err := serverEC.Subscribe(id+plexus.SendListenPorts,
 		func(subj, reply string, data plexus.ListenPortRequest) {
+			slog.Info("new listen ports", "network", data.Network)
 			response, err := getNewListenPorts(data.Network)
 			if err != nil {
 				slog.Error(err.Error())

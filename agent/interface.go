@@ -139,6 +139,7 @@ func resetPeersOnNetworkInterface(self Device, network Network) error {
 }
 
 func addPeertoInterface(name string, peer plexus.NetworkPeer) error {
+	slog.Debug("adding peer", "interace", name, "peer", peer.HostName)
 	iface, err := plexus.Get(name)
 	if err != nil {
 		return err

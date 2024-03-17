@@ -9,3 +9,4 @@ time.db
 **/launch.json
 devops/experiment/*
 devops/plexus-update
+devops/deploy/*

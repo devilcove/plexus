@@ -255,13 +255,13 @@ func serverSubcriptions() []*nats.Subscription {
 
 	//device subscriptions
 	//general
-	general, err := eConn.Subscribe(">", func(subj, repl string, request *any) {
-		slog.Debug("received request", "subject", subj, "message", request)
-	})
-	if err != nil {
-		slog.Error("subcribe general", "error", err)
-	}
-	subcriptions = append(subcriptions, general)
+	//general, err := eConn.Subscribe(">", func(subj, repl string, request *any) {
+	//	slog.Debug("received request", "subject", subj, "message", request)
+	//})
+	//if err != nil {
+	//	slog.Error("subcribe general", "error", err)
+	//}
+	//subcriptions = append(subcriptions, general)
 
 	//checkin
 
@@ -314,7 +314,7 @@ func serverSubcriptions() []*nats.Subscription {
 
 	//leave
 	leave, err := eConn.Subscribe("*"+plexus.LeaveNetwork, func(subj, reply string, request *plexus.LeaveRequest) {
-		if len(subj) != 50 {
+		if len(subj) != 57 {
 			slog.Error("invalid subj", "subj", subj)
 			eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"})
 			return

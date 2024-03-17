@@ -8,6 +8,10 @@ import (
 
 func publishDeviceUpdate(self *Device) {
 	serverEC := serverConn.Load()
+	if serverEC == nil {
+		slog.Error("not connected to server")
+		return
+	}
 	if err := serverEC.Publish(self.WGPublicKey+plexus.UpdatePeer, plexus.Peer{
 		WGPublicKey: self.WGPublicKey,
 		PubNkey:     self.PubNkey,
@@ -27,6 +31,10 @@ func publishDeviceUpdate(self *Device) {
 func publishPeerUpdate(self *Device, network *Network) {
 	me := getSelfFromPeers(self, network.Peers)
 	serverEC := serverConn.Load()
+	if serverEC == nil {
+		slog.Error("not connected to server")
+		return
+	}
 	if err := serverEC.Publish(self.WGPublicKey+plexus.UpdateNetworkPeer, plexus.NetworkPeer{
 		WGPublicKey:      self.WGPublicKey,
 		HostName:         self.Name,

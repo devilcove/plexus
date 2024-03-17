@@ -12,7 +12,7 @@ import (
 // server handlers
 func networkUpdates(subject string, update plexus.NetworkUpdate) {
 	networkName := subject[9:]
-	slog.Info("network update for", "network", networkName, "peer", update.Peer)
+	slog.Info("network update for", "network", networkName, "action", update.Action, "peer", update.Peer)
 	network, err := boltdb.Get[Network](networkName, networkTable)
 	if err != nil {
 		if errors.Is(err, boltdb.ErrNoResults) {
@@ -29,11 +29,22 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 	}
 	switch update.Action {
 	case plexus.AddPeer:
+		slog.Debug("add peer")
+		for _, peer := range network.Peers {
+			if peer.WGPublicKey == update.Peer.WGPublicKey {
+				slog.Error("peer already exists", "network", networkName, "peer", update.Peer.HostName, "id", update.Peer.WGPublicKey)
+				return
+			}
+		}
 		network.Peers = append(network.Peers, update.Peer)
 		if err := addPeertoInterface(network.Interface, update.Peer); err != nil {
 			slog.Error("add peer", "error", err)
 		}
+		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+			slog.Error("update network -- add peer", "error", err)
+		}
 	case plexus.DeletePeer:
+		slog.Debug("delete peer")
 		if update.Peer.WGPublicKey == self.Peer.WGPublicKey {
 			slog.Info("self delete --> delete network", "network", networkName)
 			if err := boltdb.Delete[Network](network.Name, networkTable); err != nil {
@@ -45,25 +56,51 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 			}
 			return
 		}
+		found := false
 		for i, oldpeer := range network.Peers {
 			if oldpeer.WGPublicKey == update.Peer.WGPublicKey {
-				network.Peers = slices.Delete(network.Peers, i, i)
+				slog.Debug("found peer to delete")
+				found = true
+				network.Peers = slices.Delete(network.Peers, i, i+1)
 			}
 			if err := deletePeerFromInterface(network.Interface, update.Peer); err != nil {
 				slog.Error("delete peer", "error", err)
 			}
+			if found {
+				break
+			}
+		}
+		if !found {
+			slog.Error("peer does not exist", "network", networkName, "peer", update.Peer.HostName, "id", update.Peer.WGPublicKey)
+			return
+		}
+		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+			slog.Error("update network -- delete peer", "error", err)
 		}
 	case plexus.UpdatePeer:
+		slog.Debug("update peer")
+		found := false
 		for i, oldpeer := range network.Peers {
 			if oldpeer.WGPublicKey == update.Peer.WGPublicKey {
 				network.Peers = slices.Replace(network.Peers, i, i+1, update.Peer)
+				found = true
 			}
+			if found {
+				break
+			}
+		}
+		if !found {
+			slog.Error("peer does not exist", "network", networkName, "peer", update.Peer.HostName, "id", update.Peer.WGPublicKey)
+			return
 		}
 		if err := replacePeerInInterface(network.Interface, update.Peer); err != nil {
 			slog.Error("replace peer", "error", err)
 		}
-
+		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+			slog.Error("update network -- delete peer", "error", err)
+		}
 	case plexus.AddRelay:
+		slog.Debug("add relay")
 		newPeers := []plexus.NetworkPeer{}
 		for _, existing := range network.Peers {
 			if existing.WGPublicKey == update.Peer.WGPublicKey {
@@ -84,6 +121,7 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 		}
 
 	case plexus.DeleteRelay:
+		slog.Debug("delete relay")
 		oldRelay := update.Peer
 		newPeers := []plexus.NetworkPeer{}
 		for _, existing := range network.Peers {
@@ -105,6 +143,7 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 		}
 
 	case plexus.DeleteNetwork:
+		slog.Debug("delete network")
 		slog.Info("delete network")
 		if err := boltdb.Delete[Network](network.Name, networkTable); err != nil {
 			slog.Error("delete network", "error", err)
@@ -116,9 +155,6 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 	default:
 		slog.Info("invalid network update type")
 		return
-	}
-	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
-		slog.Error("update network during", "command", update.Action, "error", err)
 	}
 }
 
@@ -163,7 +199,7 @@ func processJoin(request *plexus.JoinRequest) plexus.JoinResponse {
 	if serverEC == nil {
 		return plexus.JoinResponse{Message: "not connnected to server"}
 	}
-	if err := serverEC.Request(self.WGPublicKey+".join", request, &response, NatsTimeout); err != nil {
+	if err := serverEC.Request(self.WGPublicKey+plexus.JoinNetwork, request, &response, NatsTimeout); err != nil {
 		slog.Debug(err.Error())
 		return plexus.JoinResponse{Message: "error:" + err.Error()}
 	}
@@ -186,7 +222,7 @@ func processLeave(request *plexus.LeaveRequest) plexus.MessageResponse {
 	}
 	serverEC := serverConn.Load()
 	if serverEC != nil {
-		if err := serverEC.Request(self.WGPublicKey+".leave", request, &response, NatsTimeout); err != nil {
+		if err := serverEC.Request(self.WGPublicKey+plexus.LeaveNetwork, request, &response, NatsTimeout); err != nil {
 			slog.Debug(err.Error())
 			return plexus.MessageResponse{Message: "error: " + err.Error()}
 		}
@@ -217,7 +253,7 @@ func processLeaveServer() plexus.MessageResponse {
 	}
 	serverEC := serverConn.Load()
 	if serverEC != nil {
-		if err := serverEC.Publish(self.WGPublicKey+".leaveServer", nil); err != nil {
+		if err := serverEC.Publish(self.WGPublicKey+plexus.LeaveServer, nil); err != nil {
 			return plexus.MessageResponse{Message: "error: " + err.Error()}
 		}
 	}
@@ -240,7 +276,7 @@ func processReload() (plexus.NetworkResponse, error) {
 	if serverEC == nil {
 		return response, errors.New("not connected")
 	}
-	if err := serverEC.Request(self.WGPublicKey+".reload", nil, &response, NatsTimeout); err != nil {
+	if err := serverEC.Request(self.WGPublicKey+plexus.Reload, nil, &response, NatsTimeout); err != nil {
 		return response, err
 	}
 	return response, nil
