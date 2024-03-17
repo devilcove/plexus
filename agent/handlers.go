@@ -193,6 +193,13 @@ func processJoin(request *plexus.JoinRequest) plexus.JoinResponse {
 		return plexus.JoinResponse{Message: "error:" + err.Error()}
 	}
 	request.Peer = self.Peer
+	tempPeer, err := getNewListenPorts(request.Network)
+	if err != nil {
+		slog.Error("unable to obtain listen port", "error", err)
+		return plexus.JoinResponse{Message: "unable to obtain listen port " + err.Error()}
+	}
+	request.ListenPort = tempPeer.ListenPort
+	request.PublicListenPort = tempPeer.PublicListenPort
 	slog.Debug("sending join request to server")
 	serverEC := serverConn.Load()
 	if serverEC == nil {
@@ -201,14 +208,6 @@ func processJoin(request *plexus.JoinRequest) plexus.JoinResponse {
 	if err := serverEC.Request(self.WGPublicKey+plexus.JoinNetwork, request, &response, NatsTimeout); err != nil {
 		slog.Debug(err.Error())
 		return plexus.JoinResponse{Message: "error:" + err.Error()}
-	}
-	network, err := saveServerNetwork(response.Network)
-	if err != nil {
-		slog.Error("save network", "error", err)
-		return plexus.JoinResponse{Message: "error" + err.Error()}
-	}
-	if err := startInterface(self, network); err != nil {
-		response.Message = response.Message + "error starting interface " + err.Error()
 	}
 	return response
 }
