@@ -216,11 +216,6 @@ func processJoin(request *plexus.JoinRequest) plexus.JoinResponse {
 func processLeave(request *plexus.LeaveRequest) plexus.MessageResponse {
 	response := plexus.MessageResponse{}
 	slog.Debug("leave", "network", request.Network)
-	network, err := boltdb.Get[Network](request.Network, networkTable)
-	if err != nil {
-		slog.Debug(err.Error())
-		return plexus.MessageResponse{Message: "error: " + err.Error()}
-	}
 	self, err := boltdb.Get[Device]("self", deviceTable)
 	if err != nil {
 		slog.Debug(err.Error())
@@ -234,14 +229,6 @@ func processLeave(request *plexus.LeaveRequest) plexus.MessageResponse {
 		}
 	} else {
 		return plexus.MessageResponse{Message: "not connected to server"}
-	}
-	if err := deleteInterface(network.Interface); err != nil {
-		slog.Debug("delete interface", "error", err)
-		return plexus.MessageResponse{Message: "failed to delete interface: " + err.Error()}
-	}
-	if err := boltdb.Delete[Network](request.Network, networkTable); err != nil {
-		slog.Debug(err.Error())
-		return plexus.MessageResponse{Message: "failed to delete network: " + err.Error()}
 	}
 	slog.Debug("leave complete")
 	return response
