@@ -1,21 +1,21 @@
 {{define "sidebar"}}
 <!-- allow button inside <a> tag-->
-    <!-- [html-validate-disable element-permitted-content]-->
+<!-- [html-validate-disable element-permitted-content]-->
 <!-- [html-validate-disable no-inline-style]-->
 <!-- Icon Bar (Sidebar - hidden on small screens) -->
 <nav class="w3-sidebar w3-bar-block w3-hide-small w3-theme-dark" style="width:15%">
-    <div class="w3-bar-item">
+    <div class="w3-bar-item" id="sidebar-networks" hx-get="/sidebar/" hx-trigger="networkChange from:body">
         <details open>
             <summary><i class="fa fa-network-wired w3-large"></i>
                 Networks</summary>
             {{range .}}
-            <button type="button" class="w3-bar-item w3-button w3-padding-large w3-theme-dark" 
-                hx-get="/networks/{{.}}" hx-target="#content" hx-target-error="#error">
+            <button type="button" class="w3-bar-item w3-button w3-padding-large w3-theme-dark" hx-get="/networks/{{.}}"
+                hx-target="#content" hx-target-error="#error">
                 <i class="fa fa-cloud w3-small"></i>
                 {{.}}</button>
             {{end}}
-            <button type="button" class="w3-bar-item w3-button w3-padding-large w3-theme-dark" 
-                hx-get="/networks/" hx-target="#content" hx-target-error="#error">
+            <button type="button" class="w3-bar-item w3-button w3-padding-large w3-theme-dark" hx-get="/networks/"
+                hx-target="#content" hx-target-error="#error">
                 <i class="fa fa-network-wired w3-small"></i>
                 all</button>
         </details>
@@ -31,7 +31,7 @@
     <button type="button" class="w3-bar-item w3-button w3-padding-large w3-theme-dark" hx-get="/nats/"
         hx-target="#content" hx-target-error="#error">
         <i class="fa fa-user w3-large"></i>
-       Nats</button>
+        Nats</button>
     <button type="button" class="w3-bar-item w3-button w3-padding-large w3-theme-dark" hx-get="/settings/"
         hx-target="#content" hx-target-error="#error">
         <i class="fa fa-cog w3-large"></i>
@@ -54,4 +54,22 @@
             hx-target="#home" hx-swap="outerHTML">CONTACT</button>
     </div>
 </div>
+{{end}}
+
+{{define "sidebarNetworks"}}
+
+<details open>
+    <summary><i class="fa fa-network-wired w3-large"></i>
+        Networks</summary>
+    {{range .}}
+    <button type="button" class="w3-bar-item w3-button w3-padding-large w3-theme-dark" hx-get="/networks/{{.Name}}"
+        hx-target="#content" hx-target-error="#error">
+        <i class="fa fa-cloud w3-small"></i>
+        {{.Name}}</button>
+    {{end}}
+    <button type="button" class="w3-bar-item w3-button w3-padding-large w3-theme-dark" hx-get="/networks/"
+        hx-target="#content" hx-target-error="#error">
+        <i class="fa fa-network-wired w3-small"></i>
+        all</button>
+</details>
 {{end}}

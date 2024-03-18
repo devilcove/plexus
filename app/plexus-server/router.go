@@ -47,6 +47,10 @@ func setupRouter(logger *slog.Logger) *gin.Engine {
 	router.GET("/", displayMain)
 	router.POST("/", login)
 	router.GET("/logout", logout)
+	sidebar := router.Group("/sidebar", auth)
+	{
+		sidebar.GET("/", networksSideBar)
+	}
 	networks := router.Group("/networks", auth)
 	{
 		networks.GET("/add", displayAddNetwork)

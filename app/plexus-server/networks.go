@@ -85,7 +85,17 @@ func displayNetworks(c *gin.Context) {
 	}
 	page.Data = networks
 	session.Save()
-	c.HTML(http.StatusOK, networkTable, page)
+	c.Header("HX-Trigger", "networkChange")
+	c.HTML(http.StatusOK, "networks", page)
+}
+
+func networksSideBar(c *gin.Context) {
+	networks, err := boltdb.GetAll[plexus.Network](networkTable)
+	if err != nil {
+		processError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	c.HTML(http.StatusOK, "sidebarNetworks", networks)
 }
 
 func getAvailablePeers(network plexus.Network) []plexus.Peer {
