@@ -274,7 +274,7 @@ func displayAddRelay(c *gin.Context) {
 			data.Relay = peer
 			continue
 		}
-		if peer.IsRelay || peer.IsRelayed {
+		if peer.IsRelay || peer.IsRelayed || peer.IsSubNetRouter {
 			continue
 		}
 		data.AvailablePeers = append(data.AvailablePeers, peer)

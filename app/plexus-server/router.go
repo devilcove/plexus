@@ -64,6 +64,10 @@ func setupRouter(logger *slog.Logger) *gin.Engine {
 		networks.POST("/relay/:id/:peer", addRelay)
 		networks.DELETE("/relay/:id/:peer", deleteRelay)
 		networks.GET("/peers/:id/:peer", networkPeerDetails)
+		networks.GET("/router/:id/:peer", displayAddRouter)
+		networks.POST("/router/:id/:peer", addRouter)
+		networks.DELETE("/router/:id/:peer", deleteRouter)
+
 	}
 	keys := router.Group("/keys", auth)
 	{

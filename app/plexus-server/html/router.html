@@ -1,0 +1,19 @@
+{{define "addRouterToNetwork"}}
+<!-- [html-validate-disable no-inline-style]-->
+<div id="error" class="red"></div>
+<h2>Network: {{.Network}}</h2>
+<h2>Create Subnet Router</h2>
+<form class="w3-container w3-card4" hx-post="/networks/router/{{.Network}}/{{.Router}}"
+    hx-target="#content" hx-target-error="#error">
+    <label>Subnet CIDR</label>
+    <input class="w3-input" type="text" name="cidr" required style="width:50%"><br>
+    <input class="w3-check" type="checkbox" name="nat" value="Use NAT">
+    <p>
+        <button class="w3-button w3-theme-dark w3-padding large" type="button" 
+            hx-get="/networks/{{.Network}}/" hx-target="#content" hx-target-error="#error">
+            Cancel</button>
+        <button class="w3-button w3-theme-dark" type="reset">Reset</button>
+        <button class="W3-button w3-theme-dark" type="submit">Add</button>
+    </p>
+</form>
+{{end}}

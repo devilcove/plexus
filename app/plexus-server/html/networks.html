@@ -64,10 +64,6 @@
             onclick="document.getElementById('addPeerToNetwork').style.display='block'">
             <i class="fa fa-desktop"></i>
             Add Peer</button>
-        <button type="button" class="w3-bar-item w3-button"
-            onclick="document.getElementById('addPeerToNetwork').style.display='block'">
-            <i class="fa fa-network-wired"></i>
-            Create SubNet Gateway</button>
     </div>
     <!-- Details -->
     <h1>Network: {{.Name}}</h1>
@@ -116,7 +112,7 @@
                 Remove Peer</button>
         </div>
         {{if eq .IsRelay true}}
-            <div>
+        <div>
             <button class="w3-button w3-theme" type="button" hx-delete="networks/relay/{{$network}}/{{.WGPublicKey}}"
                 hx-target="#content" hx-target-error="#error" hx-confirm="Remove Relay from Network?">
                 <i class="fa fa-trash-alt"></i>
@@ -133,7 +129,21 @@
                 Create Relay</button>
         </div>
         {{end}}
-        <div class="w3-margin-top">TBD</div>
+        {{if eq .IsSubNetRouter true}}
+        <div>
+            <button class="w3-button w3-theme" type="button" hx-delete="/networks/router/{{$network}}/{{.WGPublicKey}}"
+                hx-target="#content" hx-target-error="#error" hx-confirm="Remove SubNet Router?">
+                <i class="fa fa-trash-alt"></i>
+                Delete Router</button>
+        </div>
+        {{else}}
+        <div>
+            <button class="w3-button w3-theme" type="button" hx-get="/networks/router/{{$network}}/{{.WGPublicKey}}"
+                hx-target="#content" hx-target-error="#error">
+                <i class="fa fa-network-wired"></i>
+                Create SubNet Router</button>
+        </div>
+        {{end}}
         {{end}}
     </div>
 </div>
