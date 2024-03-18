@@ -1,7 +1,8 @@
 {{define "keys"}}
 <!-- [html-validate-disable no-dup-id]-->
 <!-- [html-validate-disable no-inline-style]-->
-<div id="error" class="w3-red"></div>
+<div id="error" class="w3-red" hx-get="/keys/" hx-trigger="every 1m" 
+    hx-target="#content" hx-target-error="#error"></div>
 <div class="w3-bar w3-theme-d5">
     <button class="w3-button" type="button" hx-get="/keys/add" hx-target="#content" hx-target-errors="#error">
         <i class="fa fa-key"></i>

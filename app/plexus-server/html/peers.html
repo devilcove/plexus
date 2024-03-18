@@ -1,7 +1,8 @@
 {{define "peers"}}
 <!-- [html-validate-disable no-dup-id]-->
 <!-- [html-validate-disable prefer-tbody]-->
-<div id="error" class="w3-red"></div>
+<div id="error" class="w3-red" hx-get="/peers/" hx-trigger="every 1m"
+    hx-target="#content" hx-target-error="#error"></div>
 <h1>Peers</h1>
 <div class="grid5">
     <div class="w3-theme-l3">Name</div>
@@ -26,7 +27,8 @@
 {{end}}
 
 {{define "peerDetails"}}
-<div id="error" class="w3-red"></div>
+<div id="error" class="w3-red" hx-get="/peers/{{.WGPublicKey}}" hx-trigger="every 1m"
+    hx-target="#content" hx-target-error="#error"></div>
 <h1>Peer: {{.Name}}</h1>
 <div class="grid2 w3-theme-l3">
     <div>Wireguard Public Key</div>
