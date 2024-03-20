@@ -27,6 +27,11 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 		slog.Error("unable to read devices", "error", err)
 		return
 	}
+	wg, err := plexus.Get(network.Interface)
+	if err != nil {
+		slog.Error("get wireguard interface", "interface", network.Interface, "error", err)
+		return
+	}
 	switch update.Action {
 	case plexus.AddPeer:
 		slog.Debug("add peer")
@@ -37,12 +42,17 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 			}
 		}
 		network.Peers = append(network.Peers, update.Peer)
-		if err := addPeertoInterface(network.Interface, update.Peer); err != nil {
-			slog.Error("add peer", "error", err)
-		}
 		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 			slog.Error("update network -- add peer", "error", err)
 		}
+		wgPeer, err := convertPeerToWG(update.Peer, network.Peers)
+		if err != nil {
+			slog.Error("convert peer", "peer", update.Peer.HostName, "error", err)
+			return
+		}
+		slog.Debug("adding wg peer", "key", wgPeer.PublicKey, "allowedIPs", wgPeer.AllowedIPs)
+		wg.AddPeer(wgPeer)
+		wg.Apply()
 	case plexus.DeletePeer:
 		slog.Debug("delete peer")
 		if update.Peer.WGPublicKey == self.Peer.WGPublicKey {
@@ -56,17 +66,13 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 			}
 			return
 		}
+		wg.DeletePeer(update.Peer.WGPublicKey)
 		found := false
 		for i, oldpeer := range network.Peers {
 			if oldpeer.WGPublicKey == update.Peer.WGPublicKey {
 				slog.Debug("found peer to delete")
 				found = true
 				network.Peers = slices.Delete(network.Peers, i, i+1)
-			}
-			if err := deletePeerFromInterface(network.Interface, update.Peer); err != nil {
-				slog.Error("delete peer", "error", err)
-			}
-			if found {
 				break
 			}
 		}
@@ -77,6 +83,7 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 			slog.Error("update network -- delete peer", "error", err)
 		}
+		wg.Apply()
 	case plexus.UpdatePeer:
 		slog.Debug("update peer")
 		found := false
@@ -84,8 +91,6 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 			if oldpeer.WGPublicKey == update.Peer.WGPublicKey {
 				network.Peers = slices.Replace(network.Peers, i, i+1, update.Peer)
 				found = true
-			}
-			if found {
 				break
 			}
 		}
@@ -93,12 +98,16 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 			slog.Error("peer does not exist", "network", networkName, "peer", update.Peer.HostName, "id", update.Peer.WGPublicKey)
 			return
 		}
-		if err := replacePeerInInterface(network.Interface, update.Peer); err != nil {
-			slog.Error("replace peer", "error", err)
+		wgPeer, err := convertPeerToWG(update.Peer, network.Peers)
+		if err != nil {
+			slog.Error("convert to WG peer", "error", err)
+			return
 		}
+		wg.ReplacePeer(wgPeer)
 		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 			slog.Error("update network -- delete peer", "error", err)
 		}
+		wg.Apply()
 	case plexus.AddRelay:
 		slog.Debug("add relay")
 		newPeers := []plexus.NetworkPeer{}

@@ -31,27 +31,6 @@ func toAgentNetwork(in plexus.Network) Network {
 	return out
 }
 
-func newNetworkPeer(self *Device) (plexus.NetworkPeer, error) {
-	listenPort := checkPort(defaultWGPort)
-	addr, err := getPublicAddPort(listenPort)
-	if err != nil {
-		return plexus.NetworkPeer{}, err
-	}
-	peer := plexus.NetworkPeer{
-		WGPublicKey:      self.WGPublicKey,
-		HostName:         self.Name,
-		Endpoint:         addr.IP.String(),
-		IsRelay:          false,
-		IsRelayed:        false,
-		RelayedPeers:     []string{},
-		Connectivity:     0,
-		NatsConnected:    true,
-		ListenPort:       listenPort,
-		PublicListenPort: addr.Port,
-	}
-	return peer, nil
-}
-
 func saveServerNetworks(networks []plexus.Network) error {
 	takenInterfaces := []int{}
 	var err error
