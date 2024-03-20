@@ -25,7 +25,8 @@ func TestMain(m *testing.M) {
 	plexus.SetLogging("DEBUG")
 	defer boltdb.Close()
 	//checkDefaultUser()
-	router = setupRouter()
+	logger := plexus.SetLogging("debug")
+	router = setupRouter(logger)
 	os.Exit(m.Run())
 }
 

@@ -125,7 +125,7 @@ func createPeer() (*plexus.Peer, *wgtypes.Key, string, error) {
 // generateKeys generates wgkeys that do not have a / in pubkey
 func generateKeys() (*wgtypes.Key, *wgtypes.Key, error) {
 	for {
-		priv, err := wgtypes.GenerateKey()
+		priv, err := wgtypes.GeneratePrivateKey()
 		if err != nil {
 			return nil, nil, err
 		}
