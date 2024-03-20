@@ -1,7 +1,6 @@
 #!/bin/sh
 
 systemctl stop plexus-server
-wget file.nusak.ca/plexus-server -O /tmp/plexus-server
-cp /tmp/plexus-server /usr/local/bin/
-setcap cap=cap_net_bind_service=ep /usr/local/bin/plexus-server
-systemtcl start plexus-server
+wget file.nusak.ca/plexus-server -O /usr/local/bin/plexus-server
+setcap cap_net_bind_service=ep /usr/local/bin/plexus-server
+systemctl start plexus-server
