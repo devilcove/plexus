@@ -19,7 +19,7 @@ echo "installing plexus server"
 echo ""
 # create plexus user
 echo "creating user plexus"
-useradd -r -d /var/lib/plexus -s /sbin/nologin -m plexus
+useradd -r -d /var/lib/plexus -G systemd-journal -s /sbin/nologin -m plexus
 
 ##get files
 echo "installing files"

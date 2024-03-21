@@ -42,8 +42,12 @@ func setupRouter(logger *slog.Logger) *gin.Engine {
 		c.FileFromFS(c.Request.URL.Path, http.FS(f))
 	})
 	_ = router.SetTrustedProxies(nil)
-	router.Use(gin.Recovery(), session, sloggin.New(logger))
-
+	config := sloggin.Config{
+		DefaultLevel:     slog.LevelDebug,
+		ClientErrorLevel: slog.LevelWarn,
+		ServerErrorLevel: slog.LevelError,
+	}
+	router.Use(gin.Recovery(), session, sloggin.NewWithConfig(logger, config))
 	router.GET("/", displayMain)
 	router.POST("/", login)
 	router.GET("/logout", logout)
@@ -95,7 +99,12 @@ func setupRouter(logger *slog.Logger) *gin.Engine {
 	settings := router.Group("/settings", auth)
 	{
 		settings.GET("/", getSettings)
-		settings.POST("/", updateSettings)
+		settings.POST("/logs/:level", updateSettings)
+	}
+	server := router.Group("/server", auth)
+	{
+		server.GET("/", getServer)
+		server.POST("/logs/:level", setLogLevel)
 	}
 	return router
 }

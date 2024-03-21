@@ -60,7 +60,6 @@ func login(c *gin.Context) {
 		slog.Error("bind err", "error", err)
 		return
 	}
-	slog.Info("login by", "user", user)
 	if !validateUser(&user) {
 		session.Clear()
 		_ = session.Save()
