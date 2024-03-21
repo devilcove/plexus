@@ -28,9 +28,9 @@ func Run() {
 	if err != nil {
 		slog.Error("new device", "error", err)
 	}
-	startAllInterfaces(self)
 	ns, ec := startBroker()
 	connectToServer(self)
+	startAllInterfaces(self)
 	checkinTicker := time.NewTicker(checkinTime)
 	//serverTicker := time.NewTicker(serverCheckTime)
 	for {

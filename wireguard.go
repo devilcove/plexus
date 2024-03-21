@@ -60,11 +60,10 @@ func (w *wireguard) Apply() error {
 		return fmt.Errorf("get routes %v", err)
 	}
 	for _, route := range routes {
-		slog.Debug("wireguard apply, deleting routes", "destination", route.Dst)
-		slog.Info("checking route", "route", route.Dst, "network address", w.Address.IPNet)
+		slog.Debug("checking route", "route", route.Dst, "network address", w.Address.IPNet)
 		if route.Dst.Contains(w.Address.IP) {
 			// don't delete default route for the plexus network
-			slog.Info("skipping")
+			slog.Debug("skipping")
 			continue
 		}
 		slog.Info("deleting route to ", "destination", route.Dst)

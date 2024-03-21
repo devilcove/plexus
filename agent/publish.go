@@ -7,6 +7,7 @@ import (
 )
 
 func publishDeviceUpdate(self *Device) {
+	slog.Info("publish device update")
 	serverEC := serverConn.Load()
 	if serverEC == nil {
 		slog.Error("not connected to server")
@@ -29,6 +30,7 @@ func publishDeviceUpdate(self *Device) {
 }
 
 func publishPeerUpdate(self *Device, network *Network) {
+	slog.Info("publishing network peer update")
 	me := getSelfFromPeers(self, network.Peers)
 	serverEC := serverConn.Load()
 	if serverEC == nil {
