@@ -83,38 +83,15 @@ func setupRouter(logger *slog.Logger) *gin.Engine {
 		peers.GET("/:id", peerDetails)
 		peers.DELETE("/:id", deletePeer)
 	}
-	//router.GET("/login", displayLogin)
-	users := router.Group("/nats", auth)
+	users := router.Group("/users", auth)
 	{
-		users.GET("/", getNatsUsers)
-		//	users.GET("current", getUser)
-		//	users.POST("", addUser)
-		//	users.POST(":name", editUser)
-		//	users.DELETE(":name", deleteUser)
-		//	users.GET(":name", getUser)
+		users.GET("/", getUsers)
+		users.GET("/add", displayAddUser)
+		users.POST("/add", addUser)
+		users.DELETE(":name", deleteUser)
+		users.GET("/user/:name", getUser)
+		users.POST("user/:name", editUser)
 	}
-	//router.GET("/register", register)
-	//router.POST("/register", regUser)
-	//projects := router.Group("/projects", auth)
-	//{
-	//	projects.GET("", getProjects)
-	//	projects.GET("/add", displayProjectForm)
-	//	projects.POST("", addProject)
-	//	projects.GET("/:name", getProject)
-	//	projects.POST("/:name/start", start)
-	//	projects.POST("/stop", stop)
-	//	projects.GET("/status", displayStatus)
-	//}
-	//reports := router.Group("/reports", auth)
-	//{
-	//	reports.GET("", report)
-	//	reports.POST("", getReport)
-	//}
-	//records := router.Group("records", auth)
-	//{
-	//	records.GET("/:id", getRecord)
-	//	records.POST("/:id", editRecord)
-	//}
 	settings := router.Group("/settings", auth)
 	{
 		settings.GET("/", getSettings)

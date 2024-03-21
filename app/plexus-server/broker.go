@@ -46,6 +46,7 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 	}
 	natsOptions.Nkeys = append(natsOptions.Nkeys, tokensUsers...)
 	natsOptions.Nkeys = append(natsOptions.Nkeys, deviceUsers...)
+	natsOptions.NoSigs = true
 	natServer, err = server.NewServer(natsOptions)
 	if err != nil {
 		slog.Error("nats server", "error", err)

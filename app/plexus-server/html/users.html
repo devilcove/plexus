@@ -1,37 +1,44 @@
-{{define "natsUsers"}}
-<!-- [html-validate-disable prefer-tbody]-->
-<div id="content" hx-get="/nats/" hx-trigger="every 1m">
-    <div class="w3-container w3-center w3-theme-dark w3-padding">
-        <div id="error" class="w3-red"></div>
-        <h1>Authorized Nats Users</h1>
-        <div class="grid4">
-                <div class="w3-theme-l3">Kind</div>
-                <div class="w3-theme-l3">Name</div>
-                <div class="w3-theme-l3">Subscribe</div>
-                <div class="w3-theme-l3">Publish</div>
-            {{range . }}
-                <div>{{.Kind}}</div>
-                <div>{{.Name}}</div>
-                <div>{{.Subscribe}}</div>
-                <div>{{.Publish}}</div>
-            {{end}}
-        </div>
+{{define "users"}}
+<!-- [html-validate-disable no-dup-id]-->
+<div id="error" class="w3-red" hx-get="/users" hx-triger="every 1m" hx-target="#content" hx-target-error="#error">
+</div>
+<div class="w3-container w3-center w3-theme-dark w3-padding">
+    <div class="w3-bar w3-theme-d5">
+        <button class="w3-button" type="button" hx-get="users/add" hx-target="#content" hx-target-error="#error">
+            <i class="fa fa-user"></i>
+            Create New User</button>
+    </div>
+    <h1>Authorized Users</h1>
+    <div class="grid4">
+        <div class="w3-theme-l3">Name</div>
+        <div class="w3-theme-l3">Admin</div>
+        <div class="w3-theme-l3">Edit</div>
+        <div class="w3-theme-l3">Delete</div>
+        {{range . }}
+        <div>{{.Username}}</div>
+        <div>{{.IsAdmin}}</div>
+        <div><i class="fa fa-edit" hx-get="/users/user/{{.Username}}" hx-target="#content"
+                hx-target-errror="#error"></i></div>
+        <div><i class="fa fa-user-slash" hx-delete="/users/{{.Username}}" hx-target="#content" hx-target-error="#error"
+                hx-confirm="Delete User {{.Username}}"></i></div>
+        {{end}}
     </div>
 </div>
 {{end}}
 
 {{define "editUser"}}
+<div id="error" class="red"></div>
 <div class="w3-row">
     <div class="w3-third"><br></div>
     <div class="w3-third">
         <h1>Edit User</h1>
         <h2>{{.Username}}</h2>
-        <form name="editUser" hx-post="/users/{{.Username}}" hx-target="#content" onsubmit="return valPass()">
+        <form name="editUser" hx-post="/users/user/{{.Username}}" hx-target="#content" onsubmit="return valPass()">
             <label for="password">New Password: </label>
             <input type="password" placeholder="new password" name="Password" required><br>
             <label for="verify">Verify Password: </label>
             <input type="password" placeholder="new password" name="verify" required><br><br>
-            <button type="button" hx-get="/" hx-target="#main">Cancel</button>
+            <button type="button" hx-get="/users/" hx-target="#main">Cancel</button>
             <button type="submit">Submit</button>
         </form>
         <script>
@@ -47,4 +54,34 @@
         </script>
     </div>
 </div>
+{{end}}
+
+{{define "newUser"}}
+<div id="error" class="w3-red"></div>
+<h1>New User</h1>
+<form name="newUser" hx-post="/users/add" hx-target="#content" hx-target-error="#error" onsubmit="return valPass()">
+    <label for="username">Username</label><br>
+    <input type="text" placeholder="enter username" name="Username" required><br>
+    <label for="pass">Password</label><br>
+    <input type="password" placeholder="enter password" name="Password" required><br>
+    <label for="verify">Verify Password</label><br>
+    <input type="password" placeholder="enter password" name="Verify" required><br>
+    <label for="admin">Admin</label><br>
+    <input type="checkbox" name="Admin"><br>
+    <p><button class="w3-button" type="button" hx-get="/users/" hx-target="#content">Cancel</button>
+        <button class="w3-button w3-theme-dark" type="reset">Reset</button>
+        <button class="w3-button w3-theme-dark" type="submit">Create</button>
+    </p>
+</form>
+<script>
+    function valPass() {
+        var x = document.forms["newUser"]["Password"].value;
+        var y = document.forms["newUser"]["Verify"].value;
+        console.log(x, y)
+        if (x != y) {
+            alert("password are not the same");
+            return false;
+        }
+    }
+</script>
 {{end}}

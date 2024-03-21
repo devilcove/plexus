@@ -89,6 +89,7 @@ func validateUser(visitor *plexus.User) bool {
 		return false
 	}
 	if visitor.Username == user.Username && checkPassword(visitor, &user) {
+		visitor.IsAdmin = user.IsAdmin
 		return true
 	}
 	return false
