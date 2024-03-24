@@ -375,6 +375,7 @@ func networkPeerDetails(c *gin.Context) {
 	}
 	for _, peer := range network.Peers {
 		if peer.WGPublicKey == peerID {
+			peer.Connectivity = peer.Connectivity * 100
 			c.HTML(http.StatusOK, "displayNetworkPeer", peer)
 			return
 		}
