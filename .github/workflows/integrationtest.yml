@@ -1,0 +1,55 @@
+name: Integration Test
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - "master"
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: ./go.mod
+      - name: Build
+        run: |
+          cd app/plexus-server
+          CGO_ENABLED=0 go build -v  . 
+          cd ../plexus-agent
+          CGO_ENABLED=0 go build -v  . 
+  
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: ./go.mod
+      - name: run tests
+        run: |
+          go vet ./...
+          go test ./... -v
+  
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: setup go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: ./go.mod
+      - name:  lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          args: --timeout=5m
