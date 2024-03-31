@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/caddyserver/certmagic"
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
 	"github.com/spf13/viper"
@@ -54,11 +56,11 @@ const (
 	pingTick      = time.Minute * 3
 )
 
-func configureServer() (*slog.Logger, error) {
+func configureServer() (*slog.Logger, *tls.Config, error) {
+	var tlsConfig *tls.Config
 	viper.SetDefault("adminname", "admin")
 	viper.SetDefault("adminpass", "password")
 	viper.SetDefault("verbosity", "INFO")
-	//viper.SetDefault("fqdn", "localhost")
 	viper.SetDefault("secure", true)
 	viper.SetDefault("port", "8080")
 	viper.SetDefault("email", "")
@@ -68,39 +70,51 @@ func configureServer() (*slog.Logger, error) {
 	viper.SetConfigFile("/etc/plexus/config")
 	viper.SetConfigType("yaml")
 	if err := viper.ReadInConfig(); err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, err
+		return nil, nil, err
 	}
 	viper.SetEnvPrefix("PLEXUS")
 	viper.AutomaticEnv()
 	if err := viper.UnmarshalExact(&config); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	logger := plexus.SetLogging(config.Verbosity)
 	if config.Secure {
 		if config.FQDN == "" {
-			return logger, errors.New("secure server requires FQDN")
+			return logger, nil, errors.New("secure server requires FQDN")
 		}
 		if net.ParseIP(config.FQDN) != nil {
-			return logger, errors.New("cannot use IP address with secure")
+			return logger, nil, errors.New("cannot use IP address with secure")
 		}
 		if !emailValid(config.Email) {
-			return logger, errors.New("valid email address required")
+			return logger, nil, errors.New("valid email address required")
 		}
 
 	}
 	// initalize database
 	if err := os.MkdirAll(config.DBPath, os.ModePerm); err != nil {
-		return logger, err
+		return logger, nil, err
 	}
 	slog.Info("init db", "path", config.DBFile, "file", config.DBFile, "tables", config.Tables)
 	if err := boltdb.Initialize(config.DBPath+config.DBFile, config.Tables); err != nil {
-		return logger, fmt.Errorf("init database %w", err)
+		return logger, nil, fmt.Errorf("init database %w", err)
 	}
 	//check default user exists
 	if err := checkDefaultUser(config.AdminName, config.AdminPass); err != nil {
-		return logger, err
+		return logger, nil, err
 	}
-	return logger, nil
+	// get TLS
+	if config.Secure {
+		var err error
+		certmagic.DefaultACME.Agreed = true
+		certmagic.DefaultACME.Email = config.Email
+		certmagic.DefaultACME.CA = certmagic.LetsEncryptProductionCA
+		tlsConfig, err = certmagic.TLS([]string{config.FQDN})
+		if err != nil {
+			return nil, nil, err
+		}
+
+	}
+	return logger, tlsConfig, nil
 }
 
 func emailValid(email string) bool {

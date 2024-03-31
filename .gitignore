@@ -1,12 +1,11 @@
 **/.env
 app/plexus-server/plexus-server
 app/plexus-agent/plexus-agent
-devops/plexus-update/plexus-update
 coverage.out
 coverage.html
 test.db
 time.db
 **/launch.json
 devops/experiment/*
-**/devops/plexus-update
+devops/plexus-update/*
 devops/deploy/*

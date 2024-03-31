@@ -60,7 +60,7 @@ func TestAddKey(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	newDevice = make(chan string, 1)
 	wg.Add(1)
-	go broker(ctx, wg)
+	go broker(ctx, wg, nil)
 	err := deleteAllKeys()
 	assert.Nil(t, err)
 	user := plexus.User{

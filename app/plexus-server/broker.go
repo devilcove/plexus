@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"fmt"
 	"log/slog"
 	"os"
 	"sync"
@@ -14,7 +16,7 @@ import (
 	"github.com/nats-io/nkeys"
 )
 
-func broker(ctx context.Context, wg *sync.WaitGroup) {
+func broker(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 	defer wg.Done()
 	slog.Info("Starting broker...")
 	//create admin user
@@ -47,6 +49,10 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 	natsOptions.Nkeys = append(natsOptions.Nkeys, tokensUsers...)
 	natsOptions.Nkeys = append(natsOptions.Nkeys, deviceUsers...)
 	natsOptions.NoSigs = true
+	if config.Secure {
+		natsOptions.TLSConfig = tls
+		natsOptions.Host = config.FQDN
+	}
 	natServer, err = server.NewServer(natsOptions)
 	if err != nil {
 		slog.Error("nats server", "error", err)
@@ -57,15 +63,22 @@ func broker(ctx context.Context, wg *sync.WaitGroup) {
 		slog.Error("not ready for connection", "error", err)
 		return
 	}
-	connectOpts := nats.Options{
-		Url:  "nats://localhost:4222",
-		Nkey: adminPublicKey,
-		Name: "nats-test-nkey",
-		SignatureCB: func(nonce []byte) ([]byte, error) {
-			return adminKey.Sign(nonce)
-		},
+	//connectOpts := nats.Options{
+	//	Url: nats.DefaultURL,
+	//	//Url:  "nats://localhost:4222",
+	//	Nkey: adminPublicKey,
+	//	Name: "nats-test-nkey",
+	//	SignatureCB: func(nonce []byte) ([]byte, error) {
+	//		return adminKey.Sign(nonce)
+	//	},
+	//}
+	SignatureCB := func(nonce []byte) ([]byte, error) {
+		return adminKey.Sign(nonce)
 	}
-	natsConn, err = connectOpts.Connect()
+	opts := []nats.Option{nats.Nkey(adminPublicKey, SignatureCB)}
+	//opts = append(opts, )
+	//natsConn, err = connectOpts.Connect()
+	natsConn, err = nats.Connect(fmt.Sprintf("nats://%s:4222", config.FQDN), opts...)
 	if err != nil {
 		slog.Error("nats connect", "error", err)
 		brokerfail <- 1

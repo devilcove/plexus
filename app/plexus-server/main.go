@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"log/slog"
 	"net/http"
 	"os"
@@ -9,7 +10,6 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/caddyserver/certmagic"
 	"github.com/devilcove/boltdb"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
@@ -26,8 +26,7 @@ var (
 )
 
 func main() {
-
-	logger, err := configureServer()
+	logger, tlsConfig, err := configureServer()
 	if err != nil {
 		slog.Error("unable to configure server", "error", err)
 		os.Exit(1)
@@ -42,7 +41,7 @@ func main() {
 	signal.Notify(quit, syscall.SIGTERM, os.Interrupt)
 	signal.Notify(reset, syscall.SIGHUP)
 	ctx, cancel := context.WithCancel(context.Background())
-	start(ctx, &wg, logger)
+	start(ctx, &wg, logger, tlsConfig)
 	for {
 		select {
 		case <-quit:
@@ -55,7 +54,7 @@ func main() {
 			cancel()
 			wg.Wait()
 			ctx, cancel = context.WithCancel(context.Background())
-			start(ctx, &wg, logger)
+			start(ctx, &wg, logger, tlsConfig)
 		case <-brokerfail:
 			slog.Error("error running broker .... shutting down")
 			cancel()
@@ -70,42 +69,42 @@ func main() {
 	}
 }
 
-func start(ctx context.Context, wg *sync.WaitGroup, logger *slog.Logger) {
+func start(ctx context.Context, wg *sync.WaitGroup, logger *slog.Logger, tls *tls.Config) {
 	wg.Add(2)
-	go web(ctx, wg, logger)
-	go broker(ctx, wg)
+	go web(ctx, wg, logger, tls)
+	go broker(ctx, wg, tls)
 }
 
-func web(ctx context.Context, wg *sync.WaitGroup, logger *slog.Logger) {
+func web(ctx context.Context, wg *sync.WaitGroup, logger *slog.Logger, tls *tls.Config) {
 	defer wg.Done()
 	slog.Info("Starting web server...")
 	router := setupRouter(logger)
+	server := http.Server{
+		Addr:    ":" + config.Port,
+		Handler: router,
+	}
 	if config.Secure {
-		certmagic.DefaultACME.Agreed = true
-		certmagic.DefaultACME.Email = config.Email
-		certmagic.DefaultACME.CA = certmagic.LetsEncryptProductionCA
-		go func() {
-			if err := certmagic.HTTPS([]string{config.FQDN}, router); err != nil {
-				slog.Error("https", "error", err)
-				webfail <- 1
-			}
-		}()
-		<-ctx.Done()
-		return
-	} else {
-		server := http.Server{
-			Addr:    ":" + config.Port,
-			Handler: router,
+		if tls == nil {
+			slog.Error("secure set but tls nil")
+			webfail <- 1
 		}
+		server.TLSConfig = tls
+		server.Addr = ":443"
 		go func() {
-			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				slog.Error("http", "error", err.Error())
+			if err := server.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
+				slog.Error("https server", "error", err)
 				webfail <- 1
 			}
 		}()
-		<-ctx.Done()
-		if err := server.Shutdown(ctx); err != nil {
-			slog.Error("http server shutdown", "error", err.Error())
+	} else {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("http server", "error", err)
+			webfail <- 1
 		}
 	}
+	<-ctx.Done()
+	if err := server.Shutdown(ctx); err != nil {
+		slog.Error("http server shutdown", "error", err.Error())
+	}
+	slog.Info("http server shutdown")
 }
