@@ -115,7 +115,7 @@ type NetworkPeer struct {
 	Address          net.IPNet
 	ListenPort       int
 	PublicListenPort int
-	Endpoint         string
+	Endpoint         net.IP
 	NatsConnected    bool
 	Connectivity     float64
 	IsRelay          bool
@@ -148,7 +148,7 @@ type Peer struct {
 	OS          string
 	//ListenPort       int
 	//PublicListenPort int
-	Endpoint      string
+	Endpoint      net.IP
 	Updated       time.Time
 	NatsConnected bool
 }
@@ -234,7 +234,7 @@ type CheckinData struct {
 	Version          string
 	ListenPort       int
 	PublicListenPort int
-	Endpoint         string
+	Endpoint         net.IP
 	Connections      []ConnectivityData
 }
 

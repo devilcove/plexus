@@ -39,11 +39,11 @@ func (w *wireguard) Apply() error {
 	slog.Debug("applying wg config", "wireguard", w)
 	wgClient, err := wgctrl.New()
 	if err != nil {
-		return err
+		return fmt.Errorf("wgtcl.New %w", err)
 	}
 	defer wgClient.Close()
 	if err := wgClient.ConfigureDevice(w.Name, w.Config); err != nil {
-		return err
+		return fmt.Errorf("wireguard configure device, %w", err)
 	}
 	link, err := netlink.LinkByName(w.Name)
 	if err != nil {

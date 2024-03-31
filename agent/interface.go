@@ -260,7 +260,7 @@ func getWGPeers(self Device, network Network) []wgtypes.PeerConfig {
 			ReplaceAllowedIPs: true,
 			AllowedIPs:        getAllowedIPs(peer, network.Peers),
 			Endpoint: &net.UDPAddr{
-				IP:   net.ParseIP(peer.Endpoint),
+				IP:   peer.Endpoint,
 				Port: peer.PublicListenPort,
 			},
 			PersistentKeepaliveInterval: &keepalive,
@@ -284,7 +284,7 @@ func selfRelayedPeers(self Device, network Network) []wgtypes.PeerConfig {
 				ReplaceAllowedIPs: true,
 				AllowedIPs:        []net.IPNet{network.Net},
 				Endpoint: &net.UDPAddr{
-					IP:   net.ParseIP(peer.Endpoint),
+					IP:   peer.Endpoint,
 					Port: peer.PublicListenPort,
 				},
 				PersistentKeepaliveInterval: &keepalive,
@@ -303,9 +303,9 @@ func stunCheck(self *Device, network *Network, port int) (bool, bool, error) {
 	if err != nil {
 		return endpointChanged, portChanged, err
 	}
-	if stunAddr.IP.String() != self.Endpoint {
+	if !stunAddr.IP.Equal(self.Endpoint) {
 		endpointChanged = true
-		self.Endpoint = stunAddr.String()
+		self.Endpoint = stunAddr.IP
 	}
 	if network.PublicListenPort != stunAddr.Port {
 		network.PublicListenPort = stunAddr.Port

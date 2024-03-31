@@ -167,7 +167,7 @@ func processCheckin(data *plexus.CheckinData) plexus.MessageResponse {
 	//	peer.ListenPort = data.ListenPort
 	//	publishUpdate = true
 	//}
-	if peer.Endpoint != data.Endpoint {
+	if !peer.Endpoint.Equal(data.Endpoint) {
 		peer.Endpoint = data.Endpoint
 		publishUpdate = true
 	}

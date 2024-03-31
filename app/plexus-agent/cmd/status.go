@@ -96,7 +96,7 @@ var statusCmd = &cobra.Command{
 					fmt.Println("\trelay: true")
 					showRelayedPeers(peer.RelayedPeers, network)
 				}
-				fmt.Println("\tendpoint:", peer.Endpoint+":", peer.PublicListenPort)
+				fmt.Println("\tendpoint:", peer.Endpoint.String()+":", peer.PublicListenPort)
 				fmt.Print("\tallowed ips:")
 				for _, ip := range wgPeer.AllowedIPs {
 					ones, _ := ip.Mask.Size()
