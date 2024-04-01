@@ -17,7 +17,7 @@ require (
 	github.com/samber/slog-gin v1.10.2
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	github.com/vishvananda/netlink v1.1.0
 	go.etcd.io/bbolt v1.3.8
 	golang.org/x/crypto v0.21.0
