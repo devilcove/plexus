@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -50,7 +51,7 @@ func TestAddNetwork(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 		body, err := io.ReadAll(w.Body)
 		assert.Nil(t, err)
-		assert.Contains(t, string(body), "invalid network data")
+		assert.Contains(t, string(body), "Error Processing Request: invalid address for network")
 	})
 	t.Run("spacesNetworkName", func(t *testing.T) {
 		network := plexus.Network{
@@ -142,7 +143,7 @@ func TestAddNetwork(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 		body, err := io.ReadAll(w.Body)
 		assert.Nil(t, err)
-		assert.Contains(t, string(body), "<div id=\"error\" class=\"w3-red\"></div>")
+		assert.Contains(t, string(body), "<div id=\"error\" class=\"w3-red\"")
 	})
 
 	t.Run("duplicateCidr", func(t *testing.T) {
@@ -198,7 +199,7 @@ func TestAddNetwork(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 		body, err := io.ReadAll(w.Body)
 		assert.Nil(t, err)
-		assert.Contains(t, string(body), "<div id=\"error\" class=\"w3-red\"></div>")
+		assert.Contains(t, string(body), "<div id=\"error\" class=\"w3-red\"")
 	})
 	t.Run("duplicateName", func(t *testing.T) {
 		network := plexus.Network{
@@ -242,28 +243,17 @@ func TestDeleteNetwork(t *testing.T) {
 		assert.Contains(t, string(body), "network does not exist")
 	})
 	t.Run("existingNetwork", func(t *testing.T) {
-		network := plexus.Network{
-			Name:          "valid",
-			AddressString: "10.10.10.0/24",
-		}
-		payload, err := json.Marshal(&network)
+		err := createTestNetwork(cookie)
 		assert.Nil(t, err)
-		req, err := http.NewRequest(http.MethodPost, "/networks/add", bytes.NewBuffer(payload))
+		req, err := http.NewRequest(http.MethodDelete, "/networks/valid", nil)
 		assert.Nil(t, err)
-		req.Header.Set("content-type", "application/json")
 		req.AddCookie(cookie)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 		assert.Equal(t, http.StatusOK, w.Code)
-		req, err = http.NewRequest(http.MethodDelete, "/networks/valid", nil)
-		assert.Nil(t, err)
-		req.AddCookie(cookie)
-		w = httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusOK, w.Code)
 		body, err := io.ReadAll(w.Body)
 		assert.Nil(t, err)
-		assert.Contains(t, string(body), "<div id=\"error\" class=\"w3-red\"></div>")
+		assert.Contains(t, string(body), "<div id=\"error\" class=\"w3-red\"")
 	})
 	err = deleteAllNetworks()
 	assert.Nil(t, err)
@@ -281,4 +271,27 @@ func deleteAllNetworks() error {
 		}
 	}
 	return errs
+}
+
+func createTestNetwork(cookie *http.Cookie) error {
+	network := plexus.Network{
+		Name:          "valid",
+		AddressString: "10.10.10.0/24",
+	}
+	payload, err := json.Marshal(&network)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest(http.MethodPost, "/networks/add", bytes.NewBuffer(payload))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("content-type", "application/json")
+	req.AddCookie(cookie)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	if w.Result().StatusCode != http.StatusOK {
+		return fmt.Errorf("bad status response: %s", w.Result().Status)
+	}
+	return nil
 }

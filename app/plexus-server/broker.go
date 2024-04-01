@@ -120,7 +120,7 @@ func broker(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 			pingTicker.Stop()
 			keyTicker.Stop()
 			for _, sub := range subscrptions {
-				sub.Drain()
+				_ = sub.Drain()
 			}
 			//registerSub.Drain()
 			//checkinSub.Drain()
@@ -148,7 +148,7 @@ func broker(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 				Nkey:        nPubKey,
 				Permissions: registerPermissions(),
 			})
-			natServer.ReloadOptions(natsOptions)
+			_ = natServer.ReloadOptions(natsOptions)
 		case <-pingTicker.C:
 			pingPeers()
 		case <-keyTicker.C:
@@ -282,7 +282,9 @@ func serverSubcriptions() []*nats.Subscription {
 	checkin, err := eConn.Subscribe("*"+plexus.Checkin, func(subj, reply string, request *plexus.CheckinData) {
 		if len(subj) != 52 {
 			slog.Error("invalid subj", "subj", subj)
-			eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"})
+			if err := eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"}); err != nil {
+				slog.Error("publish error", "error", err)
+			}
 			return
 		}
 		if err := eConn.Publish(reply, processCheckin(request)); err != nil {
@@ -314,7 +316,9 @@ func serverSubcriptions() []*nats.Subscription {
 	version, err := eConn.Subscribe("*"+plexus.Version, func(subj, reply string, request *any) {
 		if len(subj) != 52 {
 			slog.Error("invalid subj", "subj", subj)
-			eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"})
+			if err := eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"}); err != nil {
+				slog.Error("publish error response", "error", err)
+			}
 			return
 		}
 		if err := eConn.Publish(reply, serverVersion()); err != nil {
@@ -330,7 +334,9 @@ func serverSubcriptions() []*nats.Subscription {
 	leave, err := eConn.Subscribe("*"+plexus.LeaveNetwork, func(subj, reply string, request *plexus.LeaveRequest) {
 		if len(subj) != 57 {
 			slog.Error("invalid subj", "subj", subj)
-			eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"})
+			if err := eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"}); err != nil {
+				slog.Error("publish error response", "error", err)
+			}
 			return
 		}
 		if err := eConn.Publish(reply, processLeave(subj[:44], request)); err != nil {
@@ -346,7 +352,9 @@ func serverSubcriptions() []*nats.Subscription {
 	leaveServer, err := eConn.Subscribe("*"+plexus.LeaveServer, func(subj, reply string, request *any) {
 		if len(subj) != 56 {
 			slog.Error("invalid subj", "subj", subj)
-			eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"})
+			if err := eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"}); err != nil {
+				slog.Error("publish error response", "error", err)
+			}
 			return
 		}
 		if err := processLeaveServer(subj[:44]); err != nil {
@@ -362,7 +370,9 @@ func serverSubcriptions() []*nats.Subscription {
 	reload, err := eConn.Subscribe("*"+plexus.Reload, func(subj, reply string, request *any) {
 		if len(subj) != 51 {
 			slog.Error("invalid subj", "subj", subj)
-			eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"})
+			if err := eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"}); err != nil {
+				slog.Error("publish error response", "error", err)
+			}
 			return
 		}
 		if err := eConn.Publish(reply, processReload(subj[:44])); err != nil {

@@ -148,7 +148,9 @@ func expireKeys() {
 	for _, key := range keys {
 		if key.Expires.Before(time.Now()) {
 			slog.Info("key has expired ...deleting", "key", key.Name, "expiry time", key.Expires.Format(time.RFC822))
-			removeKey(key)
+			if err := removeKey(key); err != nil {
+				slog.Error("remove key", "error", err)
+			}
 		}
 	}
 }
@@ -157,7 +159,7 @@ func removeKey(key plexus.Key) error {
 	var errs error
 	if err := boltdb.Delete[plexus.Key](key.Name, keyTable); err != nil {
 		slog.Error("delete key from db", "error", err)
-		errors.Join(errs, err)
+		errs = errors.Join(errs, err)
 	}
 	token, err := plexus.DecodeToken(key.Value)
 	if err != nil {

@@ -40,7 +40,7 @@ func TestDefaultUser(t *testing.T) {
 }
 
 func TestAuthFail(t *testing.T) {
-	req, err := http.NewRequest(http.MethodGet, "/settings/", nil)
+	req, err := http.NewRequest(http.MethodGet, "/server/", nil)
 	assert.Nil(t, err)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)

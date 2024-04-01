@@ -90,7 +90,7 @@ func getUsers(c *gin.Context) {
 		user.Password = ""
 		returnedUsers = append(returnedUsers, user)
 	}
-	session.Save()
+	_ = session.Save()
 	c.HTML(http.StatusOK, "users", returnedUsers)
 }
 
@@ -110,7 +110,7 @@ func getUser(c *gin.Context) {
 		return
 	}
 	user.Password = ""
-	session.Save()
+	_ = session.Save()
 	c.HTML(http.StatusOK, "editUser", user)
 }
 
@@ -123,7 +123,7 @@ func getCurrentUser(c *gin.Context) {
 		processError(c, http.StatusBadRequest, "no such user "+err.Error())
 		return
 	}
-	session.Save()
+	_ = session.Save()
 	c.HTML(http.StatusOK, "editUser", user)
 }
 

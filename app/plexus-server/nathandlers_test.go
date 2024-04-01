@@ -6,7 +6,6 @@ import (
 
 	"github.com/c-robinson/iplib"
 	"github.com/devilcove/plexus"
-	"github.com/kr/pretty"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -37,7 +36,6 @@ func TestGetNextIP(t *testing.T) {
 		},
 	}
 	network.Peers = peers
-	t.Log(pretty.Println(network))
 	ip, err := getNextIP(network)
 	assert.Nil(t, err)
 	assert.Equal(t, 0, iplib.CompareIPs(ip, net.ParseIP("192.168.0.3")))

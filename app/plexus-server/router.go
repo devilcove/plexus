@@ -96,11 +96,6 @@ func setupRouter(logger *slog.Logger) *gin.Engine {
 		users.GET("/user/:name", getUser)
 		users.POST("user/:name", editUser)
 	}
-	settings := router.Group("/settings", auth)
-	{
-		settings.GET("/", getSettings)
-		settings.POST("/logs/:level", updateSettings)
-	}
 	server := router.Group("/server", auth)
 	{
 		server.GET("/", getServer)

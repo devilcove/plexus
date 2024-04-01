@@ -7,7 +7,9 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/devilcove/boltdb"
@@ -47,49 +49,16 @@ func TestGetPage(t *testing.T) {
 	assert.Equal(t, "v0.1.0", page.Version)
 }
 
-func TestSetPage(t *testing.T) {
-	t.Run("nil", func(t *testing.T) {
-		setPage(nil, "something")
-		page := getPage("someuser")
-		assert.Equal(t, "nil", page.Page)
-	})
-	t.Run("sameuser", func(t *testing.T) {
-		setPage("newuser", "something")
-		page := getPage("newuser")
-		assert.Equal(t, "something", page.Page)
-	})
-}
-
-func TestSetTheme(t *testing.T) {
-	setTheme("themeuser", "black")
-	page := getPage("themeuser")
-	assert.Equal(t, "black", page.Theme)
-}
-
-func TestSetFont(t *testing.T) {
-	setFont("fontuser", "Lato")
-	page := getPage("fontuser")
-	assert.Equal(t, "Lato", page.Font)
-}
-
-func TestSetRefresh(t *testing.T) {
-	setRefresh("refreshuser", 2)
-	page := getPage("refreshuser")
-	assert.Equal(t, 2, page.Refresh)
-}
-
 func TestLogin(t *testing.T) {
 	err := deleteAllUsers(true)
 	assert.Nil(t, err)
 	t.Run("nousers", func(t *testing.T) {
-		user := plexus.User{
-			Username: "admin",
-			Password: "testing",
-		}
-		payload, err := json.Marshal(&user)
+		form := url.Values{}
+		form.Add("username", "admin")
+		form.Add("password", "testing")
 		assert.Nil(t, err)
-		req, err := http.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(payload))
-		req.Header.Set("Content-Type", "application/json")
+		req, err := http.NewRequest(http.MethodPost, "/", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		assert.Nil(t, err)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -110,7 +79,7 @@ func TestLogin(t *testing.T) {
 		}
 		payload, err := json.Marshal(&user)
 		assert.Nil(t, err)
-		req, err := http.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(payload))
+		req, err := http.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
 		req.Header.Set("Content-Type", "application/json")
 		assert.Nil(t, err)
 		w := httptest.NewRecorder()
@@ -127,7 +96,7 @@ func TestLogin(t *testing.T) {
 		}
 		payload, err := json.Marshal(&user)
 		assert.Nil(t, err)
-		req, err := http.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(payload))
+		req, err := http.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
 		req.Header.Set("Content-Type", "application/json")
 		assert.Nil(t, err)
 		w := httptest.NewRecorder()
@@ -144,7 +113,7 @@ func TestLogin(t *testing.T) {
 		}
 		payload, err := json.Marshal(&user)
 		assert.Nil(t, err)
-		req, err := http.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(payload))
+		req, err := http.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
 		req.Header.Set("Content-Type", "application/json")
 		assert.Nil(t, err)
 		w := httptest.NewRecorder()
@@ -152,7 +121,7 @@ func TestLogin(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 		body, err := io.ReadAll(w.Body)
 		assert.Nil(t, err)
-		assert.Contains(t, string(body), "<h1>Peers</h1>")
+		assert.Contains(t, string(body), "<title>Plexus</title>")
 		assert.NotNil(t, w.Result().Cookies())
 	})
 }
@@ -183,15 +152,14 @@ func deleteAllUsers(deleteAll bool) (errs error) {
 
 func testLogin(data plexus.User) (*http.Cookie, error) {
 	w := httptest.NewRecorder()
-	body, err := json.Marshal(data)
+	form := url.Values{}
+	form.Add("username", data.Username)
+	form.Add("password", data.Password)
+	req, err := http.NewRequest(http.MethodPost, "/", strings.NewReader(form.Encode()))
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(body))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	router.ServeHTTP(w, req)
 	for _, cookie := range w.Result().Cookies() {
 		if cookie.Name == "plexus" {

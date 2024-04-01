@@ -22,9 +22,11 @@ func TestDisplayKeys(t *testing.T) {
 		Username: "hello",
 		Password: "world",
 	}
-	createTestUser(user)
+	err := createTestUser(user)
+	assert.Nil(t, err)
 	cookie, err := testLogin(user)
 	assert.Nil(t, err)
+	assert.NotNil(t, cookie)
 	req, err := http.NewRequest(http.MethodGet, "/keys/", nil)
 	assert.Nil(t, err)
 	req.AddCookie(cookie)
@@ -79,7 +81,7 @@ func TestAddKey(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 		body, err := io.ReadAll(w.Body)
 		assert.Nil(t, err)
-		assert.Contains(t, string(body), "invalid key data")
+		assert.Contains(t, string(body), "Error Processing Request")
 	})
 	t.Run("spaceInName", func(t *testing.T) {
 		key := plexus.Key{
@@ -268,15 +270,18 @@ func TestDeleteKeys(t *testing.T) {
 }
 
 func TestUpdateKey(t *testing.T) {
+	value, err := newValue("one")
+	assert.Nil(t, err)
 	key1 := plexus.Key{
 		Name:  "one",
 		Usage: 1,
+		Value: value,
 	}
 	key2 := plexus.Key{
 		Name:  "two",
 		Usage: 10,
 	}
-	err := boltdb.Save(key1, key1.Name, keyTable)
+	err = boltdb.Save(key1, key1.Name, keyTable)
 	assert.Nil(t, err)
 	err = boltdb.Save(key2, key2.Name, keyTable)
 	assert.Nil(t, err)

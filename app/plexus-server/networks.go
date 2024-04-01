@@ -21,7 +21,7 @@ func displayAddNetwork(c *gin.Context) {
 	session := sessions.Default(c)
 	page := getPage(session.Get("user"))
 	page.Page = "addNetwork"
-	session.Save()
+	_ = session.Save()
 	c.HTML(http.StatusOK, "addNetwork", page)
 
 }
@@ -84,7 +84,7 @@ func displayNetworks(c *gin.Context) {
 		return
 	}
 	page.Data = networks
-	session.Save()
+	_ = session.Save()
 	c.Header("HX-Trigger", "networkChange")
 	c.HTML(http.StatusOK, "networks", page)
 }
@@ -159,7 +159,7 @@ func networkDetails(c *gin.Context) {
 	}
 	details.Name = networkName
 	details.AvailablePeers = getAvailablePeers(network)
-	session.Save()
+	_ = session.Save()
 	c.HTML(http.StatusOK, "networkDetails", details)
 }
 
@@ -174,6 +174,11 @@ func deleteNetwork(c *gin.Context) {
 		return
 	}
 	log.Println("deleting network", network)
+	if eConn == nil {
+		slog.Error("not connected to nats")
+		processError(c, http.StatusInternalServerError, "nats failure:  network update not published")
+		return
+	}
 	if err := eConn.Publish(plexus.Networks+network, plexus.NetworkUpdate{
 		Action: plexus.DeleteNetwork,
 	}); err != nil {

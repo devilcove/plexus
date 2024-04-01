@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"log/slog"
 	"net/http"
 	"time"
@@ -152,44 +151,4 @@ func getPage(user any) Page {
 	}
 	pages[user.(string)] = initialize()
 	return pages[user.(string)]
-}
-
-func setPage(user any, pageToSet string) {
-	log.Println("setting page", pageToSet, " for user", user)
-	if user == nil {
-		return
-	}
-	page, ok := pages[user.(string)]
-	if !ok {
-		page = initialize()
-	}
-	page.Page = pageToSet
-	pages[user.(string)] = page
-}
-
-func setTheme(user, theme string) {
-	page, ok := pages[user]
-	if !ok {
-		page = initialize()
-	}
-	page.Theme = theme
-	pages[user] = page
-}
-
-func setFont(user, font string) {
-	page, ok := pages[user]
-	if !ok {
-		page = initialize()
-	}
-	page.Font = font
-	pages[user] = page
-}
-
-func setRefresh(user string, refresh int) {
-	page, ok := pages[user]
-	if !ok {
-		page = initialize()
-	}
-	page.Refresh = refresh
-	pages[user] = page
 }
