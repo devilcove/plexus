@@ -38,7 +38,7 @@ jobs:
       - name: run tests
         run: |
           go vet ./...
-          go test ./... -v
+          sudo go test ./... -v
   
   lint:
     runs-on: ubuntu-latest
