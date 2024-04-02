@@ -36,7 +36,7 @@ debug, info, warn, or error
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := cobra.OnlyValidArgs(cmd, args); err != nil {
 			fmt.Println(err)
-			cmd.Usage()
+			_ = cmd.Usage()
 		}
 		fmt.Println("setting daemon log level to", args[0])
 		ec, err := agent.ConnectToAgentBroker()

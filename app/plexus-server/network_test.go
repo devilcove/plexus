@@ -20,7 +20,8 @@ func TestDisplayAddNetwork(t *testing.T) {
 		Username: "hello",
 		Password: "world",
 	}
-	createTestUser(user)
+	err := createTestUser(user)
+	assert.Nil(t, err)
 	cookie, err := testLogin(user)
 	assert.Nil(t, err)
 	req, err := http.NewRequest(http.MethodGet, "/networks/add", nil)
@@ -39,7 +40,8 @@ func TestAddNetwork(t *testing.T) {
 		Username: "hello",
 		Password: "world",
 	}
-	createTestUser(user)
+	err := createTestUser(user)
+	assert.Nil(t, err)
 	cookie, err := testLogin(user)
 	assert.Nil(t, err)
 	t.Run("emptydata", func(t *testing.T) {
@@ -228,7 +230,8 @@ func TestDeleteNetwork(t *testing.T) {
 		Username: "hello",
 		Password: "world",
 	}
-	createTestUser(user)
+	err := createTestUser(user)
+	assert.Nil(t, err)
 	cookie, err := testLogin(user)
 	assert.Nil(t, err)
 	t.Run("nosuchnetwork", func(t *testing.T) {

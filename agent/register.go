@@ -50,7 +50,9 @@ func handleRegistration(request *plexus.RegisterRequest) plexus.MessageResponse 
 		return plexus.MessageResponse{Message: "error saving device " + err.Error()}
 	}
 	slog.Debug("server response to join request", "response", resp)
-	connectToServer(self)
+	if err := connectToServer(self); err != nil {
+		slog.Error("connect to server", "error", err)
+	}
 	return resp
 }
 
@@ -171,7 +173,9 @@ func getPublicAddPort(port int) (*stun.XORMappedAddress, error) {
 	defer conn.Close()
 	msg := stun.MustBuild(stun.TransactionID, stun.BindingRequest)
 	if err := conn.Do(msg, func(res stun.Event) {
-		add.GetFrom(res.Message)
+		if err := add.GetFrom(res.Message); err != nil {
+			slog.Error("get address", "error", err)
+		}
 	}); err != nil {
 		return nil, err
 	}

@@ -15,7 +15,8 @@ func TestDefaultUser(t *testing.T) {
 	t.Run("noadmim", func(t *testing.T) {
 		err := deleteAllUsers(true)
 		assert.Nil(t, err)
-		checkDefaultUser("admin", "pass")
+		err = checkDefaultUser("admin", "pass")
+		assert.Nil(t, err)
 		user, err := boltdb.Get[plexus.User]("admin", userTable)
 		assert.Nil(t, err)
 		assert.Equal(t, "admin", user.Username)
@@ -24,14 +25,16 @@ func TestDefaultUser(t *testing.T) {
 	t.Run("env", func(t *testing.T) {
 		err := deleteAllUsers(true)
 		assert.Nil(t, err)
-		checkDefaultUser("Administrator", "password")
+		err = checkDefaultUser("Administrator", "password")
+		assert.Nil(t, err)
 		user, err := boltdb.Get[plexus.User]("Administrator", userTable)
 		assert.Nil(t, err)
 		assert.Equal(t, "Administrator", user.Username)
 		assert.Equal(t, true, user.IsAdmin)
 	})
 	t.Run("adminexists", func(t *testing.T) {
-		checkDefaultUser("Administator", "password")
+		err := checkDefaultUser("Administator", "password")
+		assert.Nil(t, err)
 		user, err := boltdb.Get[plexus.User]("Administrator", userTable)
 		assert.Nil(t, err)
 		assert.Equal(t, "Administrator", user.Username)

@@ -29,7 +29,9 @@ func Run() {
 		slog.Error("new device", "error", err)
 	}
 	ns, ec := startBroker()
-	connectToServer(self)
+	if err := connectToServer(self); err != nil {
+		slog.Error("connect to server", "error", err)
+	}
 	startAllInterfaces(self)
 	checkinTicker := time.NewTicker(checkinTime)
 	//serverTicker := time.NewTicker(serverCheckTime)
@@ -44,7 +46,7 @@ func Run() {
 			//serverTicker.Stop()
 			closeServerConnections()
 			slog.Info("shutdown nats server")
-			ec.Drain()
+			_ = ec.Drain()
 			go ns.Shutdown()
 			slog.Info("wait for nat server shutdown to complete")
 			ns.WaitForShutdown()

@@ -45,45 +45,49 @@ func subcribe(ec *nats.EncodedConn) {
 	//ec.Subscribe(">", func(subj string, msg *any) {
 	//slog.Debug("received nats message", "subject", subj, "data", *msg)
 	//})
-	ec.Subscribe(Agent+plexus.Status, func(subject, reply string, data any) {
+	_, _ = ec.Subscribe(Agent+plexus.Status, func(subject, reply string, data any) {
 		slog.Debug("status request received")
 		if err := ec.Publish(reply, processStatus()); err != nil {
 			slog.Error("publish status response", "err", err)
 		}
 	})
-	ec.Subscribe(Agent+plexus.JoinNetwork, func(subj, reply string, data *plexus.JoinRequest) {
+	_, _ = ec.Subscribe(Agent+plexus.JoinNetwork, func(subj, reply string, data *plexus.JoinRequest) {
 		slog.Debug("join request")
 		if err := ec.Publish(reply, processJoin(data)); err != nil {
 			slog.Error("publish join response", "error", err)
 		}
 	})
-	ec.Subscribe(Agent+plexus.LeaveNetwork, func(subj, reply string, data *plexus.LeaveRequest) {
+	_, _ = ec.Subscribe(Agent+plexus.LeaveNetwork, func(subj, reply string, data *plexus.LeaveRequest) {
 		slog.Debug("leave request")
 		if err := ec.Publish(reply, processLeave(data)); err != nil {
 			slog.Error("publish leave response", "error", err)
 		}
 	})
-	ec.Subscribe(Agent+plexus.LeaveServer, func(subj, reply string, data *any) {
+	_, _ = ec.Subscribe(Agent+plexus.LeaveServer, func(subj, reply string, data *any) {
 		slog.Debug("leaveServer request")
 		if err := ec.Publish(reply, processLeaveServer()); err != nil {
 			slog.Error("publish leaveServer response", "error", err)
 		}
-		ec.Publish(reply, plexus.MessageResponse{Message: "disconnected from server"})
+		if err := ec.Publish(reply, plexus.MessageResponse{Message: "disconnected from server"}); err != nil {
+			slog.Error("publish reply", "error", err)
+		}
 	})
 
-	ec.Subscribe(Agent+plexus.Register, func(sub, reply string, data *plexus.RegisterRequest) {
+	_, _ = ec.Subscribe(Agent+plexus.Register, func(sub, reply string, data *plexus.RegisterRequest) {
 		slog.Debug("register request")
 		resp := handleRegistration(data)
-		ec.Publish(reply, resp)
+		if err := ec.Publish(reply, resp); err != nil {
+			slog.Error("publish reply", "error", err)
+		}
 	})
-	ec.Subscribe(Agent+plexus.LogLevel, func(level *plexus.LevelRequest) {
+	_, _ = ec.Subscribe(Agent+plexus.LogLevel, func(level *plexus.LevelRequest) {
 		slog.Debug("loglevel request")
 		newLevel := strings.ToUpper(level.Level)
 		slog.Info("loglevel change", "level", newLevel)
 		plexus.SetLogging(newLevel)
 
 	})
-	ec.Subscribe(Agent+plexus.Reload, func(sub, reply string, data *any) {
+	_, _ = ec.Subscribe(Agent+plexus.Reload, func(sub, reply string, data *any) {
 		slog.Debug("reload request")
 		resp, err := processReload()
 		if err != nil {
@@ -105,11 +109,13 @@ func subcribe(ec *nats.EncodedConn) {
 		}
 		deleteAllNetworks()
 		deleteAllInterfaces()
-		saveServerNetworks(resp.Networks)
+		if err := saveServerNetworks(resp.Networks); err != nil {
+			slog.Error("save networks", "error", err)
+		}
 		startAllInterfaces(self)
 		//addNewNetworks(self, resp.Networks)
 	})
-	ec.Subscribe(Agent+plexus.Reset, func(sub, reply string, request *plexus.ResetRequest) {
+	_, _ = ec.Subscribe(Agent+plexus.Reset, func(sub, reply string, request *plexus.ResetRequest) {
 		slog.Debug("reset request")
 		self, err := boltdb.Get[Device]("self", deviceTable)
 		if err != nil {
@@ -144,7 +150,7 @@ func subcribe(ec *nats.EncodedConn) {
 			slog.Error(err.Error())
 		}
 	})
-	ec.Subscribe(Agent+plexus.Version, func(sub, reply string, long *bool) {
+	_, _ = ec.Subscribe(Agent+plexus.Version, func(sub, reply string, long *bool) {
 		slog.Debug("version request")
 		response := plexus.VersionResponse{}
 		self, err := boltdb.Get[Device]("self", deviceTable)

@@ -83,7 +83,9 @@ func startInterface(self Device, network Network) error {
 	if _, err := netlink.LinkByName(network.Interface); err == nil {
 		slog.Warn("interface exists", "interface", network.Interface)
 		wg, _ := plexus.Get(network.Interface)
-		wg.Apply()
+		if err := wg.Apply(); err != nil {
+			slog.Error("apply wg config", "error", err)
+		}
 		return err
 	}
 	mtu := 1420

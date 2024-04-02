@@ -43,7 +43,8 @@ func TestDisplayAddKey(t *testing.T) {
 		Username: "hello",
 		Password: "world",
 	}
-	createTestUser(user)
+	err := createTestUser(user)
+	assert.Nil(t, err)
 	cookie, err := testLogin(user)
 	assert.Nil(t, err)
 	req, err := http.NewRequest(http.MethodGet, "/keys/add", nil)
@@ -69,7 +70,8 @@ func TestAddKey(t *testing.T) {
 		Username: "hello",
 		Password: "world",
 	}
-	createTestUser(user)
+	err = createTestUser(user)
+	assert.Nil(t, err)
 	cookie, err := testLogin(user)
 	assert.Nil(t, err)
 	t.Run("emptydata", func(t *testing.T) {
@@ -225,7 +227,8 @@ func TestDeleteKeys(t *testing.T) {
 		Username: "hello",
 		Password: "world",
 	}
-	createTestUser(user)
+	err := createTestUser(user)
+	assert.Nil(t, err)
 	cookie, err := testLogin(user)
 	assert.Nil(t, err)
 	t.Run("nosuchkey", func(t *testing.T) {

@@ -300,7 +300,7 @@ func serverSubcriptions() []*nats.Subscription {
 	join, err := eConn.Subscribe("*"+plexus.JoinNetwork, func(subj, reply string, request *plexus.JoinRequest) {
 		if len(subj) != 49 {
 			slog.Error("invalid subj", "subj", subj)
-			eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"})
+			_ = eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"})
 			return
 		}
 		if err := eConn.Publish(reply, processJoin(subj[:44], request)); err != nil {

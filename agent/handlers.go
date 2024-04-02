@@ -52,7 +52,9 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 		}
 		slog.Debug("adding wg peer", "key", wgPeer.PublicKey, "allowedIPs", wgPeer.AllowedIPs)
 		wg.AddPeer(wgPeer)
-		wg.Apply()
+		if err := wg.Apply(); err != nil {
+			slog.Error("apply wg config", "error", err)
+		}
 	case plexus.DeletePeer:
 		slog.Debug("delete peer")
 		if update.Peer.WGPublicKey == self.Peer.WGPublicKey {
@@ -83,7 +85,9 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 			slog.Error("update network -- delete peer", "error", err)
 		}
-		wg.Apply()
+		if err := wg.Apply(); err != nil {
+			slog.Error("apply wg config", "error", err)
+		}
 	case plexus.UpdatePeer:
 		slog.Debug("update peer")
 		found := false
@@ -107,7 +111,9 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 			slog.Error("update network -- delete peer", "error", err)
 		}
-		wg.Apply()
+		if err := wg.Apply(); err != nil {
+			slog.Error("apply wg config", "error", err)
+		}
 	case plexus.AddRelay:
 		slog.Debug("add relay")
 		newPeers := []plexus.NetworkPeer{}

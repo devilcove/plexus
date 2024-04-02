@@ -77,7 +77,9 @@ func initConfig() {
 		viper.SetConfigFile(os.Getenv("HOME") + ".config/plexus-agent/config.yml")
 	}
 
-	viper.BindPFlags(rootCmd.Flags())
+	if err := viper.BindPFlags(rootCmd.Flags()); err != nil {
+		log.Println("bindflags", err)
+	}
 	viper.SetEnvPrefix("PLEXUS")
 	viper.AutomaticEnv() // read in environment variables that match
 	if err := viper.ReadInConfig(); err == nil {
