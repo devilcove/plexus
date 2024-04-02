@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"errors"
 	"net"
 	"os"
 	"testing"
@@ -50,7 +51,9 @@ func TestNewDevice(t *testing.T) {
 	assert.Nil(t, err)
 	device := Device{}
 	err = boltdb.Delete[Device]("self", deviceTable)
-	assert.Nil(t, err)
+	if err != nil && !errors.Is(err, boltdb.ErrNoResults) {
+		t.Fail()
+	}
 	hostname, err := os.Hostname()
 	assert.Nil(t, err)
 	t.Run("newDevice", func(t *testing.T) {
