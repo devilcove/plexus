@@ -117,6 +117,7 @@ func broker(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 	for {
 		select {
 		case <-ctx.Done():
+			slog.Info("shutting down broker")
 			pingTicker.Stop()
 			keyTicker.Stop()
 			for _, sub := range subscrptions {
