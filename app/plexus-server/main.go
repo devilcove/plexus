@@ -97,12 +97,16 @@ func web(ctx context.Context, wg *sync.WaitGroup, logger *slog.Logger, tls *tls.
 			}
 		}()
 	} else {
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("http server", "error", err)
-			webfail <- 1
-		}
+		go func() {
+			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				slog.Error("http server", "error", err)
+				webfail <- 1
+			}
+		}()
 	}
+	slog.Info("web server started")
 	<-ctx.Done()
+	slog.Info("shutting down web server")
 	if err := server.Shutdown(ctx); err != nil {
 		slog.Error("http server shutdown", "error", err.Error())
 	}
