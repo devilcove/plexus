@@ -7,7 +7,7 @@
     hx-target="#content" hx-target-error="#error">
     <label>Subnet CIDR</label>
     <input class="w3-input" type="text" name="cidr" required style="width:50%"><br>
-    <input class="w3-check" type="checkbox" name="nat" value="Use NAT">
+    <div class="w3-tooltip"><input class="w3-check" type="checkbox" name="nat" value="Use NAT" disabled><span class="w3-text w3-tag w3-red">Not Implemented</span><label>Use NAT</label></div>
     <p>
         <button class="w3-button w3-theme-dark w3-padding large" type="button" 
             hx-get="/networks/{{.Network}}/" hx-target="#content" hx-target-error="#error">
