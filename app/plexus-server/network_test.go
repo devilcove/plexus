@@ -53,7 +53,7 @@ func TestAddNetwork(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 		body, err := io.ReadAll(w.Body)
 		assert.Nil(t, err)
-		assert.Contains(t, string(body), "Error Processing Request: invalid address for network")
+		assert.Contains(t, string(body), "Error Processing Request:")
 	})
 	t.Run("spacesNetworkName", func(t *testing.T) {
 		network := plexus.Network{

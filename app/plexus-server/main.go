@@ -26,7 +26,7 @@ var (
 )
 
 func main() {
-	logger, tlsConfig, err := configureServer()
+	tlsConfig, err := configureServer()
 	if err != nil {
 		slog.Error("unable to configure server", "error", err)
 		os.Exit(1)
@@ -41,7 +41,7 @@ func main() {
 	signal.Notify(quit, syscall.SIGTERM, os.Interrupt)
 	signal.Notify(reset, syscall.SIGHUP)
 	ctx, cancel := context.WithCancel(context.Background())
-	start(ctx, &wg, logger, tlsConfig)
+	start(ctx, &wg, tlsConfig)
 	for {
 		select {
 		case <-quit:
@@ -54,7 +54,7 @@ func main() {
 			cancel()
 			wg.Wait()
 			ctx, cancel = context.WithCancel(context.Background())
-			start(ctx, &wg, logger, tlsConfig)
+			start(ctx, &wg, tlsConfig)
 		case <-brokerfail:
 			slog.Error("error running broker .... shutting down")
 			cancel()
@@ -69,16 +69,16 @@ func main() {
 	}
 }
 
-func start(ctx context.Context, wg *sync.WaitGroup, logger *slog.Logger, tls *tls.Config) {
+func start(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 	wg.Add(2)
-	go web(ctx, wg, logger, tls)
+	go web(ctx, wg, tls)
 	go broker(ctx, wg, tls)
 }
 
-func web(ctx context.Context, wg *sync.WaitGroup, logger *slog.Logger, tls *tls.Config) {
+func web(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 	defer wg.Done()
 	slog.Info("Starting web server...")
-	router := setupRouter(logger)
+	router := setupRouter()
 	server := http.Server{
 		Addr:    ":" + config.Port,
 		Handler: router,

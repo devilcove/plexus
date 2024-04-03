@@ -9,17 +9,17 @@ import (
 	"net/http"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
-	sloggin "github.com/samber/slog-gin"
 )
 
 //go:embed images/* assets/* html/*
 var f embed.FS
 
-func setupRouter(logger *slog.Logger) *gin.Engine {
+func setupRouter() *gin.Engine {
 	authKey, encryptKey, err := sessionKeys()
 	if err != nil {
 		slog.Error("failed to generate session keys ..... using fallback")
@@ -42,12 +42,12 @@ func setupRouter(logger *slog.Logger) *gin.Engine {
 		c.FileFromFS(c.Request.URL.Path, http.FS(f))
 	})
 	_ = router.SetTrustedProxies(nil)
-	config := sloggin.Config{
-		DefaultLevel:     slog.LevelDebug,
-		ClientErrorLevel: slog.LevelWarn,
-		ServerErrorLevel: slog.LevelError,
-	}
-	router.Use(gin.Recovery(), session, sloggin.NewWithConfig(logger, config))
+	//config := sloggin.Config{
+	//	DefaultLevel:     slog.LevelDebug,
+	//	ClientErrorLevel: slog.LevelWarn,
+	//	ServerErrorLevel: slog.LevelError,
+	//}
+	router.Use(gin.Recovery(), session, weblogger())
 	router.GET("/", displayMain)
 	router.POST("/", login)
 	router.GET("/logout", logout)
@@ -137,4 +137,21 @@ func sessionKeys() ([]byte, []byte, error) {
 		return authKey, encryptKey, err
 	}
 	return authKey, encryptKey, nil
+}
+
+func weblogger() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		c.Next()
+		if c.Writer.Status() >= 500 {
+			slog.Error("request", "Code", c.Writer.Status(), "method", c.Request.Method,
+				"route", c.Request.URL.Path, "latency", time.Since(start), "client", c.ClientIP())
+		} else if c.Writer.Status() >= 400 {
+			slog.Warn("request", "Code", c.Writer.Status(), "method", c.Request.Method,
+				"route", c.Request.URL.Path, "latency", time.Since(start), "client", c.ClientIP())
+		} else {
+			slog.Debug("request", "Code", c.Writer.Status(), "method", c.Request.Method,
+				"route", c.Request.URL.Path, "latency", time.Since(start), "client", c.ClientIP())
+		}
+	}
 }
