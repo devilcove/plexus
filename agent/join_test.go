@@ -16,6 +16,7 @@ func TestCheckPort(t *testing.T) {
 	}
 	conn, err := net.ListenUDP("udp", &add)
 	assert.Nil(t, err)
+	assert.NotNil(t, conn)
 	t.Run("portnotavail", func(t *testing.T) {
 		newPort := checkPort(51820)
 		assert.Equal(t, 51821, newPort)
