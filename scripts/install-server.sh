@@ -33,6 +33,8 @@ chmod +x /usr/local/bin/plexus-agent
 chmod +x /usr/local/bin/plexus-server
 mkdir /etc/plexus
 chown plexus:plexus /etc/plexus
+mkdir /etc/plexus-agent
+chown plexus:plexus /etc/plexus-agent
 
 #get input
 echo "Enter Fully Qualified Domain Name of plexus server (eg. plexus.example.com)"

@@ -28,8 +28,7 @@ import (
 )
 
 var (
-	cfgFile string
-	config  agent.Configuration
+	config agent.Configuration
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -60,8 +59,8 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is /etc/plexus/plexus-agent.yaml)")
 	rootCmd.PersistentFlags().StringP("verbosity", "v", "INFO", "logging verbosity")
+	rootCmd.PersistentFlags().IntP("natsport", "p", 4223, "nats port for cli <-> agent comms")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -70,12 +69,8 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-	} else {
-		viper.SetConfigFile(os.Getenv("HOME") + ".config/plexus-agent/config.yml")
-	}
+	viper.SetConfigFile("/etc/plexus-agent/config")
+	viper.SetConfigType("yaml")
 
 	if err := viper.BindPFlags(rootCmd.Flags()); err != nil {
 		log.Println("bindflags", err)
@@ -85,7 +80,7 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
-	if err := viper.Unmarshal(&config); err != nil {
+	if err := viper.UnmarshalExact(&config); err != nil {
 		log.Println("viper.Unmarshal", err)
 	}
 	agent.Config = config

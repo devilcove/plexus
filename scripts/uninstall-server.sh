@@ -20,6 +20,7 @@ rm /usr/local/bin/plexus-agent
 rm /usr/local/bin/plexus-server
 rm -r /var/lib/plexus
 rm -r /etc/plexus
+rm -r /etc/plexus-agent
 
 echo "deleting plexus user"
 userdel plexus
