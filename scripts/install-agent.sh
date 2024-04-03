@@ -19,6 +19,8 @@ wget https://file.nusak.ca/plexus-agent.service -O /lib/systemd/system/plexus-ag
 wget https://file.nusak.ca/plexus-agent -O /usr/local/bin/plexus-agent
 setcap cap_net_admin=ep /usr/local/bin/plexus-agent
 chmod +x /usr/local/bin/plexus-agent
+mkdir /etc/plexus-agent
+chown plexus:plexus /etc/plexus-agent
 
 echo "installing systemd service"
 systemctl daemon-reload

@@ -2,6 +2,7 @@ package agent
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"log/slog"
 	"runtime/debug"
@@ -16,7 +17,7 @@ import (
 
 func startBroker() (*server.Server, *nats.EncodedConn) {
 	defer log.Println("Agent server halting")
-	ns, err := server.NewServer(&server.Options{Host: "localhost", Port: 4223, NoSigs: true})
+	ns, err := server.NewServer(&server.Options{Host: "localhost", Port: Config.NatsPort, NoSigs: true})
 	if err != nil {
 		slog.Error("start nats", "error", err)
 		panic(err)
@@ -185,7 +186,7 @@ func subcribe(ec *nats.EncodedConn) {
 }
 
 func ConnectToAgentBroker() (*nats.EncodedConn, error) {
-	url := "nats://localhost:4223"
+	url := fmt.Sprintf("nats://localhost:%d", Config.NatsPort)
 	slog.Debug("connecting to agent broker ", "url", url)
 	nc, err := nats.Connect(url)
 	if err != nil {
