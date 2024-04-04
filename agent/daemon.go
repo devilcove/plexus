@@ -57,7 +57,9 @@ func Run() {
 			// reconnect to servers in case server was down when tried to connect earlier
 			slog.Debug("refreshing server connection")
 			closeServerConnections()
-			connectToServer(self)
+			if err := connectToServer(self); err != nil {
+				slog.Error("server connection", "error", err)
+			}
 		}
 	}
 }
