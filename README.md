@@ -77,4 +77,4 @@ Support
 =======
 Please use [Issues](https://github.com/devilcove/plexus/issues) or [Discussions](https://github.com/devilcove/plexus/discussions) for support requests
 
-![<img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=mkasun&button_colour=5F7FFF&font_colour=ffffff&font_family=Comic&outline_colour=000000&coffee_colour=FFDD00"](https://www.buymeacoffee.com/mkasun)
+[![coffee](https://cdn.buymeacoffee.com/buttons/v2/default-blue.png)](https://www.buymeacoffee.com/mkasun)
