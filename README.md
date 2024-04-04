@@ -3,7 +3,6 @@ Plexus
 ![tests](https://github.com/devilcove/plexus/actions/workflows/integrationtest.yml/badge.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/devilcove/pleuxs?style=flat-square)](https://goreportcard.com/report/github.com/devilcove/plexus)
 [![Go Reference](https://pkg.go.dev/badge/github.com/devilcove/plexus.svg)](https://pkg.go.dev/github.com/devilcove/plexus)
-[![Go Coverage](https://raw.githubusercontent.com/wiki/devilcove/plexus/coverage/coverage.svg)](https://raw.githack.com/wiki/devilcove/plexus/coverage.html)
 
 Plexus provides tools to easily manage private wireguard networks.
 
