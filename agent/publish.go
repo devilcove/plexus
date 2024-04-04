@@ -14,13 +14,11 @@ func publishDeviceUpdate(self *Device) {
 		return
 	}
 	if err := serverEC.Publish(self.WGPublicKey+plexus.UpdatePeer, plexus.Peer{
-		WGPublicKey: self.WGPublicKey,
-		PubNkey:     self.PubNkey,
-		Version:     self.Version,
-		Name:        self.Name,
-		OS:          self.OS,
-		//ListenPort:       self.ListenPort,
-		//PublicListenPort: self.PublicListenPort,
+		WGPublicKey:   self.WGPublicKey,
+		PubNkey:       self.PubNkey,
+		Version:       self.Version,
+		Name:          self.Name,
+		OS:            self.OS,
 		Endpoint:      self.Endpoint,
 		NatsConnected: true,
 	},

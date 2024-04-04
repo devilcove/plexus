@@ -14,8 +14,6 @@ import (
 	"github.com/nats-io/nkeys"
 )
 
-var ()
-
 func Run() {
 	plexus.SetLogging(Config.Verbosity)
 	if err := boltdb.Initialize(path+"plexus-agent.db", []string{deviceTable, networkTable}); err != nil {
@@ -34,7 +32,7 @@ func Run() {
 	}
 	startAllInterfaces(self)
 	checkinTicker := time.NewTicker(checkinTime)
-	//serverTicker := time.NewTicker(serverCheckTime)
+	serverTicker := time.NewTicker(serverCheckTime)
 	for {
 		select {
 		case <-quit:
@@ -55,11 +53,11 @@ func Run() {
 			return
 		case <-checkinTicker.C:
 			checkin()
-			//case <-serverTicker.C:
+		case <-serverTicker.C:
 			// reconnect to servers in case server was down when tried to connect earlier
-			//slog.Debug("refreshing server connection")
-			//closeServerConnections()
-			//connectToServers()
+			slog.Debug("refreshing server connection")
+			closeServerConnections()
+			connectToServer(self)
 		}
 	}
 }
@@ -120,11 +118,8 @@ func checkin() {
 		slog.Error("get device", "error", err)
 		return
 	}
-	//stunCheck(self, checkPort(self.ListenPort))
 	checkinData.ID = self.WGPublicKey
 	checkinData.Version = self.Version
-	//checkinData.ListenPort = self.ListenPort
-	//checkinData.PublicListenPort = self.PublicListenPort
 	checkinData.Endpoint = self.Endpoint
 	serverEC := serverConn.Load()
 	if serverEC == nil {

@@ -43,9 +43,6 @@ func startBroker() (*server.Server, *nats.EncodedConn) {
 }
 
 func subcribe(ec *nats.EncodedConn) {
-	//ec.Subscribe(">", func(subj string, msg *any) {
-	//slog.Debug("received nats message", "subject", subj, "data", *msg)
-	//})
 	_, _ = ec.Subscribe(Agent+plexus.Status, func(subject, reply string, data any) {
 		slog.Debug("status request received")
 		if err := ec.Publish(reply, processStatus()); err != nil {
@@ -237,7 +234,7 @@ func subcribeToServerTopics(self Device) {
 			return
 		}
 		if err := startInterface(self, network); err != nil {
-			slog.Error("error starting interace", "interface", network.Interface, "network", network.Name, "error", err)
+			slog.Error("error starting interface", "interface", network.Interface, "network", network.Name, "error", err)
 			return
 		}
 	})

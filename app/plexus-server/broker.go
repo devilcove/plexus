@@ -27,8 +27,6 @@ func broker(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 		brokerfail <- 1
 		return
 	}
-	//TODO :: add users
-	// users := GetUsers()
 	tokensUsers := getTokenUsers()
 	deviceUsers := getDeviceUsers()
 	natsOptions = &server.Options{
@@ -63,21 +61,10 @@ func broker(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 		slog.Error("not ready for connection", "error", err)
 		return
 	}
-	//connectOpts := nats.Options{
-	//	Url: nats.DefaultURL,
-	//	//Url:  "nats://localhost:4222",
-	//	Nkey: adminPublicKey,
-	//	Name: "nats-test-nkey",
-	//	SignatureCB: func(nonce []byte) ([]byte, error) {
-	//		return adminKey.Sign(nonce)
-	//	},
-	//}
 	SignatureCB := func(nonce []byte) ([]byte, error) {
 		return adminKey.Sign(nonce)
 	}
 	opts := []nats.Option{nats.Nkey(adminPublicKey, SignatureCB)}
-	//opts = append(opts, )
-	//natsConn, err = connectOpts.Connect()
 	natsConn, err = nats.Connect(fmt.Sprintf("nats://%s:4222", config.FQDN), opts...)
 	if err != nil {
 		slog.Error("nats connect", "error", err)
@@ -91,26 +78,6 @@ func broker(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 
 	subscrptions := serverSubcriptions()
 
-	//configSub, err := encodedConn.Subscribe("config.*", func(sub, reply string, request any) {
-	//response := configHandler(sub)
-	//	if err := encodedConn.Publish(reply, response); err != nil {
-	//		slog.Error("pub response to config request", "error", err)
-	//	}
-	//})
-	//if err != nil {
-	//	slog.Error("subcribe config", "error", err)
-	//}
-	//leaveSub, err := encodedConn.Subscribe("leave.*", func(subj, reply string, request *plexus.AgentRequest) {
-	//	response := processLeave(request)
-	//	slog.Debug("publish leave reply", "response", response)
-	//	if err := encodedConn.Publish(reply, response); err != nil {
-	//		slog.Error("leave reply", "error", err)
-	//	}
-	//})
-	//if err != nil {
-	//	slog.Error("subscribe leave", "error", err)
-	//}
-
 	slog.Info("broker started")
 	pingTicker := time.NewTicker(pingTick)
 	keyTicker := time.NewTicker(keyTick)
@@ -123,11 +90,6 @@ func broker(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 			for _, sub := range subscrptions {
 				_ = sub.Drain()
 			}
-			//registerSub.Drain()
-			//checkinSub.Drain()
-			//updateSub.Drain()
-			//configSub.Drain()
-			//leaveSub.Drain()
 			return
 		case token := <-newDevice:
 			slog.Info("new login device", "device", token)
@@ -269,17 +231,7 @@ func serverSubcriptions() []*nats.Subscription {
 	subcriptions = append(subcriptions, register)
 
 	//device subscriptions
-	//general
-	//general, err := eConn.Subscribe(">", func(subj, repl string, request *any) {
-	//	slog.Debug("received request", "subject", subj, "message", request)
-	//})
-	//if err != nil {
-	//	slog.Error("subcribe general", "error", err)
-	//}
-	//subcriptions = append(subcriptions, general)
-
 	//checkin
-
 	checkin, err := eConn.Subscribe("*"+plexus.Checkin, func(subj, reply string, request *plexus.CheckinData) {
 		if len(subj) != 52 {
 			slog.Error("invalid subj", "subj", subj)

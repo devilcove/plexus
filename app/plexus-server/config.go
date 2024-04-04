@@ -90,7 +90,7 @@ func configureServer() (*tls.Config, error) {
 		}
 
 	}
-	// initalize database
+	// initialize database
 	if err := os.MkdirAll(config.DBPath, os.ModePerm); err != nil {
 		return nil, err
 	}

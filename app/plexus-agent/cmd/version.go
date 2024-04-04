@@ -69,5 +69,5 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	versionCmd.Flags().BoolVarP(&long, "long", "l", false, "display server(s)/agent version infomation")
+	versionCmd.Flags().BoolVarP(&long, "long", "l", false, "display server(s)/agent version information")
 }

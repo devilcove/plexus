@@ -18,7 +18,6 @@ func SetLogging(v string) {
 		TimeFormat: time.Kitchen,
 		Level:      logLevel,
 	}))
-	//logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{AddSource: true, ReplaceAttr: replace, Level: logLevel}))
 	slog.SetDefault(logger)
 	switch strings.ToUpper(v) {
 	case "DEBUG":
