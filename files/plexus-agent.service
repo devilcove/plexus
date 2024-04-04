@@ -6,6 +6,7 @@ After=network-online.target
 User=plexus
 Type=simple
 ExecStart=/usr/local/bin/plexus-agent run
+WorkingDirectory=/var/lib/plexus
 Restart=on-success
 
 [Install]

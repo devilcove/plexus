@@ -15,8 +15,8 @@ useradd -r -d /var/lib/plexus -s /sbin/nologin -m plexus
 
 ##get files
 echo "installing files"
-wget https://file.nusak.ca/plexus-agent.service -O /lib/systemd/system/plexus-agent.service
-wget https://file.nusak.ca/plexus-agent -O /usr/local/bin/plexus-agent
+wget https://raw.githubusercontent.com/devilcove/plexus/master/files/plexus-agent.service -O /lib/systemd/system/plexus-agent.service
+wget https://github.com/devilcove/plexus/releases/latest/download/plexus-agent-linux-amd64 -O /usr/local/bin/plexus-agent
 setcap cap_net_admin=ep /usr/local/bin/plexus-agent
 chmod +x /usr/local/bin/plexus-agent
 mkdir /etc/plexus-agent
