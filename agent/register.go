@@ -115,11 +115,9 @@ func createPeer() (*plexus.Peer, *wgtypes.Key, string, error) {
 		PubNkey:     nkey,
 		Name:        name,
 		Version:     "v0.1.0",
-		//ListenPort:       port,
-		//PublicListenPort: stunAddr.Port,
-		Endpoint: stunAddr.IP,
-		OS:       runtime.GOOS,
-		Updated:  time.Now(),
+		Endpoint:    stunAddr.IP,
+		OS:          runtime.GOOS,
+		Updated:     time.Now(),
 	}
 	return peer, privKey, string(seed), nil
 }

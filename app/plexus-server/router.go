@@ -42,11 +42,6 @@ func setupRouter() *gin.Engine {
 		c.FileFromFS(c.Request.URL.Path, http.FS(f))
 	})
 	_ = router.SetTrustedProxies(nil)
-	//config := sloggin.Config{
-	//	DefaultLevel:     slog.LevelDebug,
-	//	ClientErrorLevel: slog.LevelWarn,
-	//	ServerErrorLevel: slog.LevelError,
-	//}
 	router.Use(gin.Recovery(), session, weblogger())
 	router.GET("/", displayMain)
 	router.POST("/", login)

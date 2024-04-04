@@ -159,14 +159,6 @@ func processCheckin(data *plexus.CheckinData) plexus.MessageResponse {
 	if peer.Version != data.Version {
 		peer.Version = data.Version
 	}
-	//if peer.PublicListenPort != data.PublicListenPort {
-	//	peer.PublicListenPort = data.PublicListenPort
-	//	publishUpdate = true
-	//}
-	//if peer.ListenPort != data.ListenPort {
-	//	peer.ListenPort = data.ListenPort
-	//	publishUpdate = true
-	//}
 	if !peer.Endpoint.Equal(data.Endpoint) {
 		peer.Endpoint = data.Endpoint
 		publishUpdate = true
@@ -256,21 +248,6 @@ func processLeave(id string, request *plexus.LeaveRequest) plexus.MessageRespons
 		Message: fmt.Sprintf("%s deleted from %s network", id, request.Network),
 	}
 }
-
-//func connectToNetwork(request *plexus.AgentRequest) plexus.ServerResponse {
-//	errResponse := plexus.ServerResponse{Error: true}
-//	response := plexus.ServerResponse{}
-//	slog.Debug("join request", "peer", request.Peer.WGPublicKey, "network", request.Network)
-//	network, err := addPeerToNetwork(request.Peer.WGPublicKey, request.Network)
-//	if err != nil {
-//		slog.Debug("add peer to network", "error", err)
-//		errResponse.Message = err.Error()
-//		return errResponse
-//	}
-//	response.Networks = append(response.Networks, network)
-//	response.Message = fmt.Sprintf("%s added to network %s", request.Peer.WGPublicKey, request.Network)
-//	return response
-//}
 
 func publishNetworkPeerUpdate(peer plexus.Peer) error {
 	networks, err := boltdb.GetAll[plexus.Network](networkTable)

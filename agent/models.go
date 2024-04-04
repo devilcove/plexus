@@ -25,15 +25,6 @@ type StatusResponse struct {
 	Networks  []Network
 }
 
-type ServerConnection struct {
-	Server    string
-	Connected string
-}
-
-type NetData struct {
-	Name string
-}
-
 type LeaveServerRequest struct {
 	Force bool
 }
