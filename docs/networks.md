@@ -1,13 +1,13 @@
 
 Networks
 --------
-The main network page displays a listing of all networks and the abiltity to create new or delete existing networks
+The main network page displays a listing of all networks and the ability to create new or delete existing networks
 ![All Networks](screenshots/all_networks.png)
 ## Create New Network
 ![Add Network](screenshots/add_network.png)
 
-To add a new network, the network name and network CIDR must be specified.  The network name is limited to 255 characters consisting of lowercase letters, numerals and hypen. 
-The network CIDR is normalazed (eg. your can enter 10.10.11.25/20 and it will be normalized to 10.10.0.0/20).  Network names and CIDRs are checked against existing networks for overlap.
+To add a new network, the network name and network CIDR must be specified.  The network name is limited to 255 characters consisting of lowercase letters, numerals and hyphen. 
+The network CIDR is normalized (eg. your can enter 10.10.11.25/20 and it will be normalized to 10.10.0.0/20).  Network names and CIDRs are checked against existing networks for overlap.
 ## Delete Network
 Clicking the delete network button will present a confirmation prompt.  If confirmed, the network will be deleted and all peers will be notified.
 
@@ -20,7 +20,7 @@ For each peer, the following data and controls are displayed
 
 | Heading | Detail |
 | --- | ---- |
-| Name | Selecting the peer name will display [addtional details](peers.md) |
+| Name | Selecting the peer name will display [additional details](peers.md) |
 | Status | Indicator (green/red) of nats connectivity between server and peer |
 | Traffic | Indicator (green/yellow/orange/red) of wireguard connectivity |
 | Address | network IP and wireguard listen port |

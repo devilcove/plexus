@@ -12,7 +12,7 @@ This repository provides the code for plexus-server and plexus-agent.
 Plexus-server serves the web ui and controls communications with plexus agents for peer and network updates.
 Plexus-agent runs as a daemon to communicate with the plexus server for peer and network updates.  It also provided a cli to register and leave servers and to join/leave networks.
 
-QuickStart
+Quick Start
 ==========
 Server
 ------

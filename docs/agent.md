@@ -1,7 +1,7 @@
 Plexus Agent CLI
 ----------------
 
-plexus-agent commands can be run by an ordinary user with exception of run commmand (agent daemon) which is intended to be run by plexus user
+plexus-agent commands can be run by an ordinary user with exception of run command (agent daemon) which is intended to be run by plexus user
 ```
 plexus agent to setup and manage plexus wireguard
 networks.  Communicates with plexus server for network updates.
@@ -204,7 +204,7 @@ LogLevel
 LogLevel command sets the logging level of agent daemon
 ```
 plexus-agent loglevel -h
-set log level of damemon
+set log level of daemon
 debug, info, warn, or error
 .
 
