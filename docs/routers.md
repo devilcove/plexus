@@ -4,8 +4,8 @@ Wireguard and plexus-agent are installed on a host inside the home lan and on th
 the home lan peer with the subnet cidr set to the cidr of the home network.  The road-warrior machine can then connect to any host on the home lan.
 
 ![subnet router](screenshots/subnet_router.png)
-## Caveates 
-In order for sunet routing to function correctly
+## Caveats 
+In order for subnet routing to function correctly
 * the subnet router must have ip_forwarding enabled; and
 * the subnet router must be the default gateway for the lan; or
 * all hosts on the lan have a static route for the wireguard network via the subnet router peer; or
@@ -26,7 +26,7 @@ This eliminates the need for the subnet router to be the default gateway for the
 ### Virtual Subnet
 > this capability is not yet implemented
 
-Virtural subnets overcome two potential issues with subnet routers
+Virtual subnets overcome two potential issues with subnet routers
 * creating two subnet routers on same network where the lan subnets are overlapping
 * connecting to a subnet via a subnet router but the lan subnet overlaps with the local address of the peer. EG. road-warrior at internet cafe with local address of 192.168.1.305 trying to connect to a
  subnet routed host 192.168.1.209 

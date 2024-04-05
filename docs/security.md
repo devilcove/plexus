@@ -27,7 +27,7 @@ In addition to TLS security between agent(s) and server, Nkeys (a new, highly se
 Once an agent has joined a server it can
 * Publish
     * to topics beginning with its ID (WGPublicKey)
-* Subcribe
+* Subscribe
     * to topics beginning with its ID (WGPublicKey)
     * all network updates    
 

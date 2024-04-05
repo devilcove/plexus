@@ -28,7 +28,7 @@ The install scripts:
 The update scripts:
 * stops systemd service
 * downloads updated versions of binary
-* sets required capablities on binary
+* sets required capabilities on binary
 * starts systemd service
 
 ### Uninstall
@@ -44,7 +44,7 @@ The uninstall scripts:
 
 Disable TLS
 ===========
-If the server is to be installed behind a reverse proxy or in a lan only setting, tls can be disabled.  Both web and nats traffic will be unencrypted.
+If the server is to be installed behind a reverse proxy or in a lan only setting, tls can be disabled.  Both web and nats traffic will be not be encrypted.
 ### Configuration
 * [see configuration settings](configuration.md)
 * set secure = false
