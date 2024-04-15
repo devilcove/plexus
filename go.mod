@@ -10,7 +10,7 @@ require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/kr/pretty v0.3.1
 	github.com/lmittmann/tint v1.0.4
-	github.com/nats-io/nats-server/v2 v2.10.12
+	github.com/nats-io/nats-server/v2 v2.10.14
 	github.com/nats-io/nats.go v1.34.1
 	github.com/nats-io/nkeys v0.4.7
 	github.com/pion/stun v0.6.1
