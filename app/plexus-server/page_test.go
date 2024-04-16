@@ -23,8 +23,12 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	_ = boltdb.Initialize("./test.db", []string{userTable, keyTable, networkTable, peerTable, settingTable, "keypairs"})
-	plexus.SetLogging("DEBUG")
+	if err := os.Remove("./test.db"); err != nil {
+		os.Exit(1)
+	}
+	if err := boltdb.Initialize("./test.db", []string{userTable, keyTable, networkTable, peerTable, settingTable, "keypairs"}); err != nil {
+		os.Exit(2)
+	}
 	defer boltdb.Close()
 	//checkDefaultUser()
 	plexus.SetLogging("debug")

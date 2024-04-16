@@ -42,6 +42,9 @@ func deleteAllInterfaces() {
 			return
 		}
 	}
+	if err = delNat(); err != nil {
+		slog.Error("delete NAT", "error", err)
+	}
 }
 
 func startAllInterfaces(self Device) {
@@ -86,6 +89,9 @@ func startInterface(self Device, network Network) error {
 		if err := wg.Apply(); err != nil {
 			slog.Error("apply wg config", "error", err)
 		}
+		if err := checkForNat(self, network); err != nil {
+			slog.Error("nat error", "network", network.Name, "error", err)
+		}
 		return err
 	}
 	mtu := 1420
@@ -124,6 +130,10 @@ func startInterface(self Device, network Network) error {
 	if err := wg.Up(); err != nil {
 		slog.Error("failed initializition interface", "interface", network.Interface, "error", err)
 		return err
+	}
+	slog.Debug("check if NAT required")
+	if err := checkForNat(self, network); err != nil {
+		slog.Error("nat error", "network", network.Name, "error", err)
 	}
 	return nil
 }
