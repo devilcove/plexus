@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -23,10 +24,14 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	if err := os.Remove("./test.db"); err != nil {
-		os.Exit(1)
+	if _, err := os.Stat("./test.db"); err == nil {
+		if err := os.Remove("./test.db"); err != nil {
+			log.Println("remove db", err)
+			os.Exit(1)
+		}
 	}
 	if err := boltdb.Initialize("./test.db", []string{userTable, keyTable, networkTable, peerTable, settingTable, "keypairs"}); err != nil {
+		log.Println("init db", err)
 		os.Exit(2)
 	}
 	defer boltdb.Close()
