@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -37,6 +38,15 @@ func addRouter(c *gin.Context) {
 		processError(c, http.StatusBadRequest, "invalid subnet: must be a private network")
 		return
 	}
+	used, kind, name, err := subnetInUse(subnet)
+	if err != nil {
+		processError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if used {
+		processError(c, http.StatusBadRequest, fmt.Sprintf("subnet in use by %s %s", kind, name))
+		return
+	}
 	network, err := boltdb.Get[plexus.Network](netID, networkTable)
 	if err != nil {
 		processError(c, http.StatusBadRequest, err.Error())
@@ -48,7 +58,7 @@ func addRouter(c *gin.Context) {
 	for i, peer := range network.Peers {
 		if peer.WGPublicKey == router {
 			peer.IsSubNetRouter = true
-			if nat == "true" {
+			if nat == "on" {
 				peer.UseNat = true
 			}
 			peer.SubNet = *subnet
@@ -96,4 +106,24 @@ func deleteRouter(c *gin.Context) {
 		slog.Error("publish new relay", "error", err)
 	}
 	networkDetails(c)
+}
+
+func subnetInUse(subnet *net.IPNet) (bool, string, string, error) {
+	networks, err := boltdb.GetAll[plexus.Network](networkTable)
+	if err != nil {
+		return false, "", "", err
+	}
+	for _, network := range networks {
+		if network.Net.Contains(subnet.IP) || subnet.Contains(network.Net.IP) {
+			return true, "network", network.Name, nil
+		}
+		for _, peer := range network.Peers {
+			if peer.IsSubNetRouter {
+				if subnet.Contains(peer.SubNet.IP) || peer.SubNet.Contains(subnet.IP) {
+					return true, "peer", peer.HostName, nil
+				}
+			}
+		}
+	}
+	return false, "", "", nil
 }

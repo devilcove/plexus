@@ -73,6 +73,10 @@ func newDevice() (Device, error) {
 		Seed:         seed,
 		WGPrivateKey: privKey.String(),
 	}
+	if err := os.MkdirAll(path, os.ModePerm); err != nil {
+		slog.Error("unable to mkdir", "path", path, "error", err)
+		return device, err
+	}
 	if err := os.WriteFile(path+"agent.seed", []byte(seed), os.ModePerm); err != nil {
 		slog.Error("save seed", "error", err)
 	}
