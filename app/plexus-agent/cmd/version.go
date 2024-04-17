@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	"github.com/devilcove/plexus"
-	"github.com/devilcove/plexus/agent"
+	"github.com/devilcove/plexus/internal/agent"
 	"github.com/spf13/cobra"
 )
 
