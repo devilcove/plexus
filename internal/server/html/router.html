@@ -7,7 +7,18 @@
     hx-target="#content" hx-target-error="#error">
     <label>Subnet CIDR</label>
     <input class="w3-input" type="text" name="cidr" required style="width:50%"><br>
-    <div class="w3-tooltip"><input class="w3-check" type="checkbox" name="nat"><label>Use NAT</label></div>
+    <h3>Nat</h3>
+    <input class="w3-radio" type="radio" name="nat" value="none" checked
+        onclick="document.getElementById('vcidr').disabled=true">
+    <label>None</label><br>
+    <input class="w3-radio" type="radio" name="nat" value="nat"
+        onclick="document.getElementById('vcidr').disabled=true">
+    <label>Masquerade</label><br>
+    <input class="w3-radio" type="radio" name="nat" value="virt" 
+        onclick="document.getElementById('vcidr').disabled=false">
+    <label>Use Virtual Subnet</label><br>
+    <label>Virtual CIDR</label><br>
+    <input id="vcidr" class="w3-input" type="text" name="vcidr" disabled style="width:50%">
     <p>
         <button class="w3-button w3-theme-dark w3-padding large" type="button" 
             hx-get="/networks/{{.Network}}/" hx-target="#content" hx-target-error="#error">
@@ -16,4 +27,4 @@
         <button class="W3-button w3-theme-dark" type="submit">Add</button>
     </p>
 </form>
-{{end}}
+{{end}}:w3-animate-zoom

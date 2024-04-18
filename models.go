@@ -73,9 +73,11 @@ type NetworkPeer struct {
 	IsRelay          bool
 	RelayedPeers     []string
 	IsRelayed        bool
-	IsSubNetRouter   bool
-	SubNet           net.IPNet
+	IsSubnetRouter   bool
+	Subnet           net.IPNet
 	UseNat           bool
+	UseVirtSubnet    bool
+	VirtSubnet       net.IPNet
 }
 
 type Key struct {

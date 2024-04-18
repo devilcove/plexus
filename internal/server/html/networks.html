@@ -129,10 +129,10 @@
                 Create Relay</button>
         </div>
         {{end}}
-        {{if eq .IsSubNetRouter true}}
+        {{if eq .IsSubnetRouter true}}
         <div>
             <button class="w3-button w3-theme" type="button" hx-delete="/networks/router/{{$network}}/{{.WGPublicKey}}"
-                hx-target="#content" hx-target-error="#error" hx-confirm="Remove SubNet Router?">
+                hx-target="#content" hx-target-error="#error" hx-confirm="Remove Subnet Router?">
                 <i class="fa fa-trash-alt"></i>
                 Delete Router</button>
         </div>
@@ -141,7 +141,7 @@
             <button class="w3-button w3-theme" type="button" hx-get="/networks/router/{{$network}}/{{.WGPublicKey}}"
                 hx-target="#content" hx-target-error="#error">
                 <i class="fa fa-network-wired"></i>
-                Create SubNet Router</button>
+                Create Subnet Router</button>
         </div>
         {{end}}
         {{end}}

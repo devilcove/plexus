@@ -216,8 +216,8 @@ func getAllowedIPs(node plexus.NetworkPeer, peers []plexus.NetworkPeer) []net.IP
 		IP:   node.Address.IP,
 		Mask: net.CIDRMask(32, 32),
 	})
-	if node.IsSubNetRouter {
-		allowed = append(allowed, node.SubNet)
+	if node.IsSubnetRouter {
+		allowed = append(allowed, node.Subnet)
 	}
 	if node.IsRelay {
 		for _, peer := range peers {

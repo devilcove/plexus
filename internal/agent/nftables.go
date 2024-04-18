@@ -58,8 +58,8 @@ func checkForNat(self Device, network Network) error {
 	slog.Debug("checking if NAT required")
 	for _, peer := range network.Peers {
 		if peer.WGPublicKey == self.WGPublicKey {
-			slog.Debug("Nat check", "subnet-router", peer.IsSubNetRouter)
-			if !peer.IsSubNetRouter {
+			slog.Debug("Nat check", "subnet-router", peer.IsSubnetRouter)
+			if !peer.IsSubnetRouter {
 				slog.Debug("nat check -- not subnetrouter")
 				return nil
 			}

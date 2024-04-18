@@ -146,7 +146,7 @@ func TestCheckForNat(t *testing.T) {
 		}
 	})
 	t.Run("subnetWithoutNat", func(t *testing.T) {
-		peer.IsSubNetRouter = true
+		peer.IsSubnetRouter = true
 		network.Peers = []plexus.NetworkPeer{peer}
 		err = checkForNat(self, network)
 		assert.Nil(t, err)
