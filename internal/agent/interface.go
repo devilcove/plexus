@@ -45,6 +45,9 @@ func deleteAllInterfaces() {
 	if err = delNat(); err != nil {
 		slog.Error("delete NAT", "error", err)
 	}
+	if err = delVirtualSubnet(); err != nil {
+		slog.Error("delete virtual subnet", "error", err)
+	}
 }
 
 func startAllInterfaces(self Device) {
@@ -106,6 +109,7 @@ func startInterface(self Device, network Network) error {
 	}
 	if port != network.ListenPort {
 		portChanged = true
+		network.ListenPort = port
 	}
 	if addressChanged {
 		if err := boltdb.Save(self, "self", deviceTable); err != nil {
@@ -117,7 +121,7 @@ func startInterface(self Device, network Network) error {
 		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 			return err
 		}
-		go publishPeerUpdate(&self, &network)
+		go publishListenPortUpdate(&self, &network)
 	}
 	config := wgtypes.Config{
 		PrivateKey:   &privKey,
@@ -217,7 +221,12 @@ func getAllowedIPs(node plexus.NetworkPeer, peers []plexus.NetworkPeer) []net.IP
 		Mask: net.CIDRMask(32, 32),
 	})
 	if node.IsSubnetRouter {
-		allowed = append(allowed, node.Subnet)
+		if node.UseVirtSubnet {
+			allowed = append(allowed, node.VirtSubnet)
+		} else {
+			allowed = append(allowed, node.Subnet)
+		}
+		slog.Debug("new allowed ips", "allowed", allowed, "virt", node.VirtSubnet, "subnet", node.Subnet)
 	}
 	if node.IsRelay {
 		for _, peer := range peers {

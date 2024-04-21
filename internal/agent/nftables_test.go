@@ -147,6 +147,10 @@ func TestCheckForNat(t *testing.T) {
 	})
 	t.Run("subnetWithoutNat", func(t *testing.T) {
 		peer.IsSubnetRouter = true
+		peer.Subnet = net.IPNet{
+			IP:   net.ParseIP("192.168.0.0"),
+			Mask: net.CIDRMask(24, 32),
+		}
 		network.Peers = []plexus.NetworkPeer{peer}
 		err = checkForNat(self, network)
 		assert.Nil(t, err)
@@ -197,7 +201,45 @@ func TestCheckForNat(t *testing.T) {
 			RegProtoMax: 0,
 		}, rules[0].Exprs[0])
 	})
+	t.Run("virtual subnet", func(t *testing.T) {
+		table := &nftables.Table{}
+		chain := &nftables.Chain{}
+		peer.UseNat = false
+		peer.UseVirtSubnet = true
+		peer.VirtSubnet = net.IPNet{
+			IP:   net.ParseIP("10.100.0.0").To4(),
+			Mask: net.CIDRMask(24, 32),
+		}
+		network.Peers = []plexus.NetworkPeer{peer}
+		t.Log(self, network)
+		err = checkForNat(self, network)
+		assert.Nil(t, err)
+		tables, err := c.ListTables()
+		assert.Nil(t, err)
+		tableFound := false
+		for _, t := range tables {
+			if t.Name == "plexus" {
+				tableFound = true
+				table = t
+			}
+		}
+		assert.True(t, tableFound)
+		chains, err := c.ListChains()
+		assert.Nil(t, err)
+		chainFound := false
+		for _, c := range chains {
+			if c.Name == "plexus-subnet" {
+				chainFound = true
+				chain = c
+			}
+		}
+		assert.True(t, chainFound)
+		rules, err := c.GetRules(table, chain)
+		assert.Nil(t, err)
+		assert.Equal(t, 254, len(rules))
+	})
 	cleanNat(t, c)
+
 }
 
 func cleanNat(t *testing.T, c *nftables.Conn) {

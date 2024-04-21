@@ -90,6 +90,9 @@ func addRouter(c *gin.Context) {
 	if err := eConn.Publish("networks."+network.Name, update); err != nil {
 		slog.Error("publish new relay", "error", err)
 	}
+	if err := eConn.Publish(plexus.Update+update.Peer.WGPublicKey+plexus.AddRouter, update.Peer); err != nil {
+		slog.Error("publish add subnet router", "error", err)
+	}
 	networkDetails(c)
 }
 
@@ -119,8 +122,13 @@ func deleteRouter(c *gin.Context) {
 		processError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+	slog.Debug("publish network update - delete router", "network", network.Name, "peer", update.Peer.HostName)
 	if err := eConn.Publish("networks."+network.Name, update); err != nil {
 		slog.Error("publish new relay", "error", err)
+	}
+	slog.Debug("publish device update - delete router", "network", network.Name, "peer", update.Peer.HostName)
+	if err := eConn.Publish(plexus.Update+update.Peer.WGPublicKey+plexus.DeleteRouter, update.Peer); err != nil {
+		slog.Error("publish add subnet router", "error", err)
 	}
 	networkDetails(c)
 }

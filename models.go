@@ -11,11 +11,14 @@ import (
 // nats topics
 const (
 	DeletePeer        = ".deletePeer"
+	AddRouter         = ".addRouter"
 	AddPeer           = ".addPeer"
 	UpdatePeer        = ".updatePeer"
 	UpdateNetworkPeer = ".updateNetworkPeer"
+	UpdateListenPorts = ".updateListenPorts"
 	AddRelay          = ".addRelay"
 	DeleteRelay       = ".deleteRelay"
+	DeleteRouter      = ".deleteRouter"
 	DeleteNetwork     = ".deleteNetwork"
 	JoinNetwork       = ".join"
 	LeaveNetwork      = ".leaveNetwork"
