@@ -10,13 +10,13 @@
     <h3>Nat</h3>
     <input class="w3-radio" type="radio" name="nat" value="none" checked
         onclick="document.getElementById('vcidr').disabled=true">
-    <label>None</label><br>
+    <label>None (peer is default router for subnet)</label><br>
     <input class="w3-radio" type="radio" name="nat" value="nat"
         onclick="document.getElementById('vcidr').disabled=true">
-    <label>Masquerade</label><br>
+    <label>Masquerade (peer is not default router for subnet)</label><br>
     <input class="w3-radio" type="radio" name="nat" value="virt" 
         onclick="document.getElementById('vcidr').disabled=false">
-    <label>Use Virtual Subnet</label><br>
+    <label>Use Virtual Subnet (subnet overlaps with another subnet)</label><br>
     <label>Virtual CIDR</label><br>
     <input id="vcidr" class="w3-input" type="text" name="vcidr" disabled style="width:50%">
     <p>
