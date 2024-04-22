@@ -12,7 +12,7 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
-func TestSubNetInUse(t *testing.T) {
+func TestSubnetInUse(t *testing.T) {
 	_, public, err := generateKeys()
 	assert.Nil(t, err)
 	err = boltdb.Delete[plexus.Network]("plexus", networkTable)
@@ -31,56 +31,73 @@ func TestSubNetInUse(t *testing.T) {
 	network.Peers = append(network.Peers, peer)
 	err = boltdb.Save(network, network.Name, networkTable)
 	assert.Nil(t, err)
-	subnet := &net.IPNet{
-		IP:   net.ParseIP("192.168.1.0").To4(),
-		Mask: net.CIDRMask(24, 32),
-	}
+	t.Run("overlap network", func(t *testing.T) {
+		subnet := &net.IPNet{
+			IP:   net.ParseIP("10.10.11.0"),
+			Mask: net.CIDRMask(24, 32),
+		}
+		kind, name, err := subnetInUse(subnet)
+		assert.Equal(t, ErrSubnetInUse, err)
+		assert.Equal(t, "network", kind)
+		assert.Equal(t, "plexus", name)
+	})
 	t.Run("no subnets", func(t *testing.T) {
-		used, kind, name, err := subnetInUse(subnet)
+		subnet := &net.IPNet{
+			IP:   net.ParseIP("192.168.100.0").To4(),
+			Mask: net.CIDRMask(24, 32),
+		}
+		kind, name, err := subnetInUse(subnet)
 		assert.Nil(t, err)
-		assert.False(t, used)
 		assert.Equal(t, "", kind)
 		assert.Equal(t, "", name)
 	})
 	t.Run("no overlap", func(t *testing.T) {
-		peer.SubNet = net.IPNet{
+		peer.Subnet = net.IPNet{
 			IP:   net.ParseIP("192.168.0.0").To4(),
-			Mask: net.CIDRMask(24, 32),
+			Mask: net.CIDRMask(20, 32),
 		}
-		peer.IsSubNetRouter = true
+		peer.IsSubnetRouter = true
 		network.Peers = []plexus.NetworkPeer{peer}
 		err = boltdb.Save(network, network.Name, networkTable)
 		assert.Nil(t, err)
-		used, kind, name, err := subnetInUse(subnet)
+		subnet := &net.IPNet{
+			IP:   net.ParseIP("10.10.100.0"),
+			Mask: net.CIDRMask(24, 32),
+		}
+		kind, name, err := subnetInUse(subnet)
 		assert.Nil(t, err)
-		assert.False(t, used)
 		assert.Equal(t, "", kind)
 		assert.Equal(t, "", name)
 	})
 	t.Run("overlap subnet", func(t *testing.T) {
-		peer.SubNet = net.IPNet{
-			IP:   net.ParseIP("192.168.0.0").To4(),
+		subnet := &net.IPNet{
+			IP:   net.ParseIP("192.168.1.0").To4(),
+			Mask: net.CIDRMask(24, 32),
+		}
+		kind, name, err := subnetInUse(subnet)
+		assert.Equal(t, ErrSubnetInUse, err)
+		assert.Equal(t, "peer", kind)
+		assert.Equal(t, "peer1", name)
+	})
+	t.Run("overlap virtual subnet", func(t *testing.T) {
+		peer.IsSubnetRouter = true
+		peer.UseVirtSubnet = true
+		peer.VirtSubnet = net.IPNet{
+			IP:   net.ParseIP("172.16.0.0").To4(),
 			Mask: net.CIDRMask(20, 32),
 		}
 		network.Peers = []plexus.NetworkPeer{peer}
 		err = boltdb.Save(network, network.Name, networkTable)
 		assert.Nil(t, err)
-		used, kind, name, err := subnetInUse(subnet)
-		assert.Nil(t, err)
-		assert.True(t, used)
-		assert.Equal(t, "peer", kind)
-		assert.Equal(t, "peer1", name)
-	})
-	t.Run("overlap network", func(t *testing.T) {
-		subnet = &net.IPNet{
-			IP:   net.ParseIP("10.10.11.0"),
+		subnet := &net.IPNet{
+			IP:   net.ParseIP("172.16.1.0"),
 			Mask: net.CIDRMask(24, 32),
 		}
-		used, kind, name, err := subnetInUse(subnet)
-		assert.Nil(t, err)
-		assert.True(t, used)
-		assert.Equal(t, "network", kind)
-		assert.Equal(t, "plexus", name)
+		kind, name, err := subnetInUse(subnet)
+		assert.Equal(t, ErrSubnetInUse, err)
+		assert.Equal(t, "peer", kind)
+		assert.Equal(t, "peer1", name)
+
 	})
 }
 

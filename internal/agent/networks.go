@@ -31,7 +31,7 @@ func toAgentNetwork(in plexus.Network) Network {
 	return out
 }
 
-func saveServerNetworks(networks []plexus.Network) error {
+func saveServerNetworks(self Device, networks []plexus.Network) error {
 	takenInterfaces := []int{}
 	var err error
 	for _, serverNet := range networks {
@@ -39,6 +39,9 @@ func saveServerNetworks(networks []plexus.Network) error {
 		network.ListenPort, err = getFreePort(defaultWGPort)
 		if err != nil {
 			return fmt.Errorf("unable to get freeport %w", err)
+		}
+		if _, _, err := stunCheck(&self, &network, network.ListenPort); err != nil {
+			return fmt.Errorf("stun check %w", err)
 		}
 		interfaceFound := false
 		for i := range maxNetworks {

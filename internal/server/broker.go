@@ -337,5 +337,31 @@ func serverSubcriptions() []*nats.Subscription {
 	}
 	subcriptions = append(subcriptions, reload)
 
+	//listenPortUpdate
+	portUpdate, err := eConn.Subscribe("*"+plexus.UpdateListenPorts, func(subj string, request *plexus.ListenPortResponse) {
+		if len(subj) != 44+len(plexus.UpdateNetworkPeer) {
+			slog.Error("invalid sub", "subj", subj)
+			return
+		}
+		processPortUpdate(subj[:44], request)
+	})
+	if err != nil {
+		slog.Error("subscribe network peer update", "error", err)
+	}
+	subcriptions = append(subcriptions, portUpdate)
+
+	//deviceUpdate
+	deviceUpdate, err := eConn.Subscribe("*"+plexus.UpdatePeer, func(subj string, request *plexus.Peer) {
+		if len(subj) != 44+len(plexus.UpdatePeer) {
+			slog.Error("invalid sub", "subj", subj)
+			return
+		}
+		processDeviceUpdate(subj[:44], request)
+	})
+	if err != nil {
+		slog.Error("subscribe device updates", "error", err)
+	}
+	subcriptions = append(subcriptions, deviceUpdate)
+
 	return subcriptions
 }

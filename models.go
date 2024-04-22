@@ -11,11 +11,14 @@ import (
 // nats topics
 const (
 	DeletePeer        = ".deletePeer"
+	AddRouter         = ".addRouter"
 	AddPeer           = ".addPeer"
 	UpdatePeer        = ".updatePeer"
 	UpdateNetworkPeer = ".updateNetworkPeer"
+	UpdateListenPorts = ".updateListenPorts"
 	AddRelay          = ".addRelay"
 	DeleteRelay       = ".deleteRelay"
+	DeleteRouter      = ".deleteRouter"
 	DeleteNetwork     = ".deleteNetwork"
 	JoinNetwork       = ".join"
 	LeaveNetwork      = ".leaveNetwork"
@@ -73,9 +76,11 @@ type NetworkPeer struct {
 	IsRelay          bool
 	RelayedPeers     []string
 	IsRelayed        bool
-	IsSubNetRouter   bool
-	SubNet           net.IPNet
+	IsSubnetRouter   bool
+	Subnet           net.IPNet
 	UseNat           bool
+	UseVirtSubnet    bool
+	VirtSubnet       net.IPNet
 }
 
 type Key struct {

@@ -309,3 +309,53 @@ func processLeaveServer(id string) error {
 	deletePeerFromBroker(peer.PubNkey)
 	return nil
 }
+
+func processDeviceUpdate(id string, request *plexus.Peer) {
+	slog.Debug("received device update", "device", id)
+	if id != request.WGPublicKey {
+		slog.Error("invalid device update", "id", id, "request", request)
+		return
+	}
+	peer, err := boltdb.Get[plexus.Peer](id, peerTable)
+	if err != nil {
+		slog.Error("get peer", "id", id, "error", err)
+		return
+	}
+	if !peer.Endpoint.Equal(request.Endpoint) {
+		if err := publishNetworkPeerUpdate(*request); err != nil {
+			slog.Error("publish network peer update", "error", err)
+		}
+	}
+	if err := boltdb.Save(request, id, peerTable); err != nil {
+		slog.Error("save device update", "error", err)
+	}
+}
+
+func processPortUpdate(id string, ports *plexus.ListenPortResponse) {
+	slog.Debug("port update received", "peer", id, "update", ports)
+	networks, err := boltdb.GetAll[plexus.Network](networkTable)
+	if err != nil {
+		slog.Error("get networks", "error", err)
+		return
+	}
+	for _, network := range networks {
+		for i, peer := range network.Peers {
+			if peer.WGPublicKey == id {
+				peer.ListenPort = ports.ListenPort
+				peer.PublicListenPort = ports.PublicListenPort
+				network.Peers[i] = peer
+				if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+					slog.Error("save network", "error", err)
+				}
+				data := plexus.NetworkUpdate{
+					Action: plexus.UpdatePeer,
+					Peer:   peer,
+				}
+				slog.Debug("publish network update for port change", "network", network.Name, "peer", peer.HostName)
+				if err := eConn.Publish(plexus.Networks+network.Name, data); err != nil {
+					slog.Error("publish network update", "error", err)
+				}
+			}
+		}
+	}
+}

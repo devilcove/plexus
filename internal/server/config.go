@@ -40,11 +40,13 @@ const (
 )
 
 var (
-	config       configuration
-	ErrServerURL = errors.New("invalid server URL")
-	sessionAge   = 60 * 60 * 24
-	version      = "v0.1.0"
-	path         = "/var/lib/plexus/"
+	config           configuration
+	ErrServerURL     = errors.New("invalid server URL")
+	ErrInvalidSubnet = errors.New("invalid subnet")
+	ErrSubnetInUse   = errors.New("subnet in use")
+	sessionAge       = 60 * 60 * 24
+	version          = "v0.1.0"
+	path             = "/var/lib/plexus/"
 )
 
 const (

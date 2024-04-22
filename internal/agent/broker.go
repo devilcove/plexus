@@ -107,7 +107,7 @@ func subcribe(ec *nats.EncodedConn) {
 		}
 		deleteAllNetworks()
 		deleteAllInterfaces()
-		if err := saveServerNetworks(resp.Networks); err != nil {
+		if err := saveServerNetworks(self, resp.Networks); err != nil {
 			slog.Error("save networks", "error", err)
 		}
 		startAllInterfaces(self)
@@ -137,13 +137,19 @@ func subcribe(ec *nats.EncodedConn) {
 			}
 			return
 		}
-		if err := resetPeersOnNetworkInterface(self, network); err != nil {
-			slog.Error(err.Error())
-			if err := ec.Publish(reply, plexus.MessageResponse{Message: err.Error()}); err != nil {
-				slog.Error(err.Error())
-			}
-			return
+		if err := deleteInterface(network.Interface); err != nil {
+			slog.Error("delete interface", "iface", network.Interface, "error", err)
 		}
+		if err := startInterface(self, network); err != nil {
+			slog.Error("start interface", "iface", network.Interface, "error", err)
+		}
+		//if err := resetPeersOnNetworkInterface(self, network); err != nil {
+		//	slog.Error(err.Error())
+		//	if err := ec.Publish(reply, plexus.MessageResponse{Message: err.Error()}); err != nil {
+		//		slog.Error(err.Error())
+		//	}
+		//	return
+		//}
 		if err := ec.Publish(reply, plexus.MessageResponse{Message: "interface reset"}); err != nil {
 			slog.Error(err.Error())
 		}
@@ -242,7 +248,6 @@ func subcribeToServerTopics(self Device) {
 		slog.Error("join network subscription", "error", err)
 	}
 	subscriptions = append(subscriptions, joinNet)
-
 	sendListenPorts, err := serverEC.Subscribe(plexus.Update+id+plexus.SendListenPorts,
 		func(subj, reply string, data plexus.ListenPortRequest) {
 			slog.Info("new listen ports", "network", data.Network)
@@ -260,6 +265,48 @@ func subcribeToServerTopics(self Device) {
 		slog.Error("send listen port subscription", "error", err)
 	}
 	subscriptions = append(subscriptions, sendListenPorts)
+	addRouter, err := serverEC.Subscribe(plexus.Update+id+plexus.AddRouter,
+		func(subj, reply string, data plexus.NetworkPeer) {
+			if data.WGPublicKey != id {
+				slog.Error("add router wrong id", "me", id, "router", data.WGPublicKey)
+				return
+			}
+			if !data.IsSubnetRouter {
+				return
+			}
+			slog.Debug("adding subnet router")
+			if data.UseNat {
+				if err := addNat(); err != nil {
+					slog.Error("add nat", "error", err)
+				}
+			}
+			if data.UseVirtSubnet {
+				if err := addVirtualSubnet(data.VirtSubnet, data.Subnet); err != nil {
+					slog.Error("add virtual subnet", "error", err)
+				}
+			}
+		})
+	if err != nil {
+		slog.Error("add router subscription", "error", err)
+	}
+	subscriptions = append(subscriptions, addRouter)
+	delRouter, err := serverEC.Subscribe(plexus.Update+id+plexus.DeleteRouter,
+		func(subj, reply string, data plexus.NetworkPeer) {
+			if data.WGPublicKey != id {
+				slog.Error("add router wrong id", "me", id, "router", data.WGPublicKey)
+				return
+			}
+			if err := delNat(); err != nil {
+				slog.Error("delete nat", "error", err)
+			}
+			if err := delVirtualSubnet(); err != nil {
+				slog.Error("delete virtual subnet", "error", err)
+			}
+		})
+	if err != nil {
+		slog.Error("delete router subscription", "error", err)
+	}
+	subscriptions = append(subscriptions, delRouter)
 }
 
 func createRegistationConnection(key plexus.KeyValue) (*nats.EncodedConn, error) {

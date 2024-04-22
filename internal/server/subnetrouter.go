@@ -28,23 +28,35 @@ func addRouter(c *gin.Context) {
 	router := c.Param("peer")
 	cidr := c.PostForm("cidr")
 	nat := c.PostForm("nat")
+	vcidr := c.PostForm("vcidr")
+	var virtSubnet *net.IPNet
 	slog.Debug("subnet router", "network", netID, "router", router, "subnet", cidr, "use NAT", nat)
 	_, subnet, err := net.ParseCIDR(cidr)
 	if err != nil {
 		processError(c, http.StatusBadRequest, err.Error())
 		return
 	}
+	if nat == "virt" {
+		_, virtSubnet, err = net.ParseCIDR(vcidr)
+		if err != nil {
+			processError(c, http.StatusBadRequest, err.Error())
+			return
+		}
+		if virtSubnet.Mask.String() != subnet.Mask.String() {
+			processError(c, http.StatusBadRequest, "subnet/virtual subnet masks must be the same")
+		}
+		if message, err := validateSubnet(virtSubnet); err != nil {
+			processError(c, http.StatusBadRequest, message)
+			return
+		}
+	} else {
+		if message, err := validateSubnet(subnet); err != nil {
+			processError(c, http.StatusBadRequest, message)
+			return
+		}
+	}
 	if !validateNetworkAddress(*subnet) {
 		processError(c, http.StatusBadRequest, "invalid subnet: must be a private network")
-		return
-	}
-	used, kind, name, err := subnetInUse(subnet)
-	if err != nil {
-		processError(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if used {
-		processError(c, http.StatusBadRequest, fmt.Sprintf("subnet in use by %s %s", kind, name))
 		return
 	}
 	network, err := boltdb.Get[plexus.Network](netID, networkTable)
@@ -57,11 +69,15 @@ func addRouter(c *gin.Context) {
 	}
 	for i, peer := range network.Peers {
 		if peer.WGPublicKey == router {
-			peer.IsSubNetRouter = true
-			if nat == "on" {
+			peer.IsSubnetRouter = true
+			if nat == "nat" {
 				peer.UseNat = true
 			}
-			peer.SubNet = *subnet
+			if nat == "virt" {
+				peer.UseVirtSubnet = true
+				peer.VirtSubnet = *virtSubnet
+			}
+			peer.Subnet = *subnet
 			network.Peers[i] = peer
 			update.Peer = peer
 			break
@@ -73,6 +89,9 @@ func addRouter(c *gin.Context) {
 	}
 	if err := eConn.Publish("networks."+network.Name, update); err != nil {
 		slog.Error("publish new relay", "error", err)
+	}
+	if err := eConn.Publish(plexus.Update+update.Peer.WGPublicKey+plexus.AddRouter, update.Peer); err != nil {
+		slog.Error("publish add subnet router", "error", err)
 	}
 	networkDetails(c)
 }
@@ -91,8 +110,9 @@ func deleteRouter(c *gin.Context) {
 	}
 	for i, peer := range network.Peers {
 		if peer.WGPublicKey == router {
-			peer.IsSubNetRouter = false
+			peer.IsSubnetRouter = false
 			peer.UseNat = false
+			peer.UseVirtSubnet = false
 			network.Peers[i] = peer
 			update.Peer = peer
 			break
@@ -102,28 +122,57 @@ func deleteRouter(c *gin.Context) {
 		processError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+	slog.Debug("publish network update - delete router", "network", network.Name, "peer", update.Peer.HostName)
 	if err := eConn.Publish("networks."+network.Name, update); err != nil {
 		slog.Error("publish new relay", "error", err)
+	}
+	slog.Debug("publish device update - delete router", "network", network.Name, "peer", update.Peer.HostName)
+	if err := eConn.Publish(plexus.Update+update.Peer.WGPublicKey+plexus.DeleteRouter, update.Peer); err != nil {
+		slog.Error("publish add subnet router", "error", err)
 	}
 	networkDetails(c)
 }
 
-func subnetInUse(subnet *net.IPNet) (bool, string, string, error) {
+func subnetInUse(subnet *net.IPNet) (string, string, error) {
 	networks, err := boltdb.GetAll[plexus.Network](networkTable)
 	if err != nil {
-		return false, "", "", err
+		slog.Debug("get networks", "error", err)
+		return "", "", err
 	}
 	for _, network := range networks {
 		if network.Net.Contains(subnet.IP) || subnet.Contains(network.Net.IP) {
-			return true, "network", network.Name, nil
+			slog.Debug("subnet in use - network", "network", network.Name, "net", network.Net, "subnet", subnet)
+			return "network", network.Name, ErrSubnetInUse
 		}
 		for _, peer := range network.Peers {
-			if peer.IsSubNetRouter {
-				if subnet.Contains(peer.SubNet.IP) || peer.SubNet.Contains(subnet.IP) {
-					return true, "peer", peer.HostName, nil
+			if peer.IsSubnetRouter {
+				if peer.UseVirtSubnet {
+					if subnet.Contains(peer.VirtSubnet.IP) || peer.VirtSubnet.Contains(subnet.IP) {
+						slog.Debug("virt subnet in use peer", "network", network.Name, "net", network.Net, "subnet", subnet, "peer", peer.VirtSubnet)
+						return "peer", peer.HostName, ErrSubnetInUse
+					}
+				} else {
+					if subnet.Contains(peer.Subnet.IP) || peer.Subnet.Contains(subnet.IP) {
+						slog.Debug("subnet in use by peer", "network", network.Name, "net", network.Net, "subnet", subnet, "peer", peer.Subnet)
+						return "peer", peer.HostName, ErrSubnetInUse
+					}
 				}
 			}
 		}
 	}
-	return false, "", "", nil
+	return "", "", nil
+}
+
+func validateSubnet(subnet *net.IPNet) (string, error) {
+	if !validateNetworkAddress(*subnet) {
+		return "invalid subnet: must be a private network", ErrInvalidSubnet
+	}
+	kind, name, err := subnetInUse(subnet)
+	if err != nil {
+		if kind == "" {
+			return err.Error(), err
+		}
+		return fmt.Sprintf("subnet in use by %s %s", kind, name), ErrSubnetInUse
+	}
+	return "", nil
 }
