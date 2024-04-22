@@ -18,7 +18,7 @@ const (
 	serverCheckTime     = time.Hour * 1
 	connectivityTimeout = time.Minute * 3
 	networkNotMapped    = "network not mapped to server"
-	version             = "v0.1.0"
+	version             = "v0.2.1"
 	networkTable        = "networks"
 	deviceTable         = "devices"
 	path                = "/var/lib/plexus/"

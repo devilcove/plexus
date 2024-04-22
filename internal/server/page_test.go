@@ -55,7 +55,7 @@ func TestDisplayMainPage(t *testing.T) {
 func TestGetPage(t *testing.T) {
 	// no user
 	page := getPage("someone")
-	assert.Equal(t, "v0.1.0", page.Version)
+	assert.Equal(t, version, page.Version)
 }
 
 func TestLogin(t *testing.T) {
