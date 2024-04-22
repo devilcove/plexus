@@ -185,9 +185,9 @@ func (wg *wireguard) ReplacePeer(newPeer wgtypes.PeerConfig) {
 }
 
 func (wg *wireguard) DeletePeer(key string) {
-	for _, peer := range wg.Config.Peers {
+	for i, peer := range wg.Config.Peers {
 		if peer.PublicKey.String() == key {
-			peer.Remove = true
+			wg.Config.Peers[i].Remove = true
 			break
 		}
 	}

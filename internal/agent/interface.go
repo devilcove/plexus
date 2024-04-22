@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 	"slices"
+	"strconv"
 	"time"
 
 	"github.com/devilcove/boltdb"
@@ -372,8 +373,13 @@ func convertPeerToWG(netPeer plexus.NetworkPeer, peers []plexus.NetworkPeer) (wg
 	if err != nil {
 		return wgtypes.PeerConfig{}, err
 	}
+	addr, err := net.ResolveUDPAddr("udp", netPeer.Endpoint.String()+":"+strconv.Itoa(netPeer.PublicListenPort))
+	if err != nil {
+		return wgtypes.PeerConfig{}, err
+	}
 	return wgtypes.PeerConfig{
 		PublicKey:                   key,
+		Endpoint:                    addr,
 		PersistentKeepaliveInterval: &keepalive,
 		ReplaceAllowedIPs:           true,
 		AllowedIPs:                  getAllowedIPs(netPeer, peers),
