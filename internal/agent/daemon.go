@@ -1,10 +1,15 @@
 package agent
 
 import (
+	"bufio"
+	"context"
+	"fmt"
 	"log"
 	"log/slog"
+	"net"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -33,10 +38,15 @@ func Run() {
 	startAllInterfaces(self)
 	checkinTicker := time.NewTicker(checkinTime)
 	serverTicker := time.NewTicker(serverCheckTime)
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	ctx, cancel := context.WithCancel(context.Background())
+	go privateEndpointServer(ctx, wg)
 	for {
 		select {
 		case <-quit:
 			slog.Info("quit")
+			cancel()
 			slog.Info("deleting wg interfaces")
 			deleteAllInterfaces()
 			slog.Info("stopping tickers")
@@ -49,6 +59,7 @@ func Run() {
 			slog.Info("wait for nat server shutdown to complete")
 			ns.WaitForShutdown()
 			slog.Info("nats server has shutdown")
+			wg.Wait()
 			slog.Info("exiting ...")
 			return
 		case <-checkinTicker.C:
@@ -150,4 +161,54 @@ func closeServerConnections() {
 	if ec != nil {
 		ec.Close()
 	}
+}
+
+func privateEndpointServer(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
+	networks, err := boltdb.GetAll[Network](networkTable)
+	if err != nil {
+		return
+	}
+	self, err := boltdb.Get[Device]("self", deviceTable)
+	if err != nil {
+		return
+	}
+	for _, network := range networks {
+		me := getSelfFromPeers(&self, network.Peers)
+		if me.PrivateEndpoint == nil {
+			continue
+		}
+		slog.Info("tcp listener staating on prviate endpoint")
+		listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", me.PrivateEndpoint, me.ListenPort))
+		if err != nil {
+			slog.Error("public endpoint server", "error", err)
+			return
+		}
+		go func() {
+			for {
+				select {
+				case <-ctx.Done():
+					listener.Close()
+					return
+				default:
+					c, err := listener.Accept()
+					if err != nil {
+						slog.Warn("connect error", "error", err)
+						continue
+					}
+					go handleConn(c, self.WGPublicKey)
+				}
+			}
+		}()
+	}
+}
+
+func handleConn(c net.Conn, reply string) {
+	defer c.Close()
+	reader := bufio.NewReader(c)
+	_, err := reader.ReadBytes(byte('.'))
+	if err != nil {
+		return
+	}
+	c.Write([]byte(reply))
 }

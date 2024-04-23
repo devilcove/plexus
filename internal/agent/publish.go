@@ -44,11 +44,11 @@ func publishListenPortUpdate(self *Device, network *Network) {
 	}
 }
 
-//func getSelfFromPeers(self *Device, peers []plexus.NetworkPeer) *plexus.NetworkPeer {
-//	for _, peer := range peers {
-//		if peer.WGPublicKey == self.WGPublicKey {
-//			return &peer
-//		}
-//	}
-//	return nil
-//}
+func getSelfFromPeers(self *Device, peers []plexus.NetworkPeer) *plexus.NetworkPeer {
+	for _, peer := range peers {
+		if peer.WGPublicKey == self.WGPublicKey {
+			return &peer
+		}
+	}
+	return nil
+}

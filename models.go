@@ -65,22 +65,24 @@ type Network struct {
 }
 
 type NetworkPeer struct {
-	WGPublicKey      string
-	HostName         string
-	Address          net.IPNet
-	ListenPort       int
-	PublicListenPort int
-	Endpoint         net.IP
-	NatsConnected    bool
-	Connectivity     float64
-	IsRelay          bool
-	RelayedPeers     []string
-	IsRelayed        bool
-	IsSubnetRouter   bool
-	Subnet           net.IPNet
-	UseNat           bool
-	UseVirtSubnet    bool
-	VirtSubnet       net.IPNet
+	WGPublicKey       string
+	HostName          string
+	Address           net.IPNet
+	ListenPort        int
+	PublicListenPort  int
+	Endpoint          net.IP
+	PrivateEndpoint   net.IP
+	UsePublicEndpoint bool
+	NatsConnected     bool
+	Connectivity      float64
+	IsRelay           bool
+	RelayedPeers      []string
+	IsRelayed         bool
+	IsSubnetRouter    bool
+	Subnet            net.IPNet
+	UseNat            bool
+	UseVirtSubnet     bool
+	VirtSubnet        net.IPNet
 }
 
 type Key struct {

@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"log"
@@ -287,6 +288,12 @@ func getWGPeers(self Device, network Network) []wgtypes.PeerConfig {
 			},
 			PersistentKeepaliveInterval: &keepalive,
 		}
+		if peer.UsePublicEndpoint {
+			wgPeer.Endpoint = &net.UDPAddr{
+				IP:   peer.PrivateEndpoint,
+				Port: peer.ListenPort,
+			}
+		}
 		peers = append(peers, wgPeer)
 	}
 	return peers
@@ -384,4 +391,26 @@ func convertPeerToWG(netPeer plexus.NetworkPeer, peers []plexus.NetworkPeer) (wg
 		ReplaceAllowedIPs:           true,
 		AllowedIPs:                  getAllowedIPs(netPeer, peers),
 	}, nil
+}
+
+func connectToPublicEndpoint(peer plexus.NetworkPeer) bool {
+	slog.Debug("checking public endpoint", "peer", peer.HostName)
+	endpoint := fmt.Sprintf("%s:%d", peer.PrivateEndpoint, peer.ListenPort)
+	c, err := net.Dial("tcp", endpoint)
+	if err != nil {
+		return false
+	}
+	defer c.Close()
+	p := make([]byte, 1024)
+	if _, err := c.Write([]byte("olleh.")); err != nil {
+		return false
+	}
+	if _, err := bufio.NewReader(c).Read(p); err != nil {
+		return false
+	}
+	if string(p) != peer.WGPublicKey {
+		return false
+	}
+	slog.Debug("use public endpoint for", "peer", peer.HostName)
+	return true
 }
