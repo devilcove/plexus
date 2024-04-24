@@ -6,6 +6,7 @@ require (
 	github.com/c-robinson/iplib v1.0.8
 	github.com/caddyserver/certmagic v0.20.0
 	github.com/devilcove/boltdb v0.1.5
+	github.com/fatih/color v1.16.0
 	github.com/gin-contrib/sessions v1.0.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/google/nftables v0.2.0
@@ -50,6 +51,7 @@ require (
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/libdns/libdns v0.2.1 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mdlayher/genetlink v1.3.2 // indirect
 	github.com/mdlayher/netlink v1.7.2 // indirect
