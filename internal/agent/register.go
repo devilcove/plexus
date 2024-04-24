@@ -118,7 +118,7 @@ func createPeer() (*plexus.Peer, *wgtypes.Key, string, error) {
 		WGPublicKey: pubKey.String(),
 		PubNkey:     nkey,
 		Name:        name,
-		Version:     "v0.1.0",
+		Version:     version,
 		Endpoint:    stunAddr.IP,
 		OS:          runtime.GOOS,
 		Updated:     time.Now(),

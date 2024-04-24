@@ -41,6 +41,11 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 				return
 			}
 		}
+		if update.Peer.PrivateEndpoint != nil {
+			if connectToPublicEndpoint(update.Peer) {
+				update.Peer.UsePrivateEndpoint = true
+			}
+		}
 		network.Peers = append(network.Peers, update.Peer)
 		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 			slog.Error("update network -- add peer", "error", err)
@@ -93,6 +98,11 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 		found := false
 		for i, oldpeer := range network.Peers {
 			if oldpeer.WGPublicKey == update.Peer.WGPublicKey {
+				if update.Peer.PrivateEndpoint != nil {
+					if connectToPublicEndpoint(update.Peer) {
+						update.Peer.UsePrivateEndpoint = true
+					}
+				}
 				network.Peers = slices.Replace(network.Peers, i, i+1, update.Peer)
 				found = true
 				break

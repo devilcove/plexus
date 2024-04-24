@@ -363,5 +363,18 @@ func serverSubcriptions() []*nats.Subscription {
 	}
 	subcriptions = append(subcriptions, deviceUpdate)
 
+	// network peer updates
+	peerUpdate, err := eConn.Subscribe("*"+plexus.UpdateNetworkPeer, func(subj string, request *plexus.NetworkPeer) {
+		if len(subj) != 44+len(plexus.UpdateNetworkPeer) {
+			slog.Error("invalid sub", "subj", subj)
+			return
+		}
+		processNetworkPeerUpdate(subj[:44], request)
+	})
+	if err != nil {
+		slog.Error("subscribe peer update", "error", err)
+	}
+	subcriptions = append(subcriptions, peerUpdate)
+
 	return subcriptions
 }

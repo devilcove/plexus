@@ -122,7 +122,7 @@ func initialize() Page {
 
 	}
 	return Page{
-		Version:     "v0.1.0",
+		Version:     version,
 		Theme:       "black",
 		Font:        "PT Sans",
 		Refresh:     5,
