@@ -210,5 +210,5 @@ func handleConn(c net.Conn, reply string) {
 	if err != nil {
 		return
 	}
-	c.Write([]byte(reply))
+	_, _ = c.Write([]byte(reply))
 }
