@@ -179,15 +179,15 @@ func printHandshake(handshake time.Time) {
 
 func prettyByteSize(b int64) string {
 	bf := float64(b)
-	for i, unit := range []string{"", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"} {
+	for i, unit := range []string{"", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei"} {
 		if math.Abs(bf) < 1024.0 {
 			units := color.GreenString("%sB", unit)
 			if i == 0 {
-				return fmt.Sprintf("%3.0f %s", bf, units)
+				return fmt.Sprintf("%1.0f %s", bf, units)
 			}
 			return fmt.Sprintf("%3.2f %s", bf, units)
 		}
 		bf /= 1024.0
 	}
-	return fmt.Sprintf("%.1fYiB", bf)
+	return ""
 }
