@@ -10,30 +10,31 @@ import (
 
 // nats topics
 const (
-	DeletePeer        = ".deletePeer"
-	AddRouter         = ".addRouter"
-	AddPeer           = ".addPeer"
-	UpdatePeer        = ".updatePeer"
-	UpdateNetworkPeer = ".updateNetworkPeer"
-	UpdateListenPorts = ".updateListenPorts"
-	AddRelay          = ".addRelay"
-	DeleteRelay       = ".deleteRelay"
-	DeleteRouter      = ".deleteRouter"
-	DeleteNetwork     = ".deleteNetwork"
-	JoinNetwork       = ".join"
-	LeaveNetwork      = ".leaveNetwork"
-	LeaveServer       = ".leaveServer"
-	LogLevel          = ".loglevel"
-	Ping              = ".ping"
-	Register          = ".register"
-	Reload            = ".reload"
-	Reset             = ".reset"
-	Status            = ".status"
-	Version           = ".version"
-	Checkin           = ".checkin"
-	SendListenPorts   = ".listenPorts"
-	Update            = "update."
-	Networks          = "networks."
+	DeletePeer         = ".deletePeer"
+	AddRouter          = ".addRouter"
+	AddPeer            = ".addPeer"
+	UpdatePeer         = ".updatePeer"
+	UpdateNetworkPeer  = ".updateNetworkPeer"
+	UpdateListenPorts  = ".updateListenPorts"
+	AddRelay           = ".addRelay"
+	DeleteRelay        = ".deleteRelay"
+	DeleteRouter       = ".deleteRouter"
+	DeleteNetwork      = ".deleteNetwork"
+	JoinNetwork        = ".join"
+	LeaveNetwork       = ".leaveNetwork"
+	LeaveServer        = ".leaveServer"
+	LogLevel           = ".loglevel"
+	Ping               = ".ping"
+	Register           = ".register"
+	Reload             = ".reload"
+	Reset              = ".reset"
+	SetPrivateEndpoint = ".privateEndpoint"
+	Status             = ".status"
+	Version            = ".version"
+	Checkin            = ".checkin"
+	SendListenPorts    = ".listenPorts"
+	Update             = "update."
+	Networks           = "networks."
 )
 
 type ErrorResponse struct {
@@ -65,24 +66,24 @@ type Network struct {
 }
 
 type NetworkPeer struct {
-	WGPublicKey       string
-	HostName          string
-	Address           net.IPNet
-	ListenPort        int
-	PublicListenPort  int
-	Endpoint          net.IP
-	PrivateEndpoint   net.IP
-	UsePublicEndpoint bool
-	NatsConnected     bool
-	Connectivity      float64
-	IsRelay           bool
-	RelayedPeers      []string
-	IsRelayed         bool
-	IsSubnetRouter    bool
-	Subnet            net.IPNet
-	UseNat            bool
-	UseVirtSubnet     bool
-	VirtSubnet        net.IPNet
+	WGPublicKey        string
+	HostName           string
+	Address            net.IPNet
+	ListenPort         int
+	PublicListenPort   int
+	Endpoint           net.IP
+	PrivateEndpoint    net.IP
+	UsePrivateEndpoint bool
+	NatsConnected      bool
+	Connectivity       float64
+	IsRelay            bool
+	RelayedPeers       []string
+	IsRelayed          bool
+	IsSubnetRouter     bool
+	Subnet             net.IPNet
+	UseNat             bool
+	UseVirtSubnet      bool
+	VirtSubnet         net.IPNet
 }
 
 type Key struct {
@@ -194,6 +195,11 @@ type ListenPortResponse struct {
 	Message          string
 	ListenPort       int
 	PublicListenPort int
+}
+
+type PrivateEndpoint struct {
+	IP      string
+	Network string
 }
 
 func DecodeToken(token string) (KeyValue, error) {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"net"
 	"runtime/debug"
 	"strings"
 
@@ -185,6 +186,53 @@ func subcribe(ec *nats.EncodedConn) {
 		if err := ec.Publish(reply, response); err != nil {
 			slog.Error("publish reply to version request", "error", err)
 		}
+	})
+	_, _ = ec.Subscribe(Agent+plexus.SetPrivateEndpoint, func(sub, reply string, request plexus.PrivateEndpoint) {
+		slog.Debug("set private endpoint", "endpoint", request.IP, "network", request.Network)
+		var err error
+		var networks []Network
+		self, err := boltdb.Get[Device]("self", deviceTable)
+		if err != nil {
+			_ = ec.Publish(reply, plexus.MessageResponse{
+				Message: "error getting device" + err.Error(),
+			})
+		}
+		if request.Network == "" {
+			networks, err = boltdb.GetAll[Network](networkTable)
+			if err != nil {
+				_ = ec.Publish(reply, plexus.MessageResponse{
+					Message: "error reading networks" + err.Error(),
+				})
+			}
+		} else {
+			network, err := boltdb.Get[Network](request.Network, networkTable)
+			if err != nil {
+				_ = ec.Publish(reply, plexus.MessageResponse{
+					Message: "error reading network " + err.Error(),
+				})
+			}
+			networks = append(networks, network)
+		}
+		for _, network := range networks {
+			for i, peer := range network.Peers {
+				if peer.WGPublicKey == self.WGPublicKey {
+					network.Peers[i].PrivateEndpoint = net.ParseIP(request.IP)
+					if err := publishNetworkPeerUpdate(self, &network.Peers[i]); err != nil {
+						_ = ec.Publish(reply, plexus.MessageResponse{
+							Message: "error publishing update to server " + err.Error(),
+						})
+					}
+				}
+			}
+			if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+				_ = ec.Publish(reply, plexus.MessageResponse{
+					Message: "error saving network " + network.Name + err.Error(),
+				})
+			}
+		}
+		_ = ec.Publish(reply, plexus.MessageResponse{
+			Message: "private endpoint added",
+		})
 	})
 }
 

@@ -331,6 +331,36 @@ func processDeviceUpdate(id string, request *plexus.Peer) {
 	}
 }
 
+func processNetworkPeerUpdate(id string, request *plexus.NetworkPeer) {
+	slog.Debug("received network peer update", "peer", id)
+	if id != request.WGPublicKey {
+		slog.Error("invalid update", "id", id, "request", request.WGPublicKey)
+		return
+	}
+	networks, err := boltdb.GetAll[plexus.Network](networkTable)
+	if err != nil {
+		slog.Error("get networks", "errror", err)
+		return
+	}
+	for i, network := range networks {
+		for _, peer := range network.Peers {
+			if peer.WGPublicKey == id {
+				network.Peers[i] = *request
+				if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+					slog.Error("save network", "error", err)
+				}
+				data := plexus.NetworkUpdate{
+					Action: plexus.UpdatePeer,
+					Peer:   *request,
+				}
+				if err := eConn.Publish(plexus.Networks+network.Name, data); err != nil {
+					slog.Error("publish network update", "error", err)
+				}
+			}
+		}
+	}
+}
+
 func processPortUpdate(id string, ports *plexus.ListenPortResponse) {
 	slog.Debug("port update received", "peer", id, "update", ports)
 	networks, err := boltdb.GetAll[plexus.Network](networkTable)

@@ -43,7 +43,7 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 		}
 		if update.Peer.PrivateEndpoint != nil {
 			if connectToPublicEndpoint(update.Peer) {
-				update.Peer.UsePublicEndpoint = true
+				update.Peer.UsePrivateEndpoint = true
 			}
 		}
 		network.Peers = append(network.Peers, update.Peer)
@@ -100,7 +100,7 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 			if oldpeer.WGPublicKey == update.Peer.WGPublicKey {
 				if update.Peer.PrivateEndpoint != nil {
 					if connectToPublicEndpoint(update.Peer) {
-						update.Peer.UsePublicEndpoint = true
+						update.Peer.UsePrivateEndpoint = true
 					}
 				}
 				network.Peers = slices.Replace(network.Peers, i, i+1, update.Peer)

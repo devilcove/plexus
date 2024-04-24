@@ -44,6 +44,19 @@ func publishListenPortUpdate(self *Device, network *Network) {
 	}
 }
 
+// publish network peer update to server
+func publishNetworkPeerUpdate(self Device, peer *plexus.NetworkPeer) error {
+	slog.Info("publishing network peer update")
+	serverEC := serverConn.Load()
+	if serverEC == nil {
+		return ErrNotConnected
+	}
+	if err := serverEC.Publish(self.WGPublicKey+plexus.UpdateNetworkPeer, peer); err != nil {
+		return err
+	}
+	return nil
+}
+
 func getSelfFromPeers(self *Device, peers []plexus.NetworkPeer) *plexus.NetworkPeer {
 	for _, peer := range peers {
 		if peer.WGPublicKey == self.WGPublicKey {

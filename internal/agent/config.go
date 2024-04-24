@@ -30,7 +30,7 @@ var (
 	subscriptions []*nats.Subscription
 	//errors
 	ErrNetNotMapped = errors.New("network not mapped to server")
-	ErrConnected    = errors.New("network connected")
+	ErrNotConnected = errors.New("not connected to server")
 )
 
 type Configuration struct {
