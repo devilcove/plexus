@@ -176,6 +176,7 @@ type CheckinData struct {
 	ListenPort       int
 	PublicListenPort int
 	Endpoint         net.IP
+	PrivateEndpoints []PrivateEndpoint
 	Connections      []ConnectivityData
 }
 

@@ -174,6 +174,7 @@ func processCheckin(data *plexus.CheckinData) plexus.MessageResponse {
 		}
 	}
 	processConnectionData(data)
+	processPrivateEndpoints(data.ID, data.PrivateEndpoints)
 	return plexus.MessageResponse{Message: "checkin processed"}
 }
 
@@ -207,6 +208,36 @@ func processConnectionData(data *plexus.CheckinData) {
 		network.Peers = updatedPeers
 		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 			slog.Error("save peers", "error", err)
+		}
+	}
+}
+
+// processPrivateEndpoints handles updated private endpoint data
+func processPrivateEndpoints(id string, endpoints []plexus.PrivateEndpoint) {
+	if len(endpoints) == 0 {
+		return
+	}
+	for _, ep := range endpoints {
+		network, err := boltdb.Get[plexus.Network](ep.Network, networkTable)
+		if err != nil {
+			slog.Error("get network", "error", err)
+			continue
+		}
+		for i, peer := range network.Peers {
+			if peer.WGPublicKey != id {
+				continue
+			}
+			network.Peers[i].PrivateEndpoint = net.ParseIP(ep.IP)
+			data := plexus.NetworkUpdate{
+				Action: plexus.UpdatePeer,
+				Peer:   network.Peers[i],
+			}
+			if err := eConn.Publish(plexus.Networks+network.Name, data); err != nil {
+				slog.Error("publish network update", "error", err)
+			}
+			if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+				slog.Error("save network", "network", network.Name, "error", err)
+			}
 		}
 	}
 }

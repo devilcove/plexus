@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"errors"
-	"log"
 	"log/slog"
 	"net"
 	"os"
@@ -133,35 +132,6 @@ func connectToServer(self Device) error {
 	serverConn.Store(serverEC)
 	subcribeToServerTopics(self)
 	return nil
-}
-
-func checkin() {
-	slog.Debug("checkin")
-	checkinData := plexus.CheckinData{}
-	serverResponse := plexus.MessageResponse{}
-	self, err := boltdb.Get[Device]("self", deviceTable)
-	if err != nil {
-		slog.Error("get device", "error", err)
-		return
-	}
-	checkinData.ID = self.WGPublicKey
-	checkinData.Version = self.Version
-	checkinData.Endpoint = self.Endpoint
-	serverEC := serverConn.Load()
-	if serverEC == nil {
-		slog.Debug("not connected to server broker .... skipping checkin")
-		return
-	}
-	if !serverEC.Conn.IsConnected() {
-		slog.Debug("not connected to server broker .... skipping checkin")
-		return
-	}
-	checkinData.Connections = getConnectivity()
-	if err := serverEC.Request(self.WGPublicKey+".checkin", checkinData, &serverResponse, NatsTimeout); err != nil {
-		slog.Error("error publishing checkin ", "error", err)
-		return
-	}
-	log.Println("checkin response from server", serverResponse.Message)
 }
 
 func closeServerConnections() {
