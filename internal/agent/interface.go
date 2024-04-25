@@ -378,14 +378,22 @@ func getNewListenPorts(name string) (plexus.NetworkPeer, error) {
 }
 
 func convertPeerToWG(netPeer plexus.NetworkPeer, peers []plexus.NetworkPeer) (wgtypes.PeerConfig, error) {
+	addr := &net.UDPAddr{}
 	keepalive := defaultKeepalive
 	key, err := wgtypes.ParseKey(netPeer.WGPublicKey)
 	if err != nil {
 		return wgtypes.PeerConfig{}, err
 	}
-	addr, err := net.ResolveUDPAddr("udp", netPeer.Endpoint.String()+":"+strconv.Itoa(netPeer.PublicListenPort))
-	if err != nil {
-		return wgtypes.PeerConfig{}, err
+	if netPeer.UsePrivateEndpoint {
+		addr, err = net.ResolveUDPAddr("udp", netPeer.PrivateEndpoint.String()+":"+strconv.Itoa(netPeer.ListenPort))
+		if err != nil {
+			return wgtypes.PeerConfig{}, err
+		}
+	} else {
+		addr, err = net.ResolveUDPAddr("udp", netPeer.Endpoint.String()+":"+strconv.Itoa(netPeer.PublicListenPort))
+		if err != nil {
+			return wgtypes.PeerConfig{}, err
+		}
 	}
 	return wgtypes.PeerConfig{
 		PublicKey:                   key,

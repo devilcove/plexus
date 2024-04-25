@@ -119,7 +119,7 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 		}
 		wg.ReplacePeer(wgPeer)
 		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
-			slog.Error("update network -- delete peer", "error", err)
+			slog.Error("update network -- update peer", "error", err)
 		}
 		if err := wg.Apply(); err != nil {
 			slog.Error("apply wg config", "error", err)

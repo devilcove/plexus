@@ -3,7 +3,7 @@ package agent
 import (
 	"bufio"
 	"context"
-	"fmt"
+	"errors"
 	"log"
 	"log/slog"
 	"net"
@@ -19,6 +19,8 @@ import (
 	"github.com/nats-io/nkeys"
 )
 
+var restartEndpointServer chan struct{}
+
 func Run() {
 	plexus.SetLogging(Config.Verbosity)
 	if err := boltdb.Initialize(path+"plexus-agent.db", []string{deviceTable, networkTable}); err != nil {
@@ -27,6 +29,7 @@ func Run() {
 	}
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, os.Interrupt)
+	restartEndpointServer = make(chan struct{})
 	self, err := newDevice()
 	if err != nil {
 		slog.Error("new device", "error", err)
@@ -75,6 +78,12 @@ func Run() {
 					slog.Info("connected to server")
 				}
 			}
+		case <-restartEndpointServer:
+			cancel()
+			wg.Wait()
+			wg.Add(1)
+			ctx, cancel = context.WithCancel(context.Background())
+			go privateEndpointServer(ctx, wg)
 		}
 	}
 }
@@ -168,6 +177,7 @@ func closeServerConnections() {
 }
 
 func privateEndpointServer(ctx context.Context, wg *sync.WaitGroup) {
+	slog.Debug("private endpoint server")
 	defer wg.Done()
 	networks, err := boltdb.GetAll[Network](networkTable)
 	if err != nil {
@@ -182,8 +192,8 @@ func privateEndpointServer(ctx context.Context, wg *sync.WaitGroup) {
 		if me.PrivateEndpoint == nil {
 			continue
 		}
-		slog.Info("tcp listener staating on prviate endpoint")
-		listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", me.PrivateEndpoint, me.ListenPort))
+		slog.Info("tcp listener starting on private endpoint", "endpoint", me.PrivateEndpoint, "port", me.ListenPort)
+		listener, err := net.ListenTCP("tcp", &net.TCPAddr{IP: me.PrivateEndpoint, Port: me.ListenPort})
 		if err != nil {
 			slog.Error("public endpoint server", "error", err)
 			return
@@ -192,10 +202,18 @@ func privateEndpointServer(ctx context.Context, wg *sync.WaitGroup) {
 			for {
 				select {
 				case <-ctx.Done():
+					slog.Debug("closing private endpoint server")
 					listener.Close()
 					return
 				default:
+					if err := listener.SetDeadline(time.Now().Add(endpointServerTimeout)); err != nil {
+						slog.Error("set deadline", "error", err)
+						continue
+					}
 					c, err := listener.Accept()
+					if errors.Is(err, os.ErrDeadlineExceeded) {
+						continue
+					}
 					if err != nil {
 						slog.Warn("connect error", "error", err)
 						continue
