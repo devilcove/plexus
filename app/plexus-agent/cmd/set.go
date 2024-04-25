@@ -30,32 +30,35 @@ var setCmd = &cobra.Command{
 	Use:   "set ip [network]",
 	Args:  cobra.RangeArgs(1, 2),
 	Short: "set private endpoint for network",
-	Long:  `set private endpoint ip for a or all networks.`,
+	Long: `set/reset private endpoint ip for a or all networks.
+	To reset set "" [network]`,
 	Run: func(cmd *cobra.Command, args []string) {
 		network := ""
 		if len(args) > 1 {
 			network = args[1]
 		}
 		fmt.Println("set called")
-		ip := net.ParseIP(args[0])
-		if ip == nil {
-			fmt.Println("invalid ip")
-			return
-		}
-		addr, err := netlink.AddrList(nil, netlink.FAMILY_V4)
-		if err != nil {
-			fmt.Println("error getting addresses", err)
-			return
-		}
-		found := false
-		for _, add := range addr {
-			if ip.Equal(add.IP) {
-				found = true
+		if args[0] != "" {
+			ip := net.ParseIP(args[0])
+			if ip == nil {
+				fmt.Println("invalid ip")
+				return
 			}
-		}
-		if !found {
-			fmt.Println("invalid ip")
-			return
+			addr, err := netlink.AddrList(nil, netlink.FAMILY_V4)
+			if err != nil {
+				fmt.Println("error getting addresses", err)
+				return
+			}
+			found := false
+			for _, add := range addr {
+				if ip.Equal(add.IP) {
+					found = true
+				}
+			}
+			if !found {
+				fmt.Println("invalid ip")
+				return
+			}
 		}
 		request := plexus.PrivateEndpoint{
 			IP:      args[0],
