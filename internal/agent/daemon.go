@@ -65,11 +65,15 @@ func Run() {
 		case <-checkinTicker.C:
 			checkin()
 		case <-serverTicker.C:
-			// reconnect to servers in case server was down when tried to connect earlier
-			slog.Debug("refreshing server connection")
-			closeServerConnections()
-			if err := connectToServer(self); err != nil {
-				slog.Error("server connection", "error", err)
+			// check server connection in case server was down when tried to connect earlier
+			slog.Debug("check server connection")
+			if serverConn.Load() == nil {
+				slog.Info("not connected to server.... retrying")
+				if err := connectToServer(self); err != nil {
+					slog.Error("server connection", "error", err)
+				} else {
+					slog.Info("connected to server")
+				}
 			}
 		}
 	}
