@@ -9,6 +9,7 @@ import (
 	"net"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/devilcove/boltdb"
@@ -31,17 +32,17 @@ func deleteInterface(name string) error {
 
 func deleteAllInterfaces() {
 	slog.Debug("deleting all interfaces")
-	networks, err := boltdb.GetAll[Network](networkTable)
+	ifaces, err := netlink.LinkList()
 	if err != nil {
-		slog.Error("retrieve networks", "error", err)
+		slog.Error("get interfaces", "err", err)
 		return
 	}
-	log.Printf("%d interfaces to delete", len(networks))
-	for _, network := range networks {
-		log.Println("calling deleteInterface", network.Interface)
-		if err := deleteInterface(network.Interface); err != nil {
-			slog.Error("delete interface", "error", err)
-			return
+	for _, iface := range ifaces {
+		if strings.Contains(iface.Attrs().Name, "plexus") {
+			slog.Debug("deleting interface", "name", iface.Attrs().Name)
+			if err := netlink.LinkDel(iface); err != nil {
+				slog.Error("deleting link", "name", iface.Attrs().Name, "error", err)
+			}
 		}
 	}
 	if err = delNat(); err != nil {
