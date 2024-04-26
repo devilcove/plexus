@@ -59,6 +59,12 @@ func handleRegistration(request *plexus.RegisterRequest) plexus.MessageResponse 
 func newDevice() (Device, error) {
 	device, err := boltdb.Get[Device]("self", deviceTable)
 	if err == nil {
+		if device.Version != version {
+			device.Version = version
+			if err := boltdb.Save(device, "self", deviceTable); err != nil {
+				slog.Error("update self version", "error", err)
+			}
+		}
 		return device, nil
 	}
 	if !errors.Is(err, boltdb.ErrNoResults) {
