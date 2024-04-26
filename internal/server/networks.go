@@ -179,6 +179,7 @@ func deleteNetwork(c *gin.Context) {
 		processError(c, http.StatusInternalServerError, "nats failure:  network update not published")
 		return
 	}
+	slog.Debug("publish network update", "network", network, "reason", "delete network")
 	if err := eConn.Publish(plexus.Networks+network, plexus.NetworkUpdate{
 		Action: plexus.DeleteNetwork,
 	}); err != nil {
@@ -364,6 +365,7 @@ func deleteRelay(c *gin.Context) {
 		processError(c, http.StatusBadRequest, "failed to save update network peers "+err.Error())
 		return
 	}
+	slog.Debug("publish network update", "network", network.Name, "peer", update.Peer.HostName, "reason", "delete relay")
 	if err := eConn.Publish(plexus.Networks+network.Name, update); err != nil {
 		slog.Error("publish new relay", "error", err)
 	}

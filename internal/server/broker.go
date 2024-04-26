@@ -339,7 +339,7 @@ func serverSubcriptions() []*nats.Subscription {
 
 	//listenPortUpdate
 	portUpdate, err := eConn.Subscribe("*"+plexus.UpdateListenPorts, func(subj string, request *plexus.ListenPortResponse) {
-		if len(subj) != 44+len(plexus.UpdateNetworkPeer) {
+		if len(subj) != 44+len(plexus.UpdateListenPorts) {
 			slog.Error("invalid sub", "subj", subj)
 			return
 		}
