@@ -115,12 +115,14 @@ func startInterface(self Device, network Network) error {
 		network.ListenPort = port
 	}
 	if addressChanged {
+		slog.Debug("public address changed ... saving and publishing update", "address", self.Endpoint)
 		if err := boltdb.Save(self, "self", deviceTable); err != nil {
 			return err
 		}
 		go publishDeviceUpdate(&self)
 	}
 	if portChanged {
+		slog.Debug("listenport changed .. saving and publishing update", "port", network.ListenPort, "public port", network.PublicListenPort)
 		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 			return err
 		}
@@ -408,7 +410,7 @@ func convertPeerToWG(netPeer plexus.NetworkPeer, peers []plexus.NetworkPeer) (wg
 func connectToPublicEndpoint(peer plexus.NetworkPeer) bool {
 	slog.Debug("checking private endpoint", "peer", peer.HostName)
 	endpoint := fmt.Sprintf("%s:%d", peer.PrivateEndpoint, peer.ListenPort)
-	c, err := net.Dial("tcp", endpoint)
+	c, err := net.DialTimeout("tcp", endpoint, NatsTimeout)
 	if err != nil {
 		slog.Debug("err dialing endpoint", "error", err)
 		return false
