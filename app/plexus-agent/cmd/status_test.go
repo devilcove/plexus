@@ -9,7 +9,7 @@ import (
 )
 
 func TestPrintHandshake(t *testing.T) {
-	bytes := make([]byte, 1024)
+	bytes := make([]byte, 128)
 	out, err := os.Open(os.Stdout.Name())
 	assert.Nil(t, err)
 	t.Run("one second", func(t *testing.T) {
@@ -17,32 +17,44 @@ func TestPrintHandshake(t *testing.T) {
 		_, err := out.Read(bytes)
 		assert.Nil(t, err)
 		assert.Contains(t, string(bytes), "1 second ago")
+		assert.Nil(t, out.Close())
 	})
 	t.Run("one minute", func(t *testing.T) {
+		out, err := os.Open(os.Stdout.Name())
+		assert.Nil(t, err)
 		printHandshake(time.Now().Add(time.Second * -60))
-		_, err := out.Read(bytes)
+		_, err = out.Read(bytes)
 		assert.Nil(t, err)
 		assert.Contains(t, string(bytes), "1 minute 0 seconds ago")
+		assert.Nil(t, out.Close())
 	})
 	t.Run("hours", func(t *testing.T) {
+		out, err := os.Open(os.Stdout.Name())
+		assert.Nil(t, err)
 		printHandshake(time.Now().Add(time.Second * -3600))
-		_, err := out.Read(bytes)
+		_, err = out.Read(bytes)
 		assert.Nil(t, err)
 		assert.Contains(t, string(bytes), "1 hour 0 minutes 0 seconds ago")
+		assert.Nil(t, out.Close())
 	})
 	t.Run("multi", func(t *testing.T) {
+		out, err := os.Open(os.Stdout.Name())
+		assert.Nil(t, err)
 		printHandshake(time.Now().Add(time.Second * -7250))
-		_, err := out.Read(bytes)
+		_, err = out.Read(bytes)
 		assert.Nil(t, err)
 		assert.Contains(t, string(bytes), "2 hours 0 minutes 50 seconds ago")
+		assert.Nil(t, out.Close())
 	})
 	t.Run("now", func(t *testing.T) {
+		out, err := os.Open(os.Stdout.Name())
+		assert.Nil(t, err)
 		printHandshake(time.Now())
-		_, err := out.Read(bytes)
+		_, err = out.Read(bytes)
 		assert.Nil(t, err)
 		assert.Contains(t, string(bytes), "never")
+		assert.Nil(t, out.Close())
 	})
-	assert.Nil(t, out.Close())
 }
 
 func TestPrettyByteSize(t *testing.T) {
