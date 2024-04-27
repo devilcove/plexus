@@ -381,7 +381,7 @@ func getNewListenPorts(name string) (plexus.NetworkPeer, error) {
 }
 
 func convertPeerToWG(netPeer plexus.NetworkPeer, peers []plexus.NetworkPeer) (wgtypes.PeerConfig, error) {
-	addr := &net.UDPAddr{}
+	var addr *net.UDPAddr
 	keepalive := defaultKeepalive
 	key, err := wgtypes.ParseKey(netPeer.WGPublicKey)
 	if err != nil {
