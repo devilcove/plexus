@@ -8,6 +8,7 @@ import (
 	"net"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
@@ -217,6 +218,7 @@ func subcribe(ec *nats.EncodedConn) {
 			for i, peer := range network.Peers {
 				if peer.WGPublicKey == self.WGPublicKey {
 					network.Peers[i].PrivateEndpoint = net.ParseIP(request.IP)
+					network.Peers[i].UsePrivateEndpoint = false
 					if err := publishNetworkPeerUpdate(self, &network.Peers[i]); err != nil {
 						_ = ec.Publish(reply, plexus.MessageResponse{
 							Message: "error publishing update to server " + err.Error(),
@@ -230,6 +232,9 @@ func subcribe(ec *nats.EncodedConn) {
 				})
 			}
 		}
+		restartEndpointServer <- struct{}{}
+		//wait to ensure endpoint server is started
+		time.Sleep(time.Millisecond * 10)
 		_ = ec.Publish(reply, plexus.MessageResponse{
 			Message: "private endpoint added",
 		})

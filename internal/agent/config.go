@@ -9,19 +9,20 @@ import (
 )
 
 const (
-	defaultWGPort       = 51820
-	maxNetworks         = 100
-	defaultKeepalive    = time.Second * 20
-	NatsTimeout         = time.Second * 5
-	NatsLongTimeout     = time.Second * 15
-	checkinTime         = time.Minute * 1
-	serverCheckTime     = time.Hour * 1
-	connectivityTimeout = time.Minute * 3
-	networkNotMapped    = "network not mapped to server"
-	version             = "v0.2.1"
-	networkTable        = "networks"
-	deviceTable         = "devices"
-	path                = "/var/lib/plexus/"
+	defaultWGPort         = 51820
+	maxNetworks           = 100
+	defaultKeepalive      = time.Second * 20
+	NatsTimeout           = time.Second * 5
+	NatsLongTimeout       = time.Second * 15
+	checkinTime           = time.Minute * 1
+	serverCheckTime       = time.Minute * 3
+	connectivityTimeout   = time.Minute * 3
+	endpointServerTimeout = time.Second * 30
+	networkNotMapped      = "network not mapped to server"
+	version               = "v0.2.1"
+	networkTable          = "networks"
+	deviceTable           = "devices"
+	path                  = "/var/lib/plexus/"
 )
 
 var (

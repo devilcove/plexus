@@ -18,12 +18,14 @@ package cmd
 import (
 	"fmt"
 	"log/slog"
+	"math"
 	"slices"
 	"strconv"
 	"time"
 
 	"github.com/devilcove/plexus"
 	"github.com/devilcove/plexus/internal/agent"
+	"github.com/fatih/color"
 	"github.com/kr/pretty"
 	"github.com/spf13/cobra"
 	"github.com/vishvananda/netlink"
@@ -47,8 +49,16 @@ var statusCmd = &cobra.Command{
 			fmt.Println("agent running... not connected to servers")
 			return
 		}
-		fmt.Println("Server")
-		fmt.Println("\t", status.Server, ":", status.Connected)
+		color.Green("Server")
+		var colour func(a ...interface{}) string
+		if status.Connected {
+			colour = color.New(color.FgGreen).SprintFunc()
+		} else {
+			colour = color.New(color.FgRed).SprintFunc()
+
+		}
+		fmt.Println("\t", status.Server, ":", colour(status.Connected))
+
 		if len(status.Networks) == 0 {
 			fmt.Println("no networks")
 			return
@@ -68,7 +78,7 @@ var statusCmd = &cobra.Command{
 			if err != nil {
 				slog.Error("get address of interface", "interface", network.Interface, "error", err)
 			}
-			fmt.Println("interface:", network.Interface)
+			color.Magenta("interface %s", network.Interface)
 			fmt.Println("\t network name:", network.Name)
 			fmt.Println("\t public key:", wg.PrivateKey.PublicKey())
 			fmt.Println("\t listen port:", wg.ListenPort)
@@ -91,24 +101,22 @@ var statusCmd = &cobra.Command{
 						break
 					}
 				}
-				fmt.Println("peer:", peer.WGPublicKey, peer.HostName, peer.Address.IP)
+				color.Yellow("peer: %s %s %s", peer.WGPublicKey, peer.HostName, peer.Address.IP)
 				if peer.IsRelay {
 					fmt.Println("\trelay: true")
 					showRelayedPeers(peer.RelayedPeers, network)
 				}
-				fmt.Println("\tendpoint:", peer.Endpoint.String()+":", peer.PublicListenPort)
+				fmt.Println("\tprivate-endpoint:", peer.PrivateEndpoint.String()+":", peer.ListenPort)
+				fmt.Println("\tpublic-endpoint:", peer.Endpoint.String()+":", peer.PublicListenPort)
+				fmt.Println("\twg-endpoint:", wgPeer.Endpoint)
 				fmt.Print("\tallowed ips:")
 				for _, ip := range wgPeer.AllowedIPs {
 					ones, _ := ip.Mask.Size()
 					fmt.Print(" " + ip.IP.String() + "/" + strconv.Itoa(ones))
 				}
 				fmt.Println()
-				if wgPeer.LastHandshakeTime.IsZero() {
-					fmt.Println("\tlast handshake: never")
-				} else {
-					fmt.Printf("\tlast handshake: %f0.0 %s\n", time.Since(wgPeer.LastHandshakeTime).Seconds(), "seconds ago")
-				}
-				fmt.Println("\ttransfer:", wgPeer.TransmitBytes, "sent", wgPeer.ReceiveBytes, "received")
+				printHandshake(wgPeer.LastHandshakeTime)
+				fmt.Println("\ttransfer:", prettyByteSize(wgPeer.TransmitBytes), "sent", prettyByteSize(wgPeer.ReceiveBytes), "received")
 				fmt.Println("\tkeepalive:", wgPeer.PersistentKeepaliveInterval)
 			}
 			fmt.Println()
@@ -139,4 +147,53 @@ func showRelayedPeers(relayed []string, network agent.Network) {
 			fmt.Printf("\t\t relayed: %s %s %v\n", peer.WGPublicKey, peer.HostName, peer.Address.IP)
 		}
 	}
+}
+
+func printHandshake(handshake time.Time) {
+	if handshake.IsZero() {
+		fmt.Printf("\tlast handshake: %s\n", color.RedString("never"))
+		return
+	}
+	d := time.Since(handshake)
+	hour := int(d.Hours())
+	minute := int(d.Minutes()) % 60
+	second := int(d.Seconds()) % 60
+	var hourString, minuteString, secondString string
+	if hour == 0 {
+		hourString = ""
+	} else if hour == 1 {
+		hourString = fmt.Sprintf("1 %s", color.GreenString("hour"))
+	} else {
+		hourString = fmt.Sprintf("%d %s", hour, color.GreenString("hours"))
+	}
+	if minute == 0 && hour == 0 {
+		minuteString = ""
+	} else if minute == 1 {
+		minuteString = fmt.Sprintf("1 %s", color.GreenString("minute"))
+	} else {
+		minuteString = fmt.Sprintf("%d %s", minute, color.GreenString("minutes"))
+	}
+	if minute == 0 && hour == 0 && second == 0 {
+		secondString = color.RedString("never")
+	} else if second == 1 {
+		secondString = fmt.Sprintf("1 %s", color.GreenString("second"))
+	} else {
+		secondString = fmt.Sprintf("%d %s", second, color.GreenString("seconds"))
+	}
+	fmt.Println("\tlast handshake:", hourString, minuteString, secondString, "ago")
+}
+
+func prettyByteSize(b int64) string {
+	bf := float64(b)
+	for i, unit := range []string{"", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei"} {
+		if math.Abs(bf) < 1024.0 {
+			units := color.GreenString("%sB", unit)
+			if i == 0 {
+				return fmt.Sprintf("%1.0f %s", bf, units)
+			}
+			return fmt.Sprintf("%3.2f %s", bf, units)
+		}
+		bf /= 1024.0
+	}
+	return ""
 }

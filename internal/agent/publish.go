@@ -1,8 +1,10 @@
 package agent
 
 import (
+	"log"
 	"log/slog"
 
+	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
 )
 
@@ -64,4 +66,51 @@ func getSelfFromPeers(self *Device, peers []plexus.NetworkPeer) *plexus.NetworkP
 		}
 	}
 	return nil
+}
+
+func checkin() {
+	slog.Debug("checkin")
+	checkinData := plexus.CheckinData{}
+	serverResponse := plexus.MessageResponse{}
+	self, err := boltdb.Get[Device]("self", deviceTable)
+	if err != nil {
+		slog.Error("get device", "error", err)
+		return
+	}
+	checkinData.ID = self.WGPublicKey
+	checkinData.Version = self.Version
+	checkinData.Endpoint = self.Endpoint
+	networks, err := boltdb.GetAll[Network](networkTable)
+	if err != nil {
+		slog.Error("get networks", "error", err)
+		return
+	}
+	for _, network := range networks {
+		for _, peer := range network.Peers {
+			if peer.WGPublicKey != self.WGPublicKey {
+				continue
+			}
+			if peer.PrivateEndpoint != nil {
+				checkinData.PrivateEndpoints = append(checkinData.PrivateEndpoints, plexus.PrivateEndpoint{
+					IP:      peer.PrivateEndpoint.String(),
+					Network: network.Name,
+				})
+			}
+		}
+	}
+	serverEC := serverConn.Load()
+	if serverEC == nil {
+		slog.Debug("not connected to server broker .... skipping checkin")
+		return
+	}
+	if !serverEC.Conn.IsConnected() {
+		slog.Debug("not connected to server broker .... skipping checkin")
+		return
+	}
+	checkinData.Connections = getConnectivity()
+	if err := serverEC.Request(self.WGPublicKey+".checkin", checkinData, &serverResponse, NatsTimeout); err != nil {
+		slog.Error("error publishing checkin ", "error", err)
+		return
+	}
+	log.Println("checkin response from server", serverResponse.Message)
 }
