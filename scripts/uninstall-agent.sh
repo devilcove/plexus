@@ -13,6 +13,8 @@ systemctl daemon-reload
 
 echo "deleting files"
 rm /usr/local/bin/plexus-agent
+rm /usr/lib/sysusers.d/plexus-sysusers.conf
+rm /usr/lib/tmpfiles.d/plexus-tmpfiles.conf
 rm -r /var/lib/plexus
 rm -r /etc/plexus-agent
 
