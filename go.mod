@@ -6,7 +6,7 @@ require (
 	github.com/c-robinson/iplib v1.0.8
 	github.com/caddyserver/certmagic v0.20.0
 	github.com/devilcove/boltdb v0.1.5
-	github.com/fatih/color v1.16.0
+	github.com/fatih/color v1.17.0
 	github.com/gin-contrib/sessions v1.0.1
 	github.com/gin-gonic/gin v1.9.1
 	github.com/google/nftables v0.2.0
