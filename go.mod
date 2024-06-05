@@ -4,7 +4,7 @@ go 1.22.0
 
 require (
 	github.com/c-robinson/iplib v1.0.8
-	github.com/caddyserver/certmagic v0.21.2
+	github.com/caddyserver/certmagic v0.21.3
 	github.com/devilcove/boltdb v0.1.5
 	github.com/fatih/color v1.17.0
 	github.com/gin-contrib/sessions v1.0.1
