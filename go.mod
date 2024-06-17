@@ -16,7 +16,7 @@ require (
 	github.com/nats-io/nats.go v1.35.0
 	github.com/nats-io/nkeys v0.4.7
 	github.com/pion/stun v0.6.1
-	github.com/spf13/cobra v1.8.0
+	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.9.0
 	github.com/vishvananda/netlink v1.1.0
