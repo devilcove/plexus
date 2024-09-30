@@ -12,7 +12,7 @@ require (
 	github.com/google/nftables v0.2.0
 	github.com/kr/pretty v0.3.1
 	github.com/lmittmann/tint v1.0.5
-	github.com/nats-io/nats-server/v2 v2.10.20
+	github.com/nats-io/nats-server/v2 v2.10.21
 	github.com/nats-io/nats.go v1.37.0
 	github.com/nats-io/nkeys v0.4.7
 	github.com/pion/stun v0.6.1
