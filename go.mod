@@ -12,7 +12,7 @@ require (
 	github.com/google/nftables v0.2.0
 	github.com/kr/pretty v0.3.1
 	github.com/lmittmann/tint v1.0.5
-	github.com/nats-io/nats-server/v2 v2.10.22
+	github.com/nats-io/nats-server/v2 v2.10.23
 	github.com/nats-io/nats.go v1.37.0
 	github.com/nats-io/nkeys v0.4.8
 	github.com/pion/stun v0.6.1
@@ -92,7 +92,7 @@ require (
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
-	golang.org/x/time v0.7.0 // indirect
+	golang.org/x/time v0.8.0 // indirect
 	golang.org/x/tools v0.22.0 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20230325221338-052af4a8072b // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
