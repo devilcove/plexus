@@ -1,6 +1,7 @@
 module github.com/devilcove/plexus
 
 go 1.22.0
+toolchain go1.23.6
 
 require (
 	github.com/c-robinson/iplib v1.0.8
@@ -21,7 +22,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/vishvananda/netlink v1.3.0
 	go.etcd.io/bbolt v1.3.11
-	golang.org/x/crypto v0.33.0
+	golang.org/x/crypto v0.35.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20230429144221-925a1e7659e6
 )
 
