@@ -45,7 +45,7 @@ var (
 	ErrInvalidSubnet = errors.New("invalid subnet")
 	ErrSubnetInUse   = errors.New("subnet in use")
 	sessionAge       = 60 * 60 * 24
-	version          = "v0.2.1"
+	version          = "v0.2.3"
 	path             = "/var/lib/plexus/"
 )
 
