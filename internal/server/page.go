@@ -73,9 +73,9 @@ func login(c *gin.Context) {
 	session.Options(sessions.Options{MaxAge: sessionAge, Secure: false, SameSite: http.SameSiteLaxMode})
 	_ = session.Save()
 	slog.Info("login", "user", user.Username)
-	page := getPage(user.Username)
-	page.NeedsLogin = false
-	page.Page = "networks"
+	//page := getPage(user.Username)
+	//page.NeedsLogin = false
+	//page.Page = "networks"
 	displayMain(c)
 	//c.HTML(http.StatusOK, "content", page)
 }
