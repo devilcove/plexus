@@ -209,7 +209,7 @@ func processStatus() []byte {
 	} else {
 		response.Connected = ec.IsConnected()
 	}
-	bytes, err := Encode(response)
+	bytes, err := json.Marshal(response)
 	if err != nil {
 		slog.Error("encode status response", "error", err)
 	}
@@ -342,30 +342,4 @@ func processReload() (plexus.NetworkResponse, error) {
 		return response, err
 	}
 	return response, nil
-}
-
-func publishErrorMessage(conn *nats.Conn, subj string, err error) {
-	response := &plexus.MessageResponse{
-		Message: "error" + err.Error(),
-	}
-	bytes, err := json.Marshal(response)
-	if err != nil {
-		slog.Error("invalid message respone", "error", err, "data", response)
-	}
-	if err := conn.Publish(subj, bytes); err != nil {
-		slog.Error("publish error", "error", err)
-	}
-}
-
-func publishMessage(conn *nats.Conn, subj string, msg string) {
-	response := &plexus.MessageResponse{
-		Message: msg,
-	}
-	bytes, err := json.Marshal(response)
-	if err != nil {
-		slog.Error("invalid message response", "error", err, "data", response)
-	}
-	if err := conn.Publish(subj, bytes); err != nil {
-		slog.Error("publish message", "error", err)
-	}
 }

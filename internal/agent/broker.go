@@ -393,7 +393,7 @@ func createRegistationConnection(key plexus.KeyValue) (*nats.Conn, error) {
 }
 
 func Request(conn *nats.Conn, subj string, request any, response any, timeout time.Duration) error {
-	data, err := Encode(request)
+	data, err := json.Marshal(request)
 	if err != nil {
 		return err
 	}
@@ -401,13 +401,5 @@ func Request(conn *nats.Conn, subj string, request any, response any, timeout ti
 	if err != nil {
 		return err
 	}
-	return decode(msg.Data, response)
-}
-
-func Encode(data any) ([]byte, error) {
-	return json.Marshal(data)
-}
-
-func decode(m []byte, data any) error {
-	return json.Unmarshal(m, data)
+	return json.Unmarshal(msg.Data, response)
 }
