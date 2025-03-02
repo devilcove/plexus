@@ -41,7 +41,9 @@ debug, info, warn, or error
 		fmt.Println("setting daemon log level to", args[0])
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
-		cobra.CheckErr(ec.Publish(agent.Agent+plexus.LogLevel, plexus.LevelRequest{Level: strings.ToLower(args[0])}))
+		data, err := agent.Encode(plexus.LevelRequest{Level: strings.ToLower(args[0])})
+		cobra.CheckErr(err)
+		cobra.CheckErr(ec.Publish(agent.Agent+plexus.LogLevel, data))
 		cobra.CheckErr(ec.Flush())
 		cobra.CheckErr(ec.Drain())
 	},

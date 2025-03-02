@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -241,18 +242,18 @@ func subcribe(ec *nats.EncodedConn) {
 	})
 }
 
-func ConnectToAgentBroker() (*nats.EncodedConn, error) {
+func ConnectToAgentBroker() (*nats.Conn, error) {
 	url := fmt.Sprintf("nats://localhost:%d", Config.NatsPort)
 	slog.Debug("connecting to agent broker ", "url", url)
 	nc, err := nats.Connect(url)
 	if err != nil {
 		return nil, err
 	}
-	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
-	if err != nil {
-		return nil, err
-	}
-	return ec, nil
+	//ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
+	//if err != nil {
+	//return nil, err
+	//}
+	return nc, nil
 }
 
 func subcribeToServerTopics(self Device) {
@@ -388,4 +389,24 @@ func createRegistationConnection(key plexus.KeyValue) (*nats.EncodedConn, error)
 		return nil, err
 	}
 	return ec, nil
+}
+
+func Request(conn *nats.Conn, subj string, request any, response any, timeout time.Duration) error {
+	data, err := Encode(request)
+	if err != nil {
+		return err
+	}
+	msg, err := conn.Request(subj, data, timeout)
+	if err != nil {
+		return err
+	}
+	return decode(msg.Data, response)
+}
+
+func Encode(data any) ([]byte, error) {
+	return json.Marshal(data)
+}
+
+func decode(m []byte, data any) error {
+	return json.Unmarshal(m, data)
 }
