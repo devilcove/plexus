@@ -125,11 +125,7 @@ func connectToServer(self Device) error {
 	if err != nil {
 		return err
 	}
-	serverEC, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
-	if err != nil {
-		return err
-	}
-	serverConn.Store(serverEC)
+	serverConn.Store(nc)
 	subcribeToServerTopics(self)
 	return nil
 }

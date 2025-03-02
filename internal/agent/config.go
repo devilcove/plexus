@@ -27,7 +27,7 @@ const (
 
 var (
 	Config        Configuration
-	serverConn    atomic.Pointer[nats.EncodedConn]
+	serverConn    atomic.Pointer[nats.Conn]
 	subscriptions []*nats.Subscription
 	//errors
 	ErrNetNotMapped = errors.New("network not mapped to server")

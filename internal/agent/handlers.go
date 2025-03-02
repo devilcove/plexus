@@ -199,7 +199,7 @@ func processStatus() StatusResponse {
 	if ec == nil {
 		response.Connected = false
 	} else {
-		response.Connected = ec.Conn.IsConnected()
+		response.Connected = ec.IsConnected()
 	}
 	return response
 }
@@ -226,11 +226,11 @@ func processJoin(request *plexus.JoinRequest) plexus.JoinResponse {
 	request.ListenPort = tempPeer.ListenPort
 	request.PublicListenPort = tempPeer.PublicListenPort
 	slog.Debug("sending join request to server")
-	serverEC := serverConn.Load()
-	if serverEC == nil {
+	serverConn := serverConn.Load()
+	if serverConn == nil {
 		return plexus.JoinResponse{Message: "not connnected to server"}
 	}
-	if err := serverEC.Request(self.WGPublicKey+plexus.JoinNetwork, request, &response, NatsTimeout); err != nil {
+	if err := Request(serverConn, self.WGPublicKey+plexus.JoinNetwork, request, &response, NatsTimeout); err != nil {
 		slog.Debug(err.Error())
 		return plexus.JoinResponse{Message: "error:" + err.Error()}
 	}
@@ -245,9 +245,9 @@ func processLeave(request *plexus.LeaveRequest) plexus.MessageResponse {
 		slog.Debug(err.Error())
 		return plexus.MessageResponse{Message: "error: " + err.Error()}
 	}
-	serverEC := serverConn.Load()
-	if serverEC != nil {
-		if err := serverEC.Request(self.WGPublicKey+plexus.LeaveNetwork, request, &response, NatsTimeout); err != nil {
+	serverConn := serverConn.Load()
+	if serverConn != nil {
+		if err := Request(serverConn, self.WGPublicKey+plexus.LeaveNetwork, request, &response, NatsTimeout); err != nil {
 			slog.Debug(err.Error())
 			return plexus.MessageResponse{Message: "error: " + err.Error()}
 		}
@@ -289,11 +289,11 @@ func processReload() (plexus.NetworkResponse, error) {
 		slog.Error("get device", "error", err)
 		return response, err
 	}
-	serverEC := serverConn.Load()
-	if serverEC == nil {
+	serverConn := serverConn.Load()
+	if serverConn == nil {
 		return response, errors.New("not connected")
 	}
-	if err := serverEC.Request(self.WGPublicKey+plexus.Reload, nil, &response, NatsTimeout); err != nil {
+	if err := Request(serverConn, self.WGPublicKey+plexus.Reload, nil, &response, NatsTimeout); err != nil {
 		return response, err
 	}
 	return response, nil

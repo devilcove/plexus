@@ -10,12 +10,12 @@ import (
 
 func publishDeviceUpdate(self *Device) {
 	slog.Info("publish device update")
-	serverEC := serverConn.Load()
-	if serverEC == nil {
+	serverConn := serverConn.Load()
+	if serverConn == nil {
 		slog.Error("not connected to server")
 		return
 	}
-	if err := serverEC.Publish(self.WGPublicKey+plexus.UpdatePeer, plexus.Peer{
+	data, err := Encode(plexus.Peer{
 		WGPublicKey:   self.WGPublicKey,
 		PubNkey:       self.PubNkey,
 		Version:       self.Version,
@@ -23,8 +23,12 @@ func publishDeviceUpdate(self *Device) {
 		OS:            self.OS,
 		Endpoint:      self.Endpoint,
 		NatsConnected: true,
-	},
-	); err != nil {
+	})
+	if err != nil {
+		slog.Error("publish device update endcoding error", "error", err)
+		return
+	}
+	if err := serverConn.Publish(self.WGPublicKey+plexus.UpdatePeer, data); err != nil {
 		slog.Error("publish device update", "error", err)
 	}
 }
@@ -37,12 +41,16 @@ func publishListenPortUpdate(self *Device, network *Network) {
 		slog.Error("not connected to server")
 		return
 	}
-	if err := serverEC.Publish(self.WGPublicKey+plexus.UpdateListenPorts, plexus.ListenPortResponse{
+	data, err := Encode(plexus.ListenPortResponse{
 		ListenPort:       network.ListenPort,
 		PublicListenPort: network.PublicListenPort,
-	},
-	); err != nil {
-		slog.Error("publish network peer update", "error", err)
+	})
+	if err != nil {
+		slog.Error("publish listenport update endcoding error", "error", err)
+		return
+	}
+	if err := serverEC.Publish(self.WGPublicKey+plexus.UpdateListenPorts, data); err != nil {
+		slog.Error("publish listenport update", "error", err)
 	}
 }
 
@@ -53,7 +61,11 @@ func publishNetworkPeerUpdate(self Device, peer *plexus.NetworkPeer) error {
 	if serverEC == nil {
 		return ErrNotConnected
 	}
-	if err := serverEC.Publish(self.WGPublicKey+plexus.UpdateNetworkPeer, peer); err != nil {
+	data, err := Encode(peer)
+	if err != nil {
+		return err
+	}
+	if err := serverEC.Publish(self.WGPublicKey+plexus.UpdateNetworkPeer, data); err != nil {
 		return err
 	}
 	return nil
@@ -98,17 +110,17 @@ func checkin() {
 			}
 		}
 	}
-	serverEC := serverConn.Load()
-	if serverEC == nil {
+	serverConn := serverConn.Load()
+	if serverConn == nil {
 		slog.Debug("not connected to server broker .... skipping checkin")
 		return
 	}
-	if !serverEC.Conn.IsConnected() {
+	if !serverConn.IsConnected() {
 		slog.Debug("not connected to server broker .... skipping checkin")
 		return
 	}
 	checkinData.Connections = getConnectivity()
-	if err := serverEC.Request(self.WGPublicKey+".checkin", checkinData, &serverResponse, NatsTimeout); err != nil {
+	if err := Request(serverConn, self.WGPublicKey+".checkin", checkinData, &serverResponse, NatsTimeout); err != nil {
 		slog.Error("error publishing checkin ", "error", err)
 		return
 	}
