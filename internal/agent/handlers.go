@@ -1,17 +1,25 @@
 package agent
 
 import (
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"slices"
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
+	"github.com/nats-io/nats.go"
 )
 
 // server handlers
-func networkUpdates(subject string, update plexus.NetworkUpdate) {
-	networkName := subject[9:]
+func networkUpdates(msg *nats.Msg) {
+	//func networkUpdates(subject string, update plexus.NetworkUpdate) {
+	networkName := msg.Subject[9:]
+	update := &plexus.NetworkUpdate{}
+	if err := json.Unmarshal(msg.Data, update); err != nil {
+		slog.Error("invalid network update", "error", err, "data", string(msg.Data))
+		return
+	}
 	slog.Info("network update for", "network", networkName, "action", update.Action, "peer", update.Peer)
 	network, err := boltdb.Get[Network](networkName, networkTable)
 	if err != nil {
@@ -183,7 +191,7 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 	}
 }
 
-func processStatus() StatusResponse {
+func processStatus() []byte {
 	networks, err := boltdb.GetAll[Network](networkTable)
 	if err != nil {
 		slog.Error("get networks", "error", err)
@@ -201,7 +209,25 @@ func processStatus() StatusResponse {
 	} else {
 		response.Connected = ec.IsConnected()
 	}
-	return response
+	bytes, err := Encode(response)
+	if err != nil {
+		slog.Error("encode status response", "error", err)
+	}
+	return bytes
+}
+
+func serviceJoin(in []byte) []byte {
+	request := &plexus.JoinRequest{}
+	if err := json.Unmarshal(in, request); err != nil {
+		slog.Error("invalid join request", "error", err, "data", string(in))
+		return []byte{}
+	}
+	response := processJoin(request)
+	bytes, err := json.Marshal(response)
+	if err != nil {
+		slog.Error("invalid join response", "error", err, "data", response)
+	}
+	return bytes
 }
 
 func processJoin(request *plexus.JoinRequest) plexus.JoinResponse {
@@ -237,6 +263,20 @@ func processJoin(request *plexus.JoinRequest) plexus.JoinResponse {
 	return response
 }
 
+func handleLeave(in []byte) []byte {
+	request := &plexus.LeaveRequest{}
+	if err := json.Unmarshal(in, request); err != nil {
+		slog.Error("invalid leave request", "error", err, "data", string(in))
+		return []byte{}
+	}
+	response := processLeave(request)
+	bytes, err := json.Marshal(response)
+	if err != nil {
+		slog.Error("invalid leave response", "error", err, "data", response)
+	}
+	return bytes
+}
+
 func processLeave(request *plexus.LeaveRequest) plexus.MessageResponse {
 	response := plexus.MessageResponse{}
 	slog.Debug("leave", "network", request.Network)
@@ -258,8 +298,13 @@ func processLeave(request *plexus.LeaveRequest) plexus.MessageResponse {
 	return response
 }
 
+func handleLeaveServer() ([]byte, error) {
+	response := processLeaveServer()
+	return json.Marshal(response)
+
+}
+
 func processLeaveServer() plexus.MessageResponse {
-	response := plexus.MessageResponse{}
 	self, err := boltdb.Get[Device]("self", deviceTable)
 	if err != nil {
 		slog.Debug(err.Error())
@@ -279,7 +324,7 @@ func processLeaveServer() plexus.MessageResponse {
 	if err := boltdb.Save(self, "self", deviceTable); err != nil {
 		slog.Error("save device", "error", err)
 	}
-	return response
+	return plexus.MessageResponse{Message: "left server " + self.Server}
 }
 
 func processReload() (plexus.NetworkResponse, error) {
@@ -297,4 +342,30 @@ func processReload() (plexus.NetworkResponse, error) {
 		return response, err
 	}
 	return response, nil
+}
+
+func publishErrorMessage(conn *nats.Conn, subj string, err error) {
+	response := &plexus.MessageResponse{
+		Message: "error" + err.Error(),
+	}
+	bytes, err := json.Marshal(response)
+	if err != nil {
+		slog.Error("invalid message respone", "error", err, "data", response)
+	}
+	if err := conn.Publish(subj, bytes); err != nil {
+		slog.Error("publish error", "error", err)
+	}
+}
+
+func publishMessage(conn *nats.Conn, subj string, msg string) {
+	response := &plexus.MessageResponse{
+		Message: msg,
+	}
+	bytes, err := json.Marshal(response)
+	if err != nil {
+		slog.Error("invalid message response", "error", err, "data", response)
+	}
+	if err := conn.Publish(subj, bytes); err != nil {
+		slog.Error("publish message", "error", err)
+	}
 }

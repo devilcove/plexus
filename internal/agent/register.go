@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 	"log/slog"
@@ -17,6 +18,20 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
+func processRegistration(in []byte) []byte {
+	request := &plexus.RegisterRequest{}
+	if err := json.Unmarshal(in, request); err != nil {
+		slog.Error("invalid registration request", "error", err, "data", string(in))
+		return []byte{}
+	}
+	response := handleRegistration(request)
+	bytes, err := json.Marshal(response)
+	if err != nil {
+		slog.Error("invalid registartion response", "error", err, "data", response)
+	}
+	return bytes
+
+}
 func handleRegistration(request *plexus.RegisterRequest) plexus.MessageResponse {
 	self, err := newDevice()
 	if err != nil {
