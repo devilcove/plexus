@@ -238,10 +238,6 @@ func ConnectToAgentBroker() (*nats.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	//ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
-	//if err != nil {
-	//return nil, err
-	//}
 	return agentConn, nil
 }
 

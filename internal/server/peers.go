@@ -89,7 +89,15 @@ func discardPeer(id string) (plexus.Peer, error) {
 	if err := boltdb.Delete[plexus.Peer](peer.WGPublicKey, peerTable); err != nil {
 		return peer, err
 	}
-	if err := eConn.Publish(plexus.Update+peer.WGPublicKey+plexus.LeaveServer, plexus.DeviceUpdate{Action: plexus.LeaveServer}); err != nil {
+	request := &plexus.DeviceUpdate{
+		Action: plexus.LeaveServer,
+	}
+	bytes, err := json.Marshal(request)
+	if err != nil {
+		slog.Error("invalid device update request", "error", err, "data", request)
+		return peer, err
+	}
+	if err := natsConn.Publish(plexus.Update+peer.WGPublicKey+plexus.LeaveServer, bytes); err != nil {
 		slog.Error("publish peer deletion", "error", err)
 	}
 	return peer, nil
@@ -132,10 +140,15 @@ func pingPeers() {
 	}
 	for _, peer := range peers {
 		current := peer.NatsConnected
-		pong := plexus.PingResponse{}
+		pong := &plexus.PingResponse{}
 		slog.Debug("sending ping to peer", "peer", peer.Name, "id", peer.WGPublicKey)
-		if err := eConn.Request(plexus.Update+peer.WGPublicKey+".ping", nil, &pong, natsTimeout); err != nil {
+		msg, err := natsConn.Request(plexus.Update+peer.WGPublicKey+".ping", nil, natsTimeout)
+		if err != nil {
 			peer.NatsConnected = false
+		}
+		err = json.Unmarshal(msg.Data, pong)
+		if err != nil {
+			slog.Error("invalid ping response", "error", err)
 		}
 		if pong.Message == "pong" {
 			peer.NatsConnected = true
