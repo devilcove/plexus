@@ -252,7 +252,7 @@ func subcribeToServerTopics(self Device) {
 	subscriptions = append(subscriptions, networkUpdates)
 
 	ping, err := serverConn.Subscribe(plexus.Update+id+plexus.Ping, func(msg *nats.Msg) {
-		publish.Message(serverConn, msg.Reply, "pong")
+		publish.Message(serverConn, msg.Reply, plexus.PingResponse{Message: "pong"})
 	})
 	if err != nil {
 		slog.Error("ping subscription", "error", err)
