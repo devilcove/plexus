@@ -203,7 +203,7 @@ func processConnectionData(data *plexus.CheckinData) {
 			updatedPeers = append(updatedPeers, peer)
 		}
 		network.Peers = updatedPeers
-		slog.Debug("save connecetion data", "network", network.Name)
+		slog.Debug("save connection data", "network", network.Name)
 		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 			slog.Error("save peers", "error", err)
 		}
