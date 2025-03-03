@@ -409,7 +409,12 @@ func convertPeerToWG(netPeer plexus.NetworkPeer, peers []plexus.NetworkPeer) (wg
 
 func connectToPublicEndpoint(peer plexus.NetworkPeer) bool {
 	slog.Debug("checking private endpoint", "peer", peer.HostName)
-	endpoint := fmt.Sprintf("%s:%d", peer.PrivateEndpoint, peer.ListenPort)
+	endpoint := ""
+	if peer.PrivateEndpoint.To4() == nil {
+		endpoint = fmt.Sprintf("%s:%d", peer.PrivateEndpoint, peer.ListenPort)
+	} else {
+		endpoint = fmt.Sprintf("[%s]:%d", peer.PrivateEndpoint, peer.ListenPort)
+	}
 	c, err := net.DialTimeout("tcp", endpoint, NatsTimeout)
 	if err != nil {
 		slog.Debug("err dialing endpoint", "error", err)
