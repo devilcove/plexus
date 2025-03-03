@@ -145,15 +145,16 @@ func pingPeers() {
 		msg, err := natsConn.Request(plexus.Update+peer.WGPublicKey+".ping", nil, natsTimeout)
 		if err != nil {
 			peer.NatsConnected = false
-		}
-		err = json.Unmarshal(msg.Data, pong)
-		if err != nil {
-			slog.Error("invalid ping response", "error", err)
-		}
-		if pong.Message == "pong" {
-			peer.NatsConnected = true
 		} else {
-			peer.NatsConnected = false
+			err = json.Unmarshal(msg.Data, pong)
+			if err != nil {
+				slog.Error("invalid ping response", "error", err)
+			}
+			if pong.Message == "pong" {
+				peer.NatsConnected = true
+			} else {
+				peer.NatsConnected = false
+			}
 		}
 		if peer.NatsConnected != current {
 			slog.Info("nats connection status changed", "peer", peer.Name, "ID", peer.WGPublicKey, "new status", peer.NatsConnected)
