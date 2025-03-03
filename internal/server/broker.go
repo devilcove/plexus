@@ -12,6 +12,7 @@ import (
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
+	"github.com/devilcove/plexus/internal/publish"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nkeys"
@@ -215,11 +216,11 @@ func serverSubcriptions() []*nats.Subscription {
 		request := &plexus.ServerRegisterRequest{}
 		if err := json.Unmarshal(msg.Data, request); err != nil {
 			slog.Debug("invalid register Request", "error", err, "data", string(msg.Data))
-			publishErrorMessage(natsConn, msg.Reply, "invalid request", err)
+			publish.ErrorMessage(natsConn, msg.Reply, "invalid request", err)
 		}
 		response := registerHandler(request)
 		slog.Debug("publish register reply", "response", response)
-		publishMessage(natsConn, msg.Reply, response)
+		publish.Message(natsConn, msg.Reply, response)
 		if err := decrementKeyUsage(request.KeyName); err != nil {
 			slog.Error("decrement key usage", "error", err)
 		}
@@ -235,16 +236,16 @@ func serverSubcriptions() []*nats.Subscription {
 		//checkin, err := natsConn.Subscribe("*"+plexus.Checkin, func(subj, reply string, request *plexus.CheckinData) {
 		if len(msg.Subject) != 52 {
 			slog.Error("invalid subj", "subj", msg.Subject)
-			publishErrorMessage(natsConn, msg.Reply, "invalid subject", nil)
+			publish.ErrorMessage(natsConn, msg.Reply, "invalid subject", nil)
 			return
 		}
 		request := &plexus.CheckinData{}
 		if err := json.Unmarshal(msg.Data, request); err != nil {
 			slog.Error("invalid checkin data", "error", err, "data", string(msg.Data))
-			publishErrorMessage(natsConn, msg.Reply, "invalid request", err)
+			publish.ErrorMessage(natsConn, msg.Reply, "invalid request", err)
 			return
 		}
-		publishMessage(natsConn, msg.Reply, processCheckin(request))
+		publish.Message(natsConn, msg.Reply, processCheckin(request))
 	})
 	if err != nil {
 		slog.Error("subcribe checkin", "error", err)
@@ -255,16 +256,16 @@ func serverSubcriptions() []*nats.Subscription {
 	join, err := natsConn.Subscribe("*"+plexus.JoinNetwork, func(msg *nats.Msg) {
 		if len(msg.Subject) != 49 {
 			slog.Error("invalid subj", "subj", msg.Subject)
-			publishErrorMessage(natsConn, msg.Reply, "invalid subject", nil)
+			publish.ErrorMessage(natsConn, msg.Reply, "invalid subject", nil)
 			return
 		}
 		request := plexus.JoinRequest{}
 		if err := json.Unmarshal(msg.Data, &request); err != nil {
 			slog.Error("invalid join request", "error", err, "data", string(msg.Data))
-			publishErrorMessage(natsConn, msg.Reply, "invalid join request", err)
+			publish.ErrorMessage(natsConn, msg.Reply, "invalid join request", err)
 			return
 		}
-		publishMessage(natsConn, msg.Reply, processJoin(msg.Subject[:44], &request))
+		publish.Message(natsConn, msg.Reply, processJoin(msg.Subject[:44], &request))
 	})
 	if err != nil {
 		slog.Error("subcribe join", "error", err)
@@ -275,10 +276,10 @@ func serverSubcriptions() []*nats.Subscription {
 	version, err := natsConn.Subscribe("*"+plexus.Version, func(msg *nats.Msg) {
 		if len(msg.Subject) != 52 {
 			slog.Error("invalid subj", "subj", msg.Subject)
-			publishErrorMessage(natsConn, msg.Reply, "invalid subject", nil)
+			publish.ErrorMessage(natsConn, msg.Reply, "invalid subject", nil)
 			return
 		}
-		publishMessage(natsConn, msg.Reply, serverVersion())
+		publish.Message(natsConn, msg.Reply, serverVersion())
 	})
 	if err != nil {
 		slog.Error("subcribe version", "error", err)
@@ -289,14 +290,14 @@ func serverSubcriptions() []*nats.Subscription {
 	leave, err := natsConn.Subscribe("*"+plexus.LeaveNetwork, func(msg *nats.Msg) {
 		if len(msg.Subject) != 57 {
 			slog.Error("invalid subj", "subj", msg.Subject)
-			publishErrorMessage(natsConn, msg.Reply, "invalid subject", nil)
+			publish.ErrorMessage(natsConn, msg.Reply, "invalid subject", nil)
 			return
 		}
 		request := &plexus.LeaveRequest{}
 		if err := json.Unmarshal(msg.Data, request); err != nil {
-			publishErrorMessage(natsConn, msg.Reply, "invalid request", err)
+			publish.ErrorMessage(natsConn, msg.Reply, "invalid request", err)
 		}
-		publishMessage(natsConn, msg.Reply, processLeave(msg.Subject[:44], request))
+		publish.Message(natsConn, msg.Reply, processLeave(msg.Subject[:44], request))
 	})
 	if err != nil {
 		slog.Error("subcribe leave", "error", err)
@@ -307,14 +308,15 @@ func serverSubcriptions() []*nats.Subscription {
 	leaveServer, err := natsConn.Subscribe("*"+plexus.LeaveServer, func(msg *nats.Msg) {
 		if len(msg.Subject) != 56 {
 			slog.Error("invalid subj", "subj", msg.Subject)
-			publishErrorMessage(natsConn, msg.Reply, "invalid subject", nil)
+			publish.ErrorMessage(natsConn, msg.Reply, "invalid subject", nil)
 			return
 		}
 		if err := processLeaveServer(msg.Subject[:44]); err != nil {
 			slog.Error("leave server", "error", err)
-			publishErrorMessage(natsConn, msg.Reply, "could not process request", err)
+			publish.ErrorMessage(natsConn, msg.Reply, "could not process request", err)
+			return
 		}
-		publishMessage(natsConn, msg.Reply, "goodbye")
+		publish.Message(natsConn, msg.Reply, "goodbye")
 	})
 	if err != nil {
 		slog.Error("subcribe leave server", "error", err)
@@ -325,10 +327,10 @@ func serverSubcriptions() []*nats.Subscription {
 	reload, err := natsConn.Subscribe("*"+plexus.Reload, func(msg *nats.Msg) {
 		if len(msg.Subject) != 51 {
 			slog.Error("invalid subj", "subj", msg.Subject)
-			publishErrorMessage(natsConn, msg.Reply, "invalid subject", nil)
+			publish.ErrorMessage(natsConn, msg.Reply, "invalid subject", nil)
 			return
 		}
-		publishMessage(natsConn, msg.Reply, processReload(msg.Subject[:44]))
+		publish.Message(natsConn, msg.Reply, processReload(msg.Subject[:44]))
 	})
 	if err != nil {
 		slog.Error("subcribe reload", "error", err)

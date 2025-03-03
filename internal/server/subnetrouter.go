@@ -8,6 +8,7 @@ import (
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
+	"github.com/devilcove/plexus/internal/publish"
 	"github.com/gin-gonic/gin"
 )
 
@@ -87,8 +88,8 @@ func addRouter(c *gin.Context) {
 		processError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	publishMessage(natsConn, "networks."+network.Name, update)
-	publishMessage(natsConn, plexus.Update+update.Peer.WGPublicKey+plexus.AddRouter, update.Peer)
+	publish.Message(natsConn, "networks."+network.Name, update)
+	publish.Message(natsConn, plexus.Update+update.Peer.WGPublicKey+plexus.AddRouter, update.Peer)
 	networkDetails(c)
 }
 
@@ -119,8 +120,8 @@ func deleteRouter(c *gin.Context) {
 		return
 	}
 	slog.Debug("publish network update - delete router", "network", network.Name, "peer", update.Peer.HostName)
-	publishMessage(natsConn, "networks."+network.Name, update)
-	publishMessage(natsConn, plexus.Update+update.Peer.WGPublicKey+plexus.DeleteRouter, update.Peer)
+	publish.Message(natsConn, "networks."+network.Name, update)
+	publish.Message(natsConn, plexus.Update+update.Peer.WGPublicKey+plexus.DeleteRouter, update.Peer)
 	networkDetails(c)
 }
 

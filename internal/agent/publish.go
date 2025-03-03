@@ -7,7 +7,6 @@ import (
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
-	"github.com/nats-io/nats.go"
 )
 
 func publishDeviceUpdate(self *Device) {
@@ -127,30 +126,4 @@ func checkin() {
 		return
 	}
 	log.Println("checkin response from server", serverResponse.Message)
-}
-
-func publishErrorMessage(conn *nats.Conn, subj string, err error) {
-	response := &plexus.MessageResponse{
-		Message: "error" + err.Error(),
-	}
-	bytes, err := json.Marshal(response)
-	if err != nil {
-		slog.Error("invalid message respone", "error", err, "data", response)
-	}
-	if err := conn.Publish(subj, bytes); err != nil {
-		slog.Error("publish error", "error", err)
-	}
-}
-
-func publishMessage(conn *nats.Conn, subj string, msg string) {
-	response := &plexus.MessageResponse{
-		Message: msg,
-	}
-	bytes, err := json.Marshal(response)
-	if err != nil {
-		slog.Error("invalid message response", "error", err, "data", response)
-	}
-	if err := conn.Publish(subj, bytes); err != nil {
-		slog.Error("publish message", "error", err)
-	}
 }

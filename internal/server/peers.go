@@ -9,6 +9,7 @@ import (
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
+	"github.com/devilcove/plexus/internal/publish"
 	"github.com/gin-gonic/gin"
 	"github.com/nats-io/nats-server/v2/server"
 )
@@ -71,7 +72,7 @@ func discardPeer(id string) (plexus.Peer, error) {
 					Peer:   netpeer,
 				}
 				slog.Info("publishing network update", "type", update.Action, "network", network.Name)
-				publishMessage(natsConn, "networks."+network.Name, update)
+				publish.Message(natsConn, "networks."+network.Name, update)
 			}
 		}
 		if found {
@@ -86,7 +87,7 @@ func discardPeer(id string) (plexus.Peer, error) {
 	request := &plexus.DeviceUpdate{
 		Action: plexus.LeaveServer,
 	}
-	publishMessage(natsConn, plexus.Update+peer.WGPublicKey+plexus.LeaveServer, request)
+	publish.Message(natsConn, plexus.Update+peer.WGPublicKey+plexus.LeaveServer, request)
 	return peer, nil
 }
 

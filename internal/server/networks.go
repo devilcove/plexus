@@ -12,6 +12,7 @@ import (
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
+	"github.com/devilcove/plexus/internal/publish"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
@@ -179,7 +180,7 @@ func deleteNetwork(c *gin.Context) {
 		return
 	}
 	slog.Debug("publish network update", "network", network, "reason", "delete network")
-	publishMessage(natsConn, plexus.Networks+network, plexus.NetworkUpdate{Action: plexus.DeleteNetwork})
+	publish.Message(natsConn, plexus.Networks+network, plexus.NetworkUpdate{Action: plexus.DeleteNetwork})
 	displayNetworks(c)
 }
 
@@ -219,7 +220,7 @@ func removePeerFromNetwork(c *gin.Context) {
 				Peer:   peer,
 			}
 			slog.Info("publishing network update", "topic", "networks."+network.Name)
-			publishMessage(natsConn, "networks."+network.Name, update)
+			publish.Message(natsConn, "networks."+network.Name, update)
 			break
 		}
 	}
@@ -304,7 +305,7 @@ func addRelay(c *gin.Context) {
 		return
 	}
 	slog.Debug("publish network update - add relay", "network", network.Name, "relay", relayID)
-	publishMessage(natsConn, "networks."+network.Name, update)
+	publish.Message(natsConn, "networks."+network.Name, update)
 	networkDetails(c)
 }
 
@@ -349,7 +350,7 @@ func deleteRelay(c *gin.Context) {
 		return
 	}
 	slog.Debug("publish network update", "network", network.Name, "peer", update.Peer.HostName, "reason", "delete relay")
-	publishMessage(natsConn, plexus.Networks+network.Name, update)
+	publish.Message(natsConn, plexus.Networks+network.Name, update)
 	networkDetails(c)
 }
 
