@@ -70,14 +70,8 @@ func discardPeer(id string) (plexus.Peer, error) {
 					Action: plexus.DeletePeer,
 					Peer:   netpeer,
 				}
-				bytes, err := json.Marshal(update)
-				if err != nil {
-					slog.Error("marshal peer deletion", "error", err)
-				}
 				slog.Info("publishing network update", "type", update.Action, "network", network.Name)
-				if err := natsConn.Publish("networks."+network.Name, bytes); err != nil {
-					slog.Error("publish net update", "error", err)
-				}
+				publishMessage(natsConn, "networks."+network.Name, update)
 			}
 		}
 		if found {
@@ -92,14 +86,7 @@ func discardPeer(id string) (plexus.Peer, error) {
 	request := &plexus.DeviceUpdate{
 		Action: plexus.LeaveServer,
 	}
-	bytes, err := json.Marshal(request)
-	if err != nil {
-		slog.Error("invalid device update request", "error", err, "data", request)
-		return peer, err
-	}
-	if err := natsConn.Publish(plexus.Update+peer.WGPublicKey+plexus.LeaveServer, bytes); err != nil {
-		slog.Error("publish peer deletion", "error", err)
-	}
+	publishMessage(natsConn, plexus.Update+peer.WGPublicKey+plexus.LeaveServer, request)
 	return peer, nil
 }
 

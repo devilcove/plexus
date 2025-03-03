@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net"
@@ -88,20 +87,8 @@ func addRouter(c *gin.Context) {
 		processError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	bytes, err := json.Marshal(update)
-	if err != nil {
-		slog.Error("invalid network update", "error", err, "data", update)
-	}
-	if err := natsConn.Publish("networks."+network.Name, bytes); err != nil {
-		slog.Error("publish new relay", "error", err)
-	}
-	bytes, err = json.Marshal(update.Peer)
-	if err != nil {
-		slog.Error("invalid router update", "error", err, "data", update.Peer)
-	}
-	if err := natsConn.Publish(plexus.Update+update.Peer.WGPublicKey+plexus.AddRouter, bytes); err != nil {
-		slog.Error("publish add subnet router", "error", err)
-	}
+	publishMessage(natsConn, "networks."+network.Name, update)
+	publishMessage(natsConn, plexus.Update+update.Peer.WGPublicKey+plexus.AddRouter, update.Peer)
 	networkDetails(c)
 }
 
@@ -132,21 +119,8 @@ func deleteRouter(c *gin.Context) {
 		return
 	}
 	slog.Debug("publish network update - delete router", "network", network.Name, "peer", update.Peer.HostName)
-	bytes, err := json.Marshal(update)
-	if err != nil {
-		slog.Debug("invalid network update", "error", err, "data", update)
-	}
-	if err := natsConn.Publish("networks."+network.Name, bytes); err != nil {
-		slog.Error("publish new relay", "error", err)
-	}
-	bytes, err = json.Marshal(update.Peer)
-	if err != nil {
-		slog.Debug("invalid network peer", "error", err, "data", update.Peer)
-	}
-	slog.Debug("publish device update - delete router", "network", network.Name, "peer", update.Peer.HostName)
-	if err := natsConn.Publish(plexus.Update+update.Peer.WGPublicKey+plexus.DeleteRouter, bytes); err != nil {
-		slog.Error("publish add subnet router", "error", err)
-	}
+	publishMessage(natsConn, "networks."+network.Name, update)
+	publishMessage(natsConn, plexus.Update+update.Peer.WGPublicKey+plexus.DeleteRouter, update.Peer)
 	networkDetails(c)
 }
 

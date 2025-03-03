@@ -71,11 +71,6 @@ func broker(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 		slog.Error("nats connect", "error", err)
 		brokerfail <- 1
 	}
-	//eConn, err = nats.NewEncodedConn(natsConn, nats.JSON_ENCODER)
-	//if err != nil {
-	//slog.Error("nats encoded connect", "error", err)
-	//brokerfail <- 1
-	//}
 
 	subscrptions := serverSubcriptions()
 

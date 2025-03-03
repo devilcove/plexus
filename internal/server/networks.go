@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"errors"
 	"log"
 	"log/slog"
@@ -180,15 +179,7 @@ func deleteNetwork(c *gin.Context) {
 		return
 	}
 	slog.Debug("publish network update", "network", network, "reason", "delete network")
-	bytes, err := json.Marshal(plexus.NetworkUpdate{
-		Action: plexus.DeleteNetwork,
-	})
-	if err != nil {
-		slog.Error("invalid network update", "error", err)
-	}
-	if err := natsConn.Publish(plexus.Networks+network, bytes); err != nil {
-		slog.Error("publish delete network", "error", err)
-	}
+	publishMessage(natsConn, plexus.Networks+network, plexus.NetworkUpdate{Action: plexus.DeleteNetwork})
 	displayNetworks(c)
 }
 
@@ -227,18 +218,8 @@ func removePeerFromNetwork(c *gin.Context) {
 				Action: plexus.DeletePeer,
 				Peer:   peer,
 			}
-			payload, err := json.Marshal(&update)
-			if err != nil {
-				slog.Error("marshal network update", "error", err)
-				processError(c, http.StatusInternalServerError, err.Error())
-				return
-			}
 			slog.Info("publishing network update", "topic", "networks."+network.Name)
-			if err := natsConn.Publish("networks."+network.Name, payload); err != nil {
-				slog.Error("pub delete peer", "peer", peerid, "network", netName, "error", err)
-				processError(c, http.StatusInternalServerError, err.Error())
-				return
-			}
+			publishMessage(natsConn, "networks."+network.Name, update)
 			break
 		}
 	}
@@ -323,13 +304,7 @@ func addRelay(c *gin.Context) {
 		return
 	}
 	slog.Debug("publish network update - add relay", "network", network.Name, "relay", relayID)
-	bytes, err := json.Marshal(update)
-	if err != nil {
-		slog.Error("invalid network update", "error", err, "data", update)
-	}
-	if err := natsConn.Publish("networks."+network.Name, bytes); err != nil {
-		slog.Error("publish new relay", "error", err)
-	}
+	publishMessage(natsConn, "networks."+network.Name, update)
 	networkDetails(c)
 }
 
@@ -374,13 +349,7 @@ func deleteRelay(c *gin.Context) {
 		return
 	}
 	slog.Debug("publish network update", "network", network.Name, "peer", update.Peer.HostName, "reason", "delete relay")
-	bytes, err := json.Marshal(update)
-	if err != nil {
-		slog.Error("invalid network update", "error", err, "data", update)
-	}
-	if err := natsConn.Publish(plexus.Networks+network.Name, bytes); err != nil {
-		slog.Error("publish new relay", "error", err)
-	}
+	publishMessage(natsConn, plexus.Networks+network.Name, update)
 	networkDetails(c)
 }
 
