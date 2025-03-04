@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/devilcove/boltdb"
@@ -35,10 +37,18 @@ func TestMain(m *testing.M) {
 		os.Exit(2)
 	}
 	defer boltdb.Close()
-	//checkDefaultUser()
+
+	wg := &sync.WaitGroup{}
+	ctx, cancel := context.WithCancel(context.Background())
+	newDevice = make(chan string, 1)
+	wg.Add(1)
+	go broker(ctx, wg, nil)
 	plexus.SetLogging("debug")
 	router = setupRouter()
-	os.Exit(m.Run())
+	code := m.Run()
+	cancel()
+	wg.Wait()
+	os.Exit(code)
 }
 
 func TestDisplayMainPage(t *testing.T) {

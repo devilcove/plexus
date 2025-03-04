@@ -2,13 +2,11 @@ package server
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"sync"
 	"testing"
 	"time"
 
@@ -59,11 +57,6 @@ func TestDisplayAddKey(t *testing.T) {
 }
 
 func TestAddKey(t *testing.T) {
-	wg := &sync.WaitGroup{}
-	ctx, cancel := context.WithCancel(context.Background())
-	newDevice = make(chan string, 1)
-	wg.Add(1)
-	go broker(ctx, wg, nil)
 	err := deleteAllKeys()
 	assert.Nil(t, err)
 	user := plexus.User{
@@ -218,8 +211,6 @@ func TestAddKey(t *testing.T) {
 	})
 	err = deleteAllKeys()
 	assert.Nil(t, err)
-	cancel()
-	wg.Wait()
 }
 
 func TestDeleteKeys(t *testing.T) {
