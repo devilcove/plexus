@@ -313,9 +313,9 @@ func processLeaveServer() plexus.MessageResponse {
 	if self.Server == "" {
 		return plexus.MessageResponse{Message: "error: not connected to server"}
 	}
-	serverEC := serverConn.Load()
-	if serverEC != nil {
-		if err := serverEC.Publish(self.WGPublicKey+plexus.LeaveServer, nil); err != nil {
+	natsConn := serverConn.Load()
+	if natsConn != nil {
+		if err := natsConn.Publish(self.WGPublicKey+plexus.LeaveServer, nil); err != nil {
 			return plexus.MessageResponse{Message: "error: " + err.Error()}
 		}
 	}

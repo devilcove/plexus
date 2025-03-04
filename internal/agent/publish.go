@@ -37,8 +37,8 @@ func publishDeviceUpdate(self *Device) {
 // publish new listening ports to server
 func publishListenPortUpdate(self *Device, network *Network) {
 	slog.Info("publishing listen port update")
-	serverEC := serverConn.Load()
-	if serverEC == nil {
+	natsConn := serverConn.Load()
+	if natsConn == nil {
 		slog.Error("not connected to server")
 		return
 	}
@@ -50,7 +50,7 @@ func publishListenPortUpdate(self *Device, network *Network) {
 		slog.Error("publish listenport update endcoding error", "error", err)
 		return
 	}
-	if err := serverEC.Publish(self.WGPublicKey+plexus.UpdateListenPorts, data); err != nil {
+	if err := natsConn.Publish(self.WGPublicKey+plexus.UpdateListenPorts, data); err != nil {
 		slog.Error("publish listenport update", "error", err)
 	}
 }
@@ -58,15 +58,15 @@ func publishListenPortUpdate(self *Device, network *Network) {
 // publish network peer update to server
 func publishNetworkPeerUpdate(self Device, peer *plexus.NetworkPeer) error {
 	slog.Info("publishing network peer update")
-	serverEC := serverConn.Load()
-	if serverEC == nil {
+	natsConn := serverConn.Load()
+	if natsConn == nil {
 		return ErrNotConnected
 	}
 	data, err := json.Marshal(peer)
 	if err != nil {
 		return err
 	}
-	if err := serverEC.Publish(self.WGPublicKey+plexus.UpdateNetworkPeer, data); err != nil {
+	if err := natsConn.Publish(self.WGPublicKey+plexus.UpdateNetworkPeer, data); err != nil {
 		return err
 	}
 	return nil
