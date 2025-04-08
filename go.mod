@@ -19,7 +19,7 @@ require (
 	github.com/nats-io/nkeys v0.4.10
 	github.com/pion/stun v0.6.1
 	github.com/spf13/cobra v1.9.1
-	github.com/spf13/viper v1.20.0
+	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
 	github.com/vishvananda/netlink v1.3.0
 	go.etcd.io/bbolt v1.4.0
