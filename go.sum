@@ -6,8 +6,8 @@ github.com/bytedance/sonic/loader v0.1.1 h1:c+e5Pt1k/cy5wMveRDyk2X4B9hF4g7an8N3z
 github.com/bytedance/sonic/loader v0.1.1/go.mod h1:ncP89zfokxS5LZrJxl5z0UJcsk4M4yY2JpfqGeCtNLU=
 github.com/c-robinson/iplib v1.0.8 h1:exDRViDyL9UBLcfmlxxkY5odWX5092nPsQIykHXhIn4=
 github.com/c-robinson/iplib v1.0.8/go.mod h1:i3LuuFL1hRT5gFpBRnEydzw8R6yhGkF4szNDIbF8pgo=
-github.com/caddyserver/certmagic v0.22.0 h1:hi2skv2jouUw9uQUEyYSTTmqPZPHgf61dOANSIVCLOw=
-github.com/caddyserver/certmagic v0.22.0/go.mod h1:Vc0msarAPhOagbDc/SU6M2zbzdwVuZ0lkTh2EqtH4vs=
+github.com/caddyserver/certmagic v0.22.2 h1:qzZURXlrxwR5m25/jpvVeEyJHeJJMvAwe5zlMufOTQk=
+github.com/caddyserver/certmagic v0.22.2/go.mod h1:hbqE7BnkjhX5IJiFslPmrSeobSeZvI6ux8tyxhsd6qs=
 github.com/caddyserver/zerossl v0.1.3 h1:onS+pxp3M8HnHpN5MMbOMyNjmTheJyWRaZYwn+YTAyA=
 github.com/caddyserver/zerossl v0.1.3/go.mod h1:CxA0acn7oEGO6//4rtrRjYgEoa4MFw/XofZnrYwGqG4=
 github.com/cloudwego/base64x v0.1.4 h1:jwCgWpFanWmN8xoIUHa2rtzmkd5J2plF/dnLS6Xd/0Y=
@@ -97,8 +97,8 @@ github.com/mdlayher/netlink v1.7.3-0.20250113171957-fbb4dce95f42 h1:A1Cq6Ysb0GM0
 github.com/mdlayher/netlink v1.7.3-0.20250113171957-fbb4dce95f42/go.mod h1:BB4YCPDOzfy7FniQ/lxuYQ3dgmM2cZumHbK8RpTjN2o=
 github.com/mdlayher/socket v0.5.0 h1:ilICZmJcQz70vrWVes1MFera4jGiWNocSkykwwoy3XI=
 github.com/mdlayher/socket v0.5.0/go.mod h1:WkcBFfvyG8QENs5+hfQPl1X6Jpd2yeLIYgrGFmJiJxI=
-github.com/mholt/acmez/v3 v3.1.0 h1:RlOx2SSZ8dIAM5GfkMe8TdaxjjkiHTGorlMUt8GeMzg=
-github.com/mholt/acmez/v3 v3.1.0/go.mod h1:L1wOU06KKvq7tswuMDwKdcHeKpFFgkppZy/y0DFxagQ=
+github.com/mholt/acmez/v3 v3.1.1 h1:Jh+9uKHkPxUJdxM16q5mOr+G2V0aqkuFtNA28ihCxhQ=
+github.com/mholt/acmez/v3 v3.1.1/go.mod h1:L1wOU06KKvq7tswuMDwKdcHeKpFFgkppZy/y0DFxagQ=
 github.com/miekg/dns v1.1.63 h1:8M5aAw6OMZfFXTT7K5V0Eu5YiiL8l7nUAkyN6C9YwaY=
 github.com/miekg/dns v1.1.63/go.mod h1:6NGHfjhpmr5lt3XPLuyfDJi5AXbNIPM9PY6H6sF1Nfs=
 github.com/mikioh/ipaddr v0.0.0-20190404000644-d465c8ab6721 h1:RlZweED6sbSArvlE924+mUcZuXKLBHA35U7LN621Bws=

@@ -2,9 +2,11 @@ module github.com/devilcove/plexus
 
 go 1.23.0
 
+toolchain go1.24.1
+
 require (
 	github.com/c-robinson/iplib v1.0.8
-	github.com/caddyserver/certmagic v0.22.0
+	github.com/caddyserver/certmagic v0.22.2
 	github.com/devilcove/boltdb v0.1.7
 	github.com/fatih/color v1.18.0
 	github.com/gin-contrib/sessions v1.0.2
@@ -57,7 +59,7 @@ require (
 	github.com/mdlayher/genetlink v1.3.2 // indirect
 	github.com/mdlayher/netlink v1.7.3-0.20250113171957-fbb4dce95f42 // indirect
 	github.com/mdlayher/socket v0.5.0 // indirect
-	github.com/mholt/acmez/v3 v3.1.0 // indirect
+	github.com/mholt/acmez/v3 v3.1.1 // indirect
 	github.com/miekg/dns v1.1.63 // indirect
 	github.com/minio/highwayhash v1.0.3 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
