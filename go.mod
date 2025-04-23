@@ -6,7 +6,7 @@ toolchain go1.24.1
 
 require (
 	github.com/c-robinson/iplib v1.0.8
-	github.com/caddyserver/certmagic v0.22.2
+	github.com/caddyserver/certmagic v0.23.0
 	github.com/devilcove/boltdb v0.1.7
 	github.com/fatih/color v1.18.0
 	github.com/gin-contrib/sessions v1.0.3
@@ -15,8 +15,8 @@ require (
 	github.com/kr/pretty v0.3.1
 	github.com/lmittmann/tint v1.0.7
 	github.com/nats-io/nats-server/v2 v2.11.1
-	github.com/nats-io/nats.go v1.41.0
-	github.com/nats-io/nkeys v0.4.10
+	github.com/nats-io/nats.go v1.41.2
+	github.com/nats-io/nkeys v0.4.11
 	github.com/pion/stun v0.6.1
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
@@ -52,13 +52,13 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
-	github.com/libdns/libdns v0.2.3 // indirect
+	github.com/libdns/libdns v1.0.0-beta.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mdlayher/genetlink v1.3.2 // indirect
 	github.com/mdlayher/netlink v1.7.3-0.20250113171957-fbb4dce95f42 // indirect
 	github.com/mdlayher/socket v0.5.0 // indirect
-	github.com/mholt/acmez/v3 v3.1.1 // indirect
+	github.com/mholt/acmez/v3 v3.1.2 // indirect
 	github.com/miekg/dns v1.1.63 // indirect
 	github.com/minio/highwayhash v1.0.3 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
