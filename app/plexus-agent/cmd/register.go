@@ -36,7 +36,7 @@ var registerCmd = &cobra.Command{
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
 		resp := plexus.MessageResponse{}
-		cobra.CheckErr(ec.Request(agent.Agent+plexus.Register, request, &resp, agent.NatsTimeout))
+		cobra.CheckErr(agent.Request(ec, agent.Agent+plexus.Register, request, &resp, agent.NatsTimeout))
 		fmt.Println(resp.Message)
 	},
 }

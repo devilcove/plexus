@@ -1,17 +1,25 @@
 package agent
 
 import (
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"slices"
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
+	"github.com/nats-io/nats.go"
 )
 
 // server handlers
-func networkUpdates(subject string, update plexus.NetworkUpdate) {
-	networkName := subject[9:]
+func networkUpdates(msg *nats.Msg) {
+	//func networkUpdates(subject string, update plexus.NetworkUpdate) {
+	networkName := msg.Subject[9:]
+	update := &plexus.NetworkUpdate{}
+	if err := json.Unmarshal(msg.Data, update); err != nil {
+		slog.Error("invalid network update", "error", err, "data", string(msg.Data))
+		return
+	}
 	slog.Info("network update for", "network", networkName, "action", update.Action, "peer", update.Peer)
 	network, err := boltdb.Get[Network](networkName, networkTable)
 	if err != nil {
@@ -62,7 +70,7 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 		}
 	case plexus.DeletePeer:
 		slog.Debug("delete peer")
-		if update.Peer.WGPublicKey == self.Peer.WGPublicKey {
+		if update.Peer.WGPublicKey == self.WGPublicKey {
 			slog.Info("self delete --> delete network", "network", networkName)
 			if err := boltdb.Delete[Network](network.Name, networkTable); err != nil {
 				slog.Error("delete network", "error", err)
@@ -183,7 +191,7 @@ func networkUpdates(subject string, update plexus.NetworkUpdate) {
 	}
 }
 
-func processStatus() StatusResponse {
+func processStatus() []byte {
 	networks, err := boltdb.GetAll[Network](networkTable)
 	if err != nil {
 		slog.Error("get networks", "error", err)
@@ -199,9 +207,27 @@ func processStatus() StatusResponse {
 	if ec == nil {
 		response.Connected = false
 	} else {
-		response.Connected = ec.Conn.IsConnected()
+		response.Connected = ec.IsConnected()
 	}
-	return response
+	bytes, err := json.Marshal(response)
+	if err != nil {
+		slog.Error("encode status response", "error", err)
+	}
+	return bytes
+}
+
+func serviceJoin(in []byte) []byte {
+	request := &plexus.JoinRequest{}
+	if err := json.Unmarshal(in, request); err != nil {
+		slog.Error("invalid join request", "error", err, "data", string(in))
+		return []byte{}
+	}
+	response := processJoin(request)
+	bytes, err := json.Marshal(response)
+	if err != nil {
+		slog.Error("invalid join response", "error", err, "data", response)
+	}
+	return bytes
 }
 
 func processJoin(request *plexus.JoinRequest) plexus.JoinResponse {
@@ -226,15 +252,29 @@ func processJoin(request *plexus.JoinRequest) plexus.JoinResponse {
 	request.ListenPort = tempPeer.ListenPort
 	request.PublicListenPort = tempPeer.PublicListenPort
 	slog.Debug("sending join request to server")
-	serverEC := serverConn.Load()
-	if serverEC == nil {
+	serverConn := serverConn.Load()
+	if serverConn == nil {
 		return plexus.JoinResponse{Message: "not connnected to server"}
 	}
-	if err := serverEC.Request(self.WGPublicKey+plexus.JoinNetwork, request, &response, NatsTimeout); err != nil {
+	if err := Request(serverConn, self.WGPublicKey+plexus.JoinNetwork, request, &response, NatsTimeout); err != nil {
 		slog.Debug(err.Error())
 		return plexus.JoinResponse{Message: "error:" + err.Error()}
 	}
 	return response
+}
+
+func handleLeave(in []byte) []byte {
+	request := &plexus.LeaveRequest{}
+	if err := json.Unmarshal(in, request); err != nil {
+		slog.Error("invalid leave request", "error", err, "data", string(in))
+		return []byte{}
+	}
+	response := processLeave(request)
+	bytes, err := json.Marshal(response)
+	if err != nil {
+		slog.Error("invalid leave response", "error", err, "data", response)
+	}
+	return bytes
 }
 
 func processLeave(request *plexus.LeaveRequest) plexus.MessageResponse {
@@ -245,9 +285,9 @@ func processLeave(request *plexus.LeaveRequest) plexus.MessageResponse {
 		slog.Debug(err.Error())
 		return plexus.MessageResponse{Message: "error: " + err.Error()}
 	}
-	serverEC := serverConn.Load()
-	if serverEC != nil {
-		if err := serverEC.Request(self.WGPublicKey+plexus.LeaveNetwork, request, &response, NatsTimeout); err != nil {
+	serverConn := serverConn.Load()
+	if serverConn != nil {
+		if err := Request(serverConn, self.WGPublicKey+plexus.LeaveNetwork, request, &response, NatsTimeout); err != nil {
 			slog.Debug(err.Error())
 			return plexus.MessageResponse{Message: "error: " + err.Error()}
 		}
@@ -258,8 +298,13 @@ func processLeave(request *plexus.LeaveRequest) plexus.MessageResponse {
 	return response
 }
 
+func handleLeaveServer() ([]byte, error) {
+	response := processLeaveServer()
+	return json.Marshal(response)
+
+}
+
 func processLeaveServer() plexus.MessageResponse {
-	response := plexus.MessageResponse{}
 	self, err := boltdb.Get[Device]("self", deviceTable)
 	if err != nil {
 		slog.Debug(err.Error())
@@ -268,9 +313,9 @@ func processLeaveServer() plexus.MessageResponse {
 	if self.Server == "" {
 		return plexus.MessageResponse{Message: "error: not connected to server"}
 	}
-	serverEC := serverConn.Load()
-	if serverEC != nil {
-		if err := serverEC.Publish(self.WGPublicKey+plexus.LeaveServer, nil); err != nil {
+	natsConn := serverConn.Load()
+	if natsConn != nil {
+		if err := natsConn.Publish(self.WGPublicKey+plexus.LeaveServer, nil); err != nil {
 			return plexus.MessageResponse{Message: "error: " + err.Error()}
 		}
 	}
@@ -279,7 +324,7 @@ func processLeaveServer() plexus.MessageResponse {
 	if err := boltdb.Save(self, "self", deviceTable); err != nil {
 		slog.Error("save device", "error", err)
 	}
-	return response
+	return plexus.MessageResponse{Message: "left server " + self.Server}
 }
 
 func processReload() (plexus.NetworkResponse, error) {
@@ -289,11 +334,11 @@ func processReload() (plexus.NetworkResponse, error) {
 		slog.Error("get device", "error", err)
 		return response, err
 	}
-	serverEC := serverConn.Load()
-	if serverEC == nil {
+	serverConn := serverConn.Load()
+	if serverConn == nil {
 		return response, errors.New("not connected")
 	}
-	if err := serverEC.Request(self.WGPublicKey+plexus.Reload, nil, &response, NatsTimeout); err != nil {
+	if err := Request(serverConn, self.WGPublicKey+plexus.Reload, nil, &response, NatsTimeout); err != nil {
 		return response, err
 	}
 	return response, nil

@@ -9,6 +9,7 @@ import (
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
+	"github.com/devilcove/plexus/internal/publish"
 	"github.com/gin-gonic/gin"
 	"github.com/nats-io/nats-server/v2/server"
 )
@@ -70,14 +71,8 @@ func discardPeer(id string) (plexus.Peer, error) {
 					Action: plexus.DeletePeer,
 					Peer:   netpeer,
 				}
-				bytes, err := json.Marshal(update)
-				if err != nil {
-					slog.Error("marshal peer deletion", "error", err)
-				}
 				slog.Info("publishing network update", "type", update.Action, "network", network.Name)
-				if err := natsConn.Publish("networks."+network.Name, bytes); err != nil {
-					slog.Error("publish net update", "error", err)
-				}
+				publish.Message(natsConn, "networks."+network.Name, update)
 			}
 		}
 		if found {
@@ -89,9 +84,10 @@ func discardPeer(id string) (plexus.Peer, error) {
 	if err := boltdb.Delete[plexus.Peer](peer.WGPublicKey, peerTable); err != nil {
 		return peer, err
 	}
-	if err := eConn.Publish(plexus.Update+peer.WGPublicKey+plexus.LeaveServer, plexus.DeviceUpdate{Action: plexus.LeaveServer}); err != nil {
-		slog.Error("publish peer deletion", "error", err)
+	request := &plexus.DeviceUpdate{
+		Action: plexus.LeaveServer,
 	}
+	publish.Message(natsConn, plexus.Update+peer.WGPublicKey+plexus.LeaveServer, request)
 	return peer, nil
 }
 
@@ -132,15 +128,21 @@ func pingPeers() {
 	}
 	for _, peer := range peers {
 		current := peer.NatsConnected
-		pong := plexus.PingResponse{}
+		pong := &plexus.PingResponse{}
 		slog.Debug("sending ping to peer", "peer", peer.Name, "id", peer.WGPublicKey)
-		if err := eConn.Request(plexus.Update+peer.WGPublicKey+".ping", nil, &pong, natsTimeout); err != nil {
+		msg, err := natsConn.Request(plexus.Update+peer.WGPublicKey+".ping", nil, natsTimeout)
+		if err != nil {
 			peer.NatsConnected = false
-		}
-		if pong.Message == "pong" {
-			peer.NatsConnected = true
 		} else {
-			peer.NatsConnected = false
+			err = json.Unmarshal(msg.Data, pong)
+			if err != nil {
+				slog.Error("invalid ping response", "error", err)
+			}
+			if pong.Message == "pong" {
+				peer.NatsConnected = true
+			} else {
+				peer.NatsConnected = false
+			}
 		}
 		if peer.NatsConnected != current {
 			slog.Info("nats connection status changed", "peer", peer.Name, "ID", peer.WGPublicKey, "new status", peer.NatsConnected)

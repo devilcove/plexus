@@ -26,7 +26,7 @@ var (
 	natServer   *server.Server
 	natsOptions *server.Options
 	natsConn    *nats.Conn
-	eConn       *nats.EncodedConn
+	//eConn       *nats.EncodedConn
 )
 
 // Run - run the server

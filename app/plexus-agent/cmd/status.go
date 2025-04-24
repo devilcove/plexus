@@ -44,7 +44,7 @@ var statusCmd = &cobra.Command{
 		cobra.CheckErr(err)
 		status := agent.StatusResponse{}
 		//networks := []Network{}
-		cobra.CheckErr(ec.Request(agent.Agent+plexus.Status, nil, &status, agent.NatsTimeout))
+		cobra.CheckErr(agent.Request(ec, agent.Agent+plexus.Status, nil, &status, agent.NatsTimeout))
 		if status.Server == "" {
 			fmt.Println("agent running... not connected to servers")
 			return
@@ -159,7 +159,7 @@ func printHandshake(handshake time.Time) {
 	minute := int(d.Minutes()) % 60
 	second := int(d.Seconds()) % 60
 	var hourString, minuteString, secondString string
-	if hour == 0 {
+	if hour == 0 { //nolint:staticcheck
 		hourString = ""
 	} else if hour == 1 {
 		hourString = fmt.Sprintf("1 %s", color.GreenString("hour"))

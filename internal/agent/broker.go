@@ -1,7 +1,7 @@
 package agent
 
 import (
-	"errors"
+	"encoding/json"
 	"fmt"
 	"log"
 	"log/slog"
@@ -12,12 +12,13 @@ import (
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
+	"github.com/devilcove/plexus/internal/publish"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nkeys"
 )
 
-func startBroker() (*server.Server, *nats.EncodedConn) {
+func startBroker() (*server.Server, *nats.Conn) {
 	defer log.Println("Agent server halting")
 	ns, err := server.NewServer(&server.Options{Host: "localhost", Port: Config.NatsPort, NoSigs: true})
 	if err != nil {
@@ -35,77 +36,79 @@ func startBroker() (*server.Server, *nats.EncodedConn) {
 		slog.Error("nats connect", "error", err)
 		return nil, nil
 	}
-	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
-	if err != nil {
-		slog.Error("nats encoder", "error", err)
-		return nil, nil
-	}
-	subcribe(ec)
-	return ns, ec
+	subcribe(nc)
+	return ns, nc
 }
 
-func subcribe(ec *nats.EncodedConn) {
-	_, _ = ec.Subscribe(Agent+plexus.Status, func(subject, reply string, data any) {
-		slog.Debug("status request received")
-		if err := ec.Publish(reply, processStatus()); err != nil {
-			slog.Error("publish status response", "err", err)
+func subcribe(agentConn *nats.Conn) {
+	_, _ = agentConn.Subscribe(Agent+plexus.Status, func(msg *nats.Msg) {
+		if err := agentConn.Publish(msg.Reply, processStatus()); err != nil {
+			slog.Error("publish status response", "error", err)
 		}
 	})
-	_, _ = ec.Subscribe(Agent+plexus.JoinNetwork, func(subj, reply string, data *plexus.JoinRequest) {
+
+	_, _ = agentConn.Subscribe(Agent+plexus.JoinNetwork, func(msg *nats.Msg) {
 		slog.Debug("join request")
-		if err := ec.Publish(reply, processJoin(data)); err != nil {
+		if err := agentConn.Publish(msg.Reply, serviceJoin(msg.Data)); err != nil {
 			slog.Error("publish join response", "error", err)
 		}
 	})
-	_, _ = ec.Subscribe(Agent+plexus.LeaveNetwork, func(subj, reply string, data *plexus.LeaveRequest) {
+	_, _ = agentConn.Subscribe(Agent+plexus.LeaveNetwork, func(msg *nats.Msg) {
 		slog.Debug("leave request")
-		if err := ec.Publish(reply, processLeave(data)); err != nil {
+		if err := agentConn.Publish(msg.Reply, handleLeave(msg.Data)); err != nil {
 			slog.Error("publish leave response", "error", err)
 		}
 	})
-	_, _ = ec.Subscribe(Agent+plexus.LeaveServer, func(subj, reply string, data *any) {
+	_, _ = agentConn.Subscribe(Agent+plexus.LeaveServer, func(msg *nats.Msg) {
 		slog.Debug("leaveServer request")
-		if err := ec.Publish(reply, processLeaveServer()); err != nil {
-			slog.Error("publish leaveServer response", "error", err)
+		resp, err := handleLeaveServer()
+		if err != nil {
+			slog.Error("invalid leave server response", "error", err)
 		}
-		if err := ec.Publish(reply, plexus.MessageResponse{Message: "disconnected from server"}); err != nil {
-			slog.Error("publish reply", "error", err)
+		if err := agentConn.Publish(msg.Reply, resp); err != nil {
+			slog.Error("publish leave network response", "error", err)
 		}
 	})
 
-	_, _ = ec.Subscribe(Agent+plexus.Register, func(sub, reply string, data *plexus.RegisterRequest) {
+	_, _ = agentConn.Subscribe(Agent+plexus.Register, func(msg *nats.Msg) {
 		slog.Debug("register request")
-		resp := handleRegistration(data)
-		if err := ec.Publish(reply, resp); err != nil {
+		resp := processRegistration(msg.Data)
+		if err := agentConn.Publish(msg.Reply, resp); err != nil {
 			slog.Error("publish reply", "error", err)
 		}
 	})
-	_, _ = ec.Subscribe(Agent+plexus.LogLevel, func(level *plexus.LevelRequest) {
+	_, _ = agentConn.Subscribe(Agent+plexus.LogLevel, func(msg *nats.Msg) {
 		slog.Debug("loglevel request")
+		level := &plexus.LevelRequest{}
+		if err := json.Unmarshal(msg.Data, level); err != nil {
+			slog.Error("invalid log level request", "error", err, "data", string(msg.Data))
+			return
+		}
 		newLevel := strings.ToUpper(level.Level)
 		slog.Info("loglevel change", "level", newLevel)
 		plexus.SetLogging(newLevel)
 
 	})
-	_, _ = ec.Subscribe(Agent+plexus.Reload, func(sub, reply string, data *any) {
+	_, _ = agentConn.Subscribe(Agent+plexus.Reload, func(msg *nats.Msg) {
 		slog.Debug("reload request")
 		resp, err := processReload()
 		if err != nil {
-			if err := ec.Publish(reply, plexus.MessageResponse{Message: "error" + err.Error()}); err != nil {
-				slog.Error("publish reply", "error", err)
-			}
+			publish.ErrorMessage(agentConn, msg.Reply, "process reload", err)
 			return
 		}
 		self, err := boltdb.Get[Device]("self", deviceTable)
 		if err != nil {
 			slog.Error("get device", "error", err)
-			if err := ec.Publish(reply, plexus.MessageResponse{Message: "error" + err.Error()}); err != nil {
-				slog.Error("pub reply to reload request", "error", err)
-			}
+			publish.ErrorMessage(agentConn, msg.Reply, "get device", err)
 			return
 		}
-		if err := ec.Publish(reply, resp); err != nil {
-			slog.Error("pub reply to reload request", "error", err)
+		bytes, err := json.Marshal(resp)
+		if err != nil {
+			slog.Error("invalid reload response", "error", err, "data", resp)
+		} else {
+			if err := agentConn.Publish(msg.Reply, bytes); err != nil {
+				slog.Error("pub reply to reload request", "error", err)
+			}
 		}
 		deleteAllNetworks()
 		deleteAllInterfaces()
@@ -115,28 +118,23 @@ func subcribe(ec *nats.EncodedConn) {
 		startAllInterfaces(self)
 		//addNewNetworks(self, resp.Networks)
 	})
-	_, _ = ec.Subscribe(Agent+plexus.Reset, func(sub, reply string, request *plexus.ResetRequest) {
+	_, _ = agentConn.Subscribe(Agent+plexus.Reset, func(msg *nats.Msg) {
 		slog.Debug("reset request")
 		self, err := boltdb.Get[Device]("self", deviceTable)
 		if err != nil {
 			slog.Error(err.Error())
-			if err := ec.Publish(reply, plexus.MessageResponse{Message: err.Error()}); err != nil {
-				slog.Error(err.Error())
-			}
+			publish.ErrorMessage(agentConn, msg.Reply, "get device", err)
+			return
+		}
+		request := &plexus.ResetRequest{}
+		if err := json.Unmarshal(msg.Data, request); err != nil {
+			slog.Error("invalid reset request", "error", err, "data", string(msg.Data))
+			publish.ErrorMessage(agentConn, msg.Reply, "invalid request", err)
 			return
 		}
 		network, err := boltdb.Get[Network](request.Network, networkTable)
-		if errors.Is(err, boltdb.ErrNoResults) {
-			if err := ec.Publish(reply, plexus.MessageResponse{Message: "no such network"}); err != nil {
-				slog.Error(err.Error())
-			}
-			return
-		}
 		if err != nil {
-			slog.Error(err.Error())
-			if err := ec.Publish(reply, plexus.MessageResponse{Message: err.Error()}); err != nil {
-				slog.Error(err.Error())
-			}
+			publish.ErrorMessage(agentConn, msg.Reply, "get network", err)
 			return
 		}
 		if err := deleteInterface(network.Interface); err != nil {
@@ -145,34 +143,27 @@ func subcribe(ec *nats.EncodedConn) {
 		if err := startInterface(self, network); err != nil {
 			slog.Error("start interface", "iface", network.Interface, "error", err)
 		}
-		//if err := resetPeersOnNetworkInterface(self, network); err != nil {
-		//	slog.Error(err.Error())
-		//	if err := ec.Publish(reply, plexus.MessageResponse{Message: err.Error()}); err != nil {
-		//		slog.Error(err.Error())
-		//	}
-		//	return
-		//}
-		if err := ec.Publish(reply, plexus.MessageResponse{Message: "interface reset"}); err != nil {
-			slog.Error(err.Error())
-		}
+		publish.Message(agentConn, msg.Reply, "interfaces reset")
 	})
-	_, _ = ec.Subscribe(Agent+plexus.Version, func(sub, reply string, long *bool) {
+	_, _ = agentConn.Subscribe(Agent+plexus.Version, func(msg *nats.Msg) {
 		slog.Debug("version request")
 		response := plexus.VersionResponse{}
 		self, err := boltdb.Get[Device]("self", deviceTable)
 		if err != nil {
+			publish.ErrorMessage(agentConn, msg.Reply, "get self", err)
 			slog.Error("get device", "error", err)
-			if err := ec.Publish(reply, response); err != nil {
-				slog.Error("publish reply to version request", "error", err)
-			}
 			return
 		}
 		slog.Debug("checking version of server")
-		serverEC := serverConn.Load()
-		if serverEC != nil {
-			slog.Debug("server connection", "connected", serverEC.Conn.IsConnected())
-			if err := serverEC.Request(self.WGPublicKey+plexus.Version, nil, &response, NatsTimeout); err != nil {
+		server := serverConn.Load()
+		if server != nil {
+			slog.Debug("server connection", "connected", server.IsConnected())
+			resp, err := server.Request(self.WGPublicKey+plexus.Version, nil, NatsTimeout)
+			if err != nil {
 				slog.Error("version request", "error", err)
+			}
+			if err := json.Unmarshal(resp.Data, &response); err != nil {
+				slog.Error("invalid version response from server", "error", err, "data", string(resp.Data))
 			}
 		} else {
 			slog.Debug("not connected to server")
@@ -184,33 +175,39 @@ func subcribe(ec *nats.EncodedConn) {
 				response.Agent = response.Agent + setting.Value + " "
 			}
 		}
-		if err := ec.Publish(reply, response); err != nil {
+		bytes, err := json.Marshal(response)
+		if err != nil {
+			slog.Error("invalid version response", "error", err, "data", response)
+		}
+		if err := agentConn.Publish(msg.Reply, bytes); err != nil {
 			slog.Error("publish reply to version request", "error", err)
 		}
 	})
-	_, _ = ec.Subscribe(Agent+plexus.SetPrivateEndpoint, func(sub, reply string, request plexus.PrivateEndpoint) {
+	_, _ = agentConn.Subscribe(Agent+plexus.SetPrivateEndpoint, func(msg *nats.Msg) {
+		request := plexus.PrivateEndpoint{}
+		if err := json.Unmarshal(msg.Data, &request); err != nil {
+			slog.Error("invalid private endpoint request", "error", err, "data", string(msg.Data))
+			publish.ErrorMessage(agentConn, msg.Reply, "invalid request", err)
+			return
+		}
 		slog.Debug("set private endpoint", "endpoint", request.IP, "network", request.Network)
 		var err error
 		var networks []Network
 		self, err := boltdb.Get[Device]("self", deviceTable)
 		if err != nil {
-			_ = ec.Publish(reply, plexus.MessageResponse{
-				Message: "error getting device" + err.Error(),
-			})
+			publish.ErrorMessage(agentConn, msg.Reply, "get device", err)
+			return
 		}
 		if request.Network == "" {
 			networks, err = boltdb.GetAll[Network](networkTable)
 			if err != nil {
-				_ = ec.Publish(reply, plexus.MessageResponse{
-					Message: "error reading networks" + err.Error(),
-				})
+				publish.ErrorMessage(agentConn, msg.Reply, "get network", err)
+				return
 			}
 		} else {
 			network, err := boltdb.Get[Network](request.Network, networkTable)
 			if err != nil {
-				_ = ec.Publish(reply, plexus.MessageResponse{
-					Message: "error reading network " + err.Error(),
-				})
+				publish.ErrorMessage(agentConn, msg.Reply, "get network", err)
 			}
 			networks = append(networks, network)
 		}
@@ -220,61 +217,49 @@ func subcribe(ec *nats.EncodedConn) {
 					network.Peers[i].PrivateEndpoint = net.ParseIP(request.IP)
 					network.Peers[i].UsePrivateEndpoint = false
 					if err := publishNetworkPeerUpdate(self, &network.Peers[i]); err != nil {
-						_ = ec.Publish(reply, plexus.MessageResponse{
-							Message: "error publishing update to server " + err.Error(),
-						})
+						publish.ErrorMessage(agentConn, msg.Reply, "publish error", err)
 					}
 				}
 			}
 			if err := boltdb.Save(network, network.Name, networkTable); err != nil {
-				_ = ec.Publish(reply, plexus.MessageResponse{
-					Message: "error saving network " + network.Name + err.Error(),
-				})
+				publish.ErrorMessage(agentConn, msg.Reply, "internal error", err)
 			}
 		}
 		restartEndpointServer <- struct{}{}
 		//wait to ensure endpoint server is started
 		time.Sleep(time.Millisecond * 10)
-		_ = ec.Publish(reply, plexus.MessageResponse{
-			Message: "private endpoint added",
-		})
+		publish.Message(agentConn, msg.Reply, "private endpoint added")
 	})
 }
 
-func ConnectToAgentBroker() (*nats.EncodedConn, error) {
+func ConnectToAgentBroker() (*nats.Conn, error) {
 	url := fmt.Sprintf("nats://localhost:%d", Config.NatsPort)
 	slog.Debug("connecting to agent broker ", "url", url)
-	nc, err := nats.Connect(url)
+	agentConn, err := nats.Connect(url)
 	if err != nil {
 		return nil, err
 	}
-	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
-	if err != nil {
-		return nil, err
-	}
-	return ec, nil
+	return agentConn, nil
 }
 
 func subcribeToServerTopics(self Device) {
 	id := self.WGPublicKey
-	serverEC := serverConn.Load()
-	networkUpdates, err := serverEC.Subscribe("networks.>", networkUpdates)
+	serverConn := serverConn.Load()
+	networkUpdates, err := serverConn.Subscribe("networks.>", networkUpdates)
 	if err != nil {
 		slog.Error("network subscription failed", "error", err)
 	}
 	subscriptions = append(subscriptions, networkUpdates)
 
-	ping, err := serverEC.Subscribe(plexus.Update+id+plexus.Ping, func(subj, reply string, data *any) {
-		if err := serverEC.Publish(reply, plexus.PingResponse{Message: "pong"}); err != nil {
-			slog.Error("publish pong", "error", err)
-		}
+	ping, err := serverConn.Subscribe(plexus.Update+id+plexus.Ping, func(msg *nats.Msg) {
+		publish.Message(serverConn, msg.Reply, plexus.PingResponse{Message: "pong"})
 	})
 	if err != nil {
 		slog.Error("ping subscription", "error", err)
 	}
 	subscriptions = append(subscriptions, ping)
 
-	leaveServer, err := serverEC.Subscribe(plexus.Update+id+plexus.LeaveServer, func(subj, reply string, data *any) {
+	leaveServer, err := serverConn.Subscribe(plexus.Update+id+plexus.LeaveServer, func(msg *nats.Msg) {
 		slog.Info("leave server")
 		closeServerConnections()
 		deleteAllInterfaces()
@@ -285,7 +270,11 @@ func subcribeToServerTopics(self Device) {
 	}
 	subscriptions = append(subscriptions, leaveServer)
 
-	joinNet, err := serverEC.Subscribe(plexus.Update+id+plexus.JoinNetwork, func(data *plexus.ServerJoinRequest) {
+	joinNet, err := serverConn.Subscribe(plexus.Update+id+plexus.JoinNetwork, func(msg *nats.Msg) {
+		data := &plexus.ServerJoinRequest{}
+		if err := json.Unmarshal(msg.Data, data); err != nil {
+			slog.Error("invalid server join request", "error", err, "data", string(msg.Data))
+		}
 		slog.Info("join network", "network", data.Network)
 		network, err := saveServerNetwork(data.Network)
 		if err != nil {
@@ -301,15 +290,23 @@ func subcribeToServerTopics(self Device) {
 		slog.Error("join network subscription", "error", err)
 	}
 	subscriptions = append(subscriptions, joinNet)
-	sendListenPorts, err := serverEC.Subscribe(plexus.Update+id+plexus.SendListenPorts,
-		func(subj, reply string, data plexus.ListenPortRequest) {
+	sendListenPorts, err := serverConn.Subscribe(plexus.Update+id+plexus.SendListenPorts,
+		func(msg *nats.Msg) {
+			data := &plexus.ListenPortRequest{}
+			if err := json.Unmarshal(msg.Data, data); err != nil {
+				slog.Error("invalid server listen port request", "error", err, "data", string(msg.Data))
+			}
 			slog.Info("new listen ports", "network", data.Network)
 			response, err := getNewListenPorts(data.Network)
 			if err != nil {
 				slog.Error(err.Error())
 				return
 			}
-			if err := serverEC.Publish(reply, response); err != nil {
+			bytes, err := json.Marshal(response)
+			if err != nil {
+				slog.Error("invalid listen port response", "error", err, "data", response)
+			}
+			if err := serverConn.Publish(msg.Reply, bytes); err != nil {
 				slog.Error("publish reply to SendListenPorts", "error", err)
 			}
 			slog.Debug("sent listenports to server", "public", response.PublicListenPort, "private", response.ListenPort)
@@ -318,8 +315,12 @@ func subcribeToServerTopics(self Device) {
 		slog.Error("send listen port subscription", "error", err)
 	}
 	subscriptions = append(subscriptions, sendListenPorts)
-	addRouter, err := serverEC.Subscribe(plexus.Update+id+plexus.AddRouter,
-		func(subj, reply string, data plexus.NetworkPeer) {
+	addRouter, err := serverConn.Subscribe(plexus.Update+id+plexus.AddRouter,
+		func(msg *nats.Msg) {
+			data := &plexus.NetworkPeer{}
+			if err := json.Unmarshal(msg.Data, data); err != nil {
+				slog.Error("invalid network peer", "error", err, "data", string(msg.Data))
+			}
 			if data.WGPublicKey != id {
 				slog.Error("add router wrong id", "me", id, "router", data.WGPublicKey)
 				return
@@ -343,8 +344,14 @@ func subcribeToServerTopics(self Device) {
 		slog.Error("add router subscription", "error", err)
 	}
 	subscriptions = append(subscriptions, addRouter)
-	delRouter, err := serverEC.Subscribe(plexus.Update+id+plexus.DeleteRouter,
-		func(subj, reply string, data plexus.NetworkPeer) {
+	delRouter, err := serverConn.Subscribe(plexus.Update+id+plexus.DeleteRouter,
+		//func(subj, reply string, data plexus.NetworkPeer) {
+		func(msg *nats.Msg) {
+			data := &plexus.NetworkPeer{}
+			if err := json.Unmarshal(msg.Data, data); err != nil {
+				slog.Error("invalid network peer", "error", err, "data", string(msg.Data))
+			}
+
 			if data.WGPublicKey != id {
 				slog.Error("add router wrong id", "me", id, "router", data.WGPublicKey)
 				return
@@ -362,7 +369,7 @@ func subcribeToServerTopics(self Device) {
 	subscriptions = append(subscriptions, delRouter)
 }
 
-func createRegistationConnection(key plexus.KeyValue) (*nats.EncodedConn, error) {
+func createRegistationConnection(key plexus.KeyValue) (*nats.Conn, error) {
 	loginKeyPair, err := nkeys.FromSeed([]byte(key.Seed))
 	if err != nil {
 		return nil, err
@@ -379,13 +386,17 @@ func createRegistationConnection(key plexus.KeyValue) (*nats.EncodedConn, error)
 		Nkey:        loginPublicKey,
 		SignatureCB: sign,
 	}
-	nc, err := opts.Connect()
+	return opts.Connect()
+}
+
+func Request(conn *nats.Conn, subj string, request any, response any, timeout time.Duration) error {
+	data, err := json.Marshal(request)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
+	msg, err := conn.Request(subj, data, timeout)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return ec, nil
+	return json.Unmarshal(msg.Data, response)
 }

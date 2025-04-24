@@ -34,7 +34,7 @@ func TestNew(t *testing.T) {
 				ReplaceAllowedIPs: true,
 				AllowedIPs: []net.IPNet{
 					{
-						IP:   net.ParseIP("10.10.10.2"),
+						IP:   net.ParseIP("10.100.10.2"),
 						Mask: net.CIDRMask(32, 32),
 					},
 				},
@@ -48,7 +48,7 @@ func TestNew(t *testing.T) {
 	}
 	address := netlink.Addr{
 		IPNet: &net.IPNet{
-			IP:   net.ParseIP("10.10.10.1"),
+			IP:   net.ParseIP("10.100.10.1"),
 			Mask: net.CIDRMask(24, 32),
 		},
 	}
@@ -61,7 +61,7 @@ func TestNew(t *testing.T) {
 	link, err := netlink.LinkByName(wg.Name)
 	assert.Nil(t, err)
 	assert.Equal(t, link.Attrs().Index, wg.Attrs().Index)
-	routes, err := netlink.RouteGet(net.ParseIP("10.10.10.10"))
+	routes, err := netlink.RouteGet(net.ParseIP("10.100.10.10"))
 	assert.Nil(t, err)
 	assert.Equal(t, wg.Attrs().Index, routes[0].LinkIndex)
 	err = wg.Down()

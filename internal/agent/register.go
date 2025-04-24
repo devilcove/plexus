@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 	"log/slog"
@@ -17,6 +18,20 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
+func processRegistration(in []byte) []byte {
+	request := &plexus.RegisterRequest{}
+	if err := json.Unmarshal(in, request); err != nil {
+		slog.Error("invalid registration request", "error", err, "data", string(in))
+		return []byte{}
+	}
+	response := handleRegistration(request)
+	bytes, err := json.Marshal(response)
+	if err != nil {
+		slog.Error("invalid registartion response", "error", err, "data", response)
+	}
+	return bytes
+
+}
 func handleRegistration(request *plexus.RegisterRequest) plexus.MessageResponse {
 	self, err := newDevice()
 	if err != nil {
@@ -31,7 +46,7 @@ func handleRegistration(request *plexus.RegisterRequest) plexus.MessageResponse 
 		log.Println(err)
 		return plexus.MessageResponse{Message: "invalid registration key: " + err.Error()}
 	}
-	ec, err := createRegistationConnection(loginKey)
+	conn, err := createRegistationConnection(loginKey)
 	if err != nil {
 		return plexus.MessageResponse{Message: "invalid registration key: " + err.Error()}
 	}
@@ -40,11 +55,11 @@ func handleRegistration(request *plexus.RegisterRequest) plexus.MessageResponse 
 		KeyName: loginKey.KeyName,
 		Peer:    self.Peer,
 	}
-	if err := ec.Request("register", serverRequest, &resp, NatsTimeout); err != nil {
+	if err := Request(conn, "register", serverRequest, &resp, NatsTimeout); err != nil {
 		log.Println(err)
 		return plexus.MessageResponse{Message: "error: " + err.Error()}
 	}
-	self.Server = ec.Conn.ConnectedUrl()
+	self.Server = conn.ConnectedUrl()
 	if err := boltdb.Save(self, "self", deviceTable); err != nil {
 		slog.Error("save device", "error", err)
 		return plexus.MessageResponse{Message: "error saving device " + err.Error()}

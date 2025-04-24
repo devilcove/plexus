@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
+	"github.com/devilcove/plexus/internal/publish"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nkeys"
@@ -68,11 +70,6 @@ func broker(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 	natsConn, err = nats.Connect(fmt.Sprintf("nats://%s:4222", config.FQDN), opts...)
 	if err != nil {
 		slog.Error("nats connect", "error", err)
-		brokerfail <- 1
-	}
-	eConn, err = nats.NewEncodedConn(natsConn, nats.JSON_ENCODER)
-	if err != nil {
-		slog.Error("nats encoded connect", "error", err)
 		brokerfail <- 1
 	}
 
@@ -215,12 +212,15 @@ func serverSubcriptions() []*nats.Subscription {
 
 	//token subscriptions
 	// register handler
-	register, err := eConn.Subscribe("register", func(subj, reply string, request *plexus.ServerRegisterRequest) {
+	register, err := natsConn.Subscribe("register", func(msg *nats.Msg) {
+		request := &plexus.ServerRegisterRequest{}
+		if err := json.Unmarshal(msg.Data, request); err != nil {
+			slog.Debug("invalid register Request", "error", err, "data", string(msg.Data))
+			publish.ErrorMessage(natsConn, msg.Reply, "invalid request", err)
+		}
 		response := registerHandler(request)
 		slog.Debug("publish register reply", "response", response)
-		if err := eConn.Publish(reply, response); err != nil {
-			slog.Error("publish register reply", "error", err)
-		}
+		publish.Message(natsConn, msg.Reply, response)
 		if err := decrementKeyUsage(request.KeyName); err != nil {
 			slog.Error("decrement key usage", "error", err)
 		}
@@ -232,17 +232,20 @@ func serverSubcriptions() []*nats.Subscription {
 
 	//device subscriptions
 	//checkin
-	checkin, err := eConn.Subscribe("*"+plexus.Checkin, func(subj, reply string, request *plexus.CheckinData) {
-		if len(subj) != 52 {
-			slog.Error("invalid subj", "subj", subj)
-			if err := eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"}); err != nil {
-				slog.Error("publish error", "error", err)
-			}
+	checkin, err := natsConn.Subscribe("*"+plexus.Checkin, func(msg *nats.Msg) {
+		//checkin, err := natsConn.Subscribe("*"+plexus.Checkin, func(subj, reply string, request *plexus.CheckinData) {
+		if len(msg.Subject) != 52 {
+			slog.Error("invalid subj", "subj", msg.Subject)
+			publish.ErrorMessage(natsConn, msg.Reply, "invalid subject", nil)
 			return
 		}
-		if err := eConn.Publish(reply, processCheckin(request)); err != nil {
-			slog.Error("publish reply", "error", err)
+		request := &plexus.CheckinData{}
+		if err := json.Unmarshal(msg.Data, request); err != nil {
+			slog.Error("invalid checkin data", "error", err, "data", string(msg.Data))
+			publish.ErrorMessage(natsConn, msg.Reply, "invalid request", err)
+			return
 		}
+		publish.Message(natsConn, msg.Reply, processCheckin(request))
 	})
 	if err != nil {
 		slog.Error("subcribe checkin", "error", err)
@@ -250,15 +253,19 @@ func serverSubcriptions() []*nats.Subscription {
 	subcriptions = append(subcriptions, checkin)
 
 	//join
-	join, err := eConn.Subscribe("*"+plexus.JoinNetwork, func(subj, reply string, request *plexus.JoinRequest) {
-		if len(subj) != 49 {
-			slog.Error("invalid subj", "subj", subj)
-			_ = eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"})
+	join, err := natsConn.Subscribe("*"+plexus.JoinNetwork, func(msg *nats.Msg) {
+		if len(msg.Subject) != 49 {
+			slog.Error("invalid subj", "subj", msg.Subject)
+			publish.ErrorMessage(natsConn, msg.Reply, "invalid subject", nil)
 			return
 		}
-		if err := eConn.Publish(reply, processJoin(subj[:44], request)); err != nil {
-			slog.Error("publish reply", "error", err)
+		request := plexus.JoinRequest{}
+		if err := json.Unmarshal(msg.Data, &request); err != nil {
+			slog.Error("invalid join request", "error", err, "data", string(msg.Data))
+			publish.ErrorMessage(natsConn, msg.Reply, "invalid join request", err)
+			return
 		}
+		publish.Message(natsConn, msg.Reply, processJoin(msg.Subject[:44], &request))
 	})
 	if err != nil {
 		slog.Error("subcribe join", "error", err)
@@ -266,17 +273,13 @@ func serverSubcriptions() []*nats.Subscription {
 	subcriptions = append(subcriptions, join)
 
 	//version
-	version, err := eConn.Subscribe("*"+plexus.Version, func(subj, reply string, request *any) {
-		if len(subj) != 52 {
-			slog.Error("invalid subj", "subj", subj)
-			if err := eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"}); err != nil {
-				slog.Error("publish error response", "error", err)
-			}
+	version, err := natsConn.Subscribe("*"+plexus.Version, func(msg *nats.Msg) {
+		if len(msg.Subject) != 52 {
+			slog.Error("invalid subj", "subj", msg.Subject)
+			publish.ErrorMessage(natsConn, msg.Reply, "invalid subject", nil)
 			return
 		}
-		if err := eConn.Publish(reply, serverVersion()); err != nil {
-			slog.Error("publish reply", "error", err)
-		}
+		publish.Message(natsConn, msg.Reply, serverVersion())
 	})
 	if err != nil {
 		slog.Error("subcribe version", "error", err)
@@ -284,17 +287,17 @@ func serverSubcriptions() []*nats.Subscription {
 	subcriptions = append(subcriptions, version)
 
 	//leave
-	leave, err := eConn.Subscribe("*"+plexus.LeaveNetwork, func(subj, reply string, request *plexus.LeaveRequest) {
-		if len(subj) != 57 {
-			slog.Error("invalid subj", "subj", subj)
-			if err := eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"}); err != nil {
-				slog.Error("publish error response", "error", err)
-			}
+	leave, err := natsConn.Subscribe("*"+plexus.LeaveNetwork, func(msg *nats.Msg) {
+		if len(msg.Subject) != 57 {
+			slog.Error("invalid subj", "subj", msg.Subject)
+			publish.ErrorMessage(natsConn, msg.Reply, "invalid subject", nil)
 			return
 		}
-		if err := eConn.Publish(reply, processLeave(subj[:44], request)); err != nil {
-			slog.Error("publish reply", "error", err)
+		request := &plexus.LeaveRequest{}
+		if err := json.Unmarshal(msg.Data, request); err != nil {
+			publish.ErrorMessage(natsConn, msg.Reply, "invalid request", err)
 		}
+		publish.Message(natsConn, msg.Reply, processLeave(msg.Subject[:44], request))
 	})
 	if err != nil {
 		slog.Error("subcribe leave", "error", err)
@@ -302,17 +305,18 @@ func serverSubcriptions() []*nats.Subscription {
 	subcriptions = append(subcriptions, leave)
 
 	//leaveServer
-	leaveServer, err := eConn.Subscribe("*"+plexus.LeaveServer, func(subj, reply string, request *any) {
-		if len(subj) != 56 {
-			slog.Error("invalid subj", "subj", subj)
-			if err := eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"}); err != nil {
-				slog.Error("publish error response", "error", err)
-			}
+	leaveServer, err := natsConn.Subscribe("*"+plexus.LeaveServer, func(msg *nats.Msg) {
+		if len(msg.Subject) != 56 {
+			slog.Error("invalid subj", "subj", msg.Subject)
+			publish.ErrorMessage(natsConn, msg.Reply, "invalid subject", nil)
 			return
 		}
-		if err := processLeaveServer(subj[:44]); err != nil {
+		if err := processLeaveServer(msg.Subject[:44]); err != nil {
 			slog.Error("leave server", "error", err)
+			publish.ErrorMessage(natsConn, msg.Reply, "could not process request", err)
+			return
 		}
+		publish.Message(natsConn, msg.Reply, "goodbye")
 	})
 	if err != nil {
 		slog.Error("subcribe leave server", "error", err)
@@ -320,30 +324,30 @@ func serverSubcriptions() []*nats.Subscription {
 	subcriptions = append(subcriptions, leaveServer)
 
 	//reload
-	reload, err := eConn.Subscribe("*"+plexus.Reload, func(subj, reply string, request *any) {
-		if len(subj) != 51 {
-			slog.Error("invalid subj", "subj", subj)
-			if err := eConn.Publish(reply, plexus.ErrorResponse{Message: "invalid subject"}); err != nil {
-				slog.Error("publish error response", "error", err)
-			}
+	reload, err := natsConn.Subscribe("*"+plexus.Reload, func(msg *nats.Msg) {
+		if len(msg.Subject) != 51 {
+			slog.Error("invalid subj", "subj", msg.Subject)
+			publish.ErrorMessage(natsConn, msg.Reply, "invalid subject", nil)
 			return
 		}
-		if err := eConn.Publish(reply, processReload(subj[:44])); err != nil {
-			slog.Error("publish reply", "error", err)
-		}
+		publish.Message(natsConn, msg.Reply, processReload(msg.Subject[:44]))
 	})
 	if err != nil {
 		slog.Error("subcribe reload", "error", err)
 	}
 	subcriptions = append(subcriptions, reload)
 
-	//listenPortUpdate
-	portUpdate, err := eConn.Subscribe("*"+plexus.UpdateListenPorts, func(subj string, request *plexus.ListenPortResponse) {
-		if len(subj) != 44+len(plexus.UpdateListenPorts) {
-			slog.Error("invalid sub", "subj", subj)
+	//listenPortUpdate  -- reply to a listenPortRequest
+	portUpdate, err := natsConn.Subscribe("*"+plexus.UpdateListenPorts, func(msg *nats.Msg) {
+		if len(msg.Subject) != 44+len(plexus.UpdateListenPorts) {
+			slog.Error("invalid sub", "subj", msg.Subject)
 			return
 		}
-		processPortUpdate(subj[:44], request)
+		request := &plexus.ListenPortResponse{}
+		if err := json.Unmarshal(msg.Data, request); err != nil {
+			slog.Error("invalid listen port update", "error", err, "data", string(msg.Data))
+		}
+		processPortUpdate(msg.Subject[:44], request)
 	})
 	if err != nil {
 		slog.Error("subscribe network peer update", "error", err)
@@ -351,12 +355,17 @@ func serverSubcriptions() []*nats.Subscription {
 	subcriptions = append(subcriptions, portUpdate)
 
 	//deviceUpdate
-	deviceUpdate, err := eConn.Subscribe("*"+plexus.UpdatePeer, func(subj string, request *plexus.Peer) {
-		if len(subj) != 44+len(plexus.UpdatePeer) {
-			slog.Error("invalid sub", "subj", subj)
+	deviceUpdate, err := natsConn.Subscribe("*"+plexus.UpdatePeer, func(msg *nats.Msg) {
+		if len(msg.Subject) != 44+len(plexus.UpdatePeer) {
+			slog.Error("invalid sub", "subj", msg.Subject)
 			return
 		}
-		processDeviceUpdate(subj[:44], request)
+		peer := &plexus.Peer{}
+		if err := json.Unmarshal(msg.Data, peer); err != nil {
+			slog.Error("invalid peer data", "error", err, "data", string(msg.Data))
+			return
+		}
+		processDeviceUpdate(msg.Subject[:44], peer)
 	})
 	if err != nil {
 		slog.Error("subscribe device updates", "error", err)
@@ -364,12 +373,17 @@ func serverSubcriptions() []*nats.Subscription {
 	subcriptions = append(subcriptions, deviceUpdate)
 
 	// network peer updates
-	peerUpdate, err := eConn.Subscribe("*"+plexus.UpdateNetworkPeer, func(subj string, request *plexus.NetworkPeer) {
-		if len(subj) != 44+len(plexus.UpdateNetworkPeer) {
-			slog.Error("invalid sub", "subj", subj)
+	peerUpdate, err := natsConn.Subscribe("*"+plexus.UpdateNetworkPeer, func(msg *nats.Msg) {
+		if len(msg.Subject) != 44+len(plexus.UpdateNetworkPeer) {
+			slog.Error("invalid sub", "subj", msg.Subject)
 			return
 		}
-		processNetworkPeerUpdate(subj[:44], request)
+		request := &plexus.NetworkPeer{}
+		if err := json.Unmarshal(msg.Data, request); err != nil {
+			slog.Error("invalid peer data", "error", err, "data", string(msg.Data))
+			return
+		}
+		processNetworkPeerUpdate(msg.Subject[:44], request)
 	})
 	if err != nil {
 		slog.Error("subscribe peer update", "error", err)

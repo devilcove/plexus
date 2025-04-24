@@ -13,6 +13,7 @@ import (
 	"github.com/c-robinson/iplib"
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
+	"github.com/devilcove/plexus/internal/publish"
 	"github.com/nats-io/nats-server/v2/server"
 )
 
@@ -101,18 +102,13 @@ func addPeerToNetwork(peerID, network string, listenPort, publicListenPort int) 
 		return netToUpdate, err
 	}
 	slog.Debug("publish device update", "name", netPeer.HostName)
-	if err := eConn.Publish(plexus.Update+peer.WGPublicKey+plexus.JoinNetwork, plexus.DeviceUpdate{
+	deviceUpdate := plexus.DeviceUpdate{
 		Action:  plexus.JoinNetwork,
 		Network: netToUpdate,
-	}); err != nil {
-		slog.Error("publish device update", "peer", netPeer.HostName, "error", err)
-		return netToUpdate, err
 	}
+	publish.Message(natsConn, plexus.Update+peer.WGPublicKey+plexus.JoinNetwork, deviceUpdate)
 	slog.Debug("publish network update", "network", network, "update", update)
-	if err := eConn.Publish(plexus.Networks+network, update); err != nil {
-		slog.Error("publish new peer", "error", err)
-		return netToUpdate, err
-	}
+	publish.Message(natsConn, plexus.Networks+network, update)
 	return netToUpdate, nil
 }
 
@@ -207,7 +203,7 @@ func processConnectionData(data *plexus.CheckinData) {
 			updatedPeers = append(updatedPeers, peer)
 		}
 		network.Peers = updatedPeers
-		slog.Debug("save connecetion data", "network", network.Name)
+		slog.Debug("save connection data", "network", network.Name)
 		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 			slog.Error("save peers", "error", err)
 		}
@@ -237,10 +233,8 @@ func processPrivateEndpoints(id string, endpoints []plexus.PrivateEndpoint) {
 				Action: plexus.UpdatePeer,
 				Peer:   network.Peers[i],
 			}
-			slog.Debug("publish network update", "network", network.Name, "peer", data.Peer.HostName, "reason", "private endpoint update")
-			if err := eConn.Publish(plexus.Networks+network.Name, data); err != nil {
-				slog.Error("publish network update", "error", err)
-			}
+			slog.Debug("publish network update", "network", network.Name, "peer", network.Peers[i], "reason", "private endpoint update")
+			publish.Message(natsConn, plexus.Networks+network.Name, data)
 			if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 				slog.Error("save network", "network", network.Name, "error", err)
 			}
@@ -272,10 +266,7 @@ func processLeave(id string, request *plexus.LeaveRequest) plexus.MessageRespons
 			Peer:   peer,
 		}
 		slog.Debug("publishing network update for peer leaving network", "network", request.Network, "peer", id)
-		if err := eConn.Publish(plexus.Networks+request.Network, update); err != nil {
-			slog.Error("publish network update", "error", err)
-			return plexus.MessageResponse{Message: "error: " + err.Error()}
-		}
+		publish.Message(natsConn, plexus.Networks+request.Network, update)
 	}
 	if !found {
 		slog.Error("peer not found", "peer", id, "network", request.Network)
@@ -302,9 +293,7 @@ func publishNetworkPeerUpdate(peer plexus.Peer, why string) error {
 					Action: plexus.UpdatePeer,
 					Peer:   netPeer,
 				}
-				if err := eConn.Publish(plexus.Networks+network.Name, data); err != nil {
-					slog.Error("publish network update", "error", err)
-				}
+				publish.Message(natsConn, plexus.Networks+network.Name, data)
 			}
 		}
 	}
@@ -323,7 +312,7 @@ func serverVersion() plexus.VersionResponse {
 }
 
 func processJoin(id string, request *plexus.JoinRequest) plexus.JoinResponse {
-	if id != request.Peer.WGPublicKey {
+	if id != request.WGPublicKey {
 		return plexus.JoinResponse{Message: "peer id does not match subject"}
 	}
 	network, err := addPeerToNetwork(request.WGPublicKey, request.Network,
@@ -391,9 +380,7 @@ func processNetworkPeerUpdate(id string, request *plexus.NetworkPeer) {
 					Peer:   *request,
 				}
 				slog.Debug("publish peer update", "network", network.Name, "peer", request.HostName)
-				if err := eConn.Publish(plexus.Networks+network.Name, data); err != nil {
-					slog.Error("publish network update", "error", err)
-				}
+				publish.Message(natsConn, plexus.Networks+network.Name, data)
 			}
 			updatedPeers = append(updatedPeers, peer)
 		}
@@ -426,9 +413,7 @@ func processPortUpdate(id string, ports *plexus.ListenPortResponse) {
 					Peer:   peer,
 				}
 				slog.Debug("publish network update for port change", "network", network.Name, "peer", peer.HostName)
-				if err := eConn.Publish(plexus.Networks+network.Name, data); err != nil {
-					slog.Error("publish network update", "error", err)
-				}
+				publish.Message(natsConn, plexus.Networks+network.Name, data)
 			}
 		}
 	}

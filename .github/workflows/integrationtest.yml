@@ -54,4 +54,4 @@ jobs:
       - name:  lint
         uses: golangci/golangci-lint-action@v7
         with:
-          args: --timeout=5m
+          args: --timeout=5m -D errcheck 

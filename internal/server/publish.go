@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"strings"
@@ -9,11 +10,19 @@ import (
 )
 
 func getListenPorts(id, network string) (int, int, error) {
-	response := plexus.ListenPortResponse{}
+	response := &plexus.ListenPortResponse{}
 	slog.Debug("requesting listen port from peer", "id", id)
-	if err := eConn.Request(plexus.Update+id+plexus.SendListenPorts, plexus.ListenPortRequest{
+	request, err := json.Marshal(plexus.ListenPortRequest{
 		Network: network,
-	}, &response, natsTimeout); err != nil {
+	})
+	if err != nil {
+		slog.Error("invalid request", "error", err, "network", network)
+	}
+	msg, err := natsConn.Request(plexus.Update+id+plexus.SendListenPorts, request, natsTimeout)
+	if err != nil {
+		return 0, 0, err
+	}
+	if err := json.Unmarshal(msg.Data, response); err != nil {
 		return 0, 0, err
 	}
 	if strings.Contains(response.Message, "error") {

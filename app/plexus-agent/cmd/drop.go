@@ -36,7 +36,7 @@ var dropCmd = &cobra.Command{
 		var response plexus.MessageResponse
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
-		cobra.CheckErr(ec.Request(agent.Agent+plexus.LeaveServer, agent.LeaveServerRequest{
+		cobra.CheckErr(agent.Request(ec, agent.Agent+plexus.LeaveServer, agent.LeaveServerRequest{
 			Force: force,
 		}, &response, agent.NatsTimeout))
 		fmt.Println(response.Message)

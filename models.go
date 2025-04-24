@@ -39,6 +39,7 @@ const (
 
 type ErrorResponse struct {
 	Message string
+	Error   error
 }
 
 type MessageResponse struct {

@@ -35,7 +35,7 @@ var joinCmd = &cobra.Command{
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
 		defer ec.Close()
-		cobra.CheckErr(ec.Request(agent.Agent+plexus.JoinNetwork, plexus.JoinRequest{
+		cobra.CheckErr(agent.Request(ec, agent.Agent+plexus.JoinNetwork, plexus.JoinRequest{
 			Network: args[0],
 		}, &response, agent.NatsTimeout))
 		fmt.Println(response.Message)

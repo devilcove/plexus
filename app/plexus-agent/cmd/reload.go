@@ -33,7 +33,7 @@ var reloadCmd = &cobra.Command{
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
 		resp := plexus.MessageResponse{}
-		cobra.CheckErr(ec.Request(agent.Agent+plexus.Reload, nil, &resp, agent.NatsTimeout))
+		cobra.CheckErr(agent.Request(ec, agent.Agent+plexus.Reload, nil, &resp, agent.NatsTimeout))
 		fmt.Println(resp.Message)
 	},
 }

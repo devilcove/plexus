@@ -22,10 +22,11 @@ import (
 
 	"github.com/devilcove/plexus"
 	"github.com/devilcove/plexus/internal/agent"
+	"github.com/kr/pretty"
 	"github.com/spf13/cobra"
 )
 
-const version = "v0.2.3"
+const version = "v0.3.0"
 
 // versionCmd represents the version command
 var versionCmd = &cobra.Command{
@@ -35,11 +36,11 @@ var versionCmd = &cobra.Command{
 	and optionally server(s) and agent version`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if long {
-			ec, err := agent.ConnectToAgentBroker()
+			nc, err := agent.ConnectToAgentBroker()
 			cobra.CheckErr(err)
 			response := plexus.VersionResponse{}
 			// need longer timeout is case of server timeout
-			err = ec.Request(agent.Agent+plexus.Version, long, &response, agent.NatsLongTimeout)
+			err = agent.Request(nc, agent.Agent+plexus.Version, long, &response, agent.NatsLongTimeout)
 			if err != nil {
 				fmt.Println("error", err)
 			}
@@ -55,6 +56,7 @@ var versionCmd = &cobra.Command{
 			}
 		}
 		fmt.Print("\n")
+		pretty.Println(info.Main.Version)
 	},
 }
 

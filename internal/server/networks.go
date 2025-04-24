@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"errors"
 	"log"
 	"log/slog"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
+	"github.com/devilcove/plexus/internal/publish"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
@@ -174,17 +174,13 @@ func deleteNetwork(c *gin.Context) {
 		return
 	}
 	log.Println("deleting network", network)
-	if eConn == nil {
+	if natsConn == nil {
 		slog.Error("not connected to nats")
 		processError(c, http.StatusInternalServerError, "nats failure:  network update not published")
 		return
 	}
 	slog.Debug("publish network update", "network", network, "reason", "delete network")
-	if err := eConn.Publish(plexus.Networks+network, plexus.NetworkUpdate{
-		Action: plexus.DeleteNetwork,
-	}); err != nil {
-		slog.Error("publish delete network", "error", err)
-	}
+	publish.Message(natsConn, plexus.Networks+network, plexus.NetworkUpdate{Action: plexus.DeleteNetwork})
 	displayNetworks(c)
 }
 
@@ -223,18 +219,8 @@ func removePeerFromNetwork(c *gin.Context) {
 				Action: plexus.DeletePeer,
 				Peer:   peer,
 			}
-			payload, err := json.Marshal(&update)
-			if err != nil {
-				slog.Error("marshal network update", "error", err)
-				processError(c, http.StatusInternalServerError, err.Error())
-				return
-			}
 			slog.Info("publishing network update", "topic", "networks."+network.Name)
-			if err := natsConn.Publish("networks."+network.Name, payload); err != nil {
-				slog.Error("pub delete peer", "peer", peerid, "network", netName, "error", err)
-				processError(c, http.StatusInternalServerError, err.Error())
-				return
-			}
+			publish.Message(natsConn, "networks."+network.Name, update)
 			break
 		}
 	}
@@ -319,9 +305,7 @@ func addRelay(c *gin.Context) {
 		return
 	}
 	slog.Debug("publish network update - add relay", "network", network.Name, "relay", relayID)
-	if err := eConn.Publish("networks."+network.Name, update); err != nil {
-		slog.Error("publish new relay", "error", err)
-	}
+	publish.Message(natsConn, "networks."+network.Name, update)
 	networkDetails(c)
 }
 
@@ -366,9 +350,7 @@ func deleteRelay(c *gin.Context) {
 		return
 	}
 	slog.Debug("publish network update", "network", network.Name, "peer", update.Peer.HostName, "reason", "delete relay")
-	if err := eConn.Publish(plexus.Networks+network.Name, update); err != nil {
-		slog.Error("publish new relay", "error", err)
-	}
+	publish.Message(natsConn, plexus.Networks+network.Name, update)
 	networkDetails(c)
 }
 
