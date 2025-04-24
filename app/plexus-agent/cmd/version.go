@@ -22,10 +22,11 @@ import (
 
 	"github.com/devilcove/plexus"
 	"github.com/devilcove/plexus/internal/agent"
+	"github.com/kr/pretty"
 	"github.com/spf13/cobra"
 )
 
-const version = "v0.2.3"
+const version = "v0.3.0"
 
 // versionCmd represents the version command
 var versionCmd = &cobra.Command{
@@ -55,6 +56,7 @@ var versionCmd = &cobra.Command{
 			}
 		}
 		fmt.Print("\n")
+		pretty.Println(info.Main.Version)
 	},
 }
 

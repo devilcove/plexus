@@ -70,7 +70,7 @@ func networkUpdates(msg *nats.Msg) {
 		}
 	case plexus.DeletePeer:
 		slog.Debug("delete peer")
-		if update.Peer.WGPublicKey == self.Peer.WGPublicKey {
+		if update.Peer.WGPublicKey == self.WGPublicKey {
 			slog.Info("self delete --> delete network", "network", networkName)
 			if err := boltdb.Delete[Network](network.Name, networkTable); err != nil {
 				slog.Error("delete network", "error", err)

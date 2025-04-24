@@ -312,7 +312,7 @@ func serverVersion() plexus.VersionResponse {
 }
 
 func processJoin(id string, request *plexus.JoinRequest) plexus.JoinResponse {
-	if id != request.Peer.WGPublicKey {
+	if id != request.WGPublicKey {
 		return plexus.JoinResponse{Message: "peer id does not match subject"}
 	}
 	network, err := addPeerToNetwork(request.WGPublicKey, request.Network,

@@ -159,7 +159,7 @@ func printHandshake(handshake time.Time) {
 	minute := int(d.Minutes()) % 60
 	second := int(d.Seconds()) % 60
 	var hourString, minuteString, secondString string
-	if hour == 0 {
+	if hour == 0 { //nolint:staticcheck
 		hourString = ""
 	} else if hour == 1 {
 		hourString = fmt.Sprintf("1 %s", color.GreenString("hour"))
