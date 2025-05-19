@@ -13,7 +13,7 @@ require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/google/nftables v0.3.0
 	github.com/kr/pretty v0.3.1
-	github.com/lmittmann/tint v1.0.7
+	github.com/lmittmann/tint v1.1.0
 	github.com/nats-io/nats-server/v2 v2.11.3
 	github.com/nats-io/nats.go v1.42.0
 	github.com/nats-io/nkeys v0.4.11
