@@ -9,12 +9,12 @@ require (
 	github.com/caddyserver/certmagic v0.23.0
 	github.com/devilcove/boltdb v0.1.7
 	github.com/fatih/color v1.18.0
-	github.com/gin-contrib/sessions v1.0.3
-	github.com/gin-gonic/gin v1.10.0
+	github.com/gin-contrib/sessions v1.0.4
+	github.com/gin-gonic/gin v1.10.1
 	github.com/google/nftables v0.3.0
 	github.com/kr/pretty v0.3.1
-	github.com/lmittmann/tint v1.0.7
-	github.com/nats-io/nats-server/v2 v2.11.3
+	github.com/lmittmann/tint v1.1.0
+	github.com/nats-io/nats-server/v2 v2.11.4
 	github.com/nats-io/nats.go v1.42.0
 	github.com/nats-io/nkeys v0.4.11
 	github.com/pion/stun v0.6.1
@@ -42,7 +42,7 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
-	github.com/google/go-tpm v0.9.3 // indirect
+	github.com/google/go-tpm v0.9.5 // indirect
 	github.com/gorilla/context v1.1.2 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/gorilla/sessions v1.4.0 // indirect
