@@ -165,7 +165,7 @@ func delVirtualSubnet() error {
 	c := &nftables.Conn{}
 	chains, err := c.ListChains()
 	if err != nil {
-		return nil
+		return err
 	}
 	for _, chain := range chains {
 		if chain.Name == "plexus-subnet" {

@@ -23,7 +23,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// joinCmd represents the connect command
+// joinCmd represents the connect command.
 var joinCmd = &cobra.Command{
 	Use:   "join network",
 	Args:  cobra.ExactArgs(1),

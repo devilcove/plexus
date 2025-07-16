@@ -6,6 +6,7 @@ const Agent = "agent"
 
 type Network struct {
 	plexus.Network
+
 	ListenPort       int
 	PublicListenPort int
 	Interface        string
@@ -14,6 +15,7 @@ type Network struct {
 
 type Device struct {
 	plexus.Peer
+
 	WGPrivateKey string
 	Seed         string
 	Server       string

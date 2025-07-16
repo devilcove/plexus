@@ -23,7 +23,6 @@ func displayAddNetwork(c *gin.Context) {
 	page.Page = "addNetwork"
 	_ = session.Save()
 	c.HTML(http.StatusOK, "addNetwork", page)
-
 }
 
 func addNetwork(c *gin.Context) {
@@ -153,7 +152,8 @@ func networkDetails(c *gin.Context) {
 			slog.Error("could not obtains peer for network details", "peer", peer.WGPublicKey, "network", network, "error", err)
 			continue
 		}
-		slog.Debug("network details", "peer", peer.HostName, "connected", time.Since(p.Updated) < time.Second*10, "connectivity", peer.Connectivity)
+		slog.Debug("network details", "peer", peer.HostName, "connected",
+			time.Since(p.Updated) < time.Second*10, "connectivity", peer.Connectivity)
 		details.Peers = append(details.Peers, peer)
 		slog.Debug("connectivity", "network", network.Name, "peer", peer.HostName, "connectivity", peer.Connectivity)
 	}
@@ -292,7 +292,6 @@ func addRelay(c *gin.Context) {
 			peer.IsRelay = true
 			peer.RelayedPeers = relayedIDs
 			update.Peer = peer
-
 		}
 		if slices.Contains(relayedIDs, peer.WGPublicKey) {
 			peer.IsRelayed = true
@@ -336,7 +335,7 @@ func deleteRelay(c *gin.Context) {
 	}
 	for _, peer := range network.Peers {
 		if peer.WGPublicKey == peerID {
-			//already added above
+			// already added above.
 			continue
 		}
 		if slices.Contains(peersToUnrelay, peer.WGPublicKey) {
@@ -364,7 +363,7 @@ func networkPeerDetails(c *gin.Context) {
 	}
 	for _, peer := range network.Peers {
 		if peer.WGPublicKey == peerID {
-			peer.Connectivity = peer.Connectivity * 100
+			peer.Connectivity *= 100
 			c.HTML(http.StatusOK, "displayNetworkPeer", peer)
 			return
 		}

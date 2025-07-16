@@ -8,21 +8,21 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-// ErrorMessage publish error message
+// ErrorMessage publish error message.
 func ErrorMessage(conn *nats.Conn, subj string, msg string, err error) {
 	response, err := json.Marshal(plexus.ErrorResponse{
 		Message: msg,
 		Error:   err,
 	})
 	if err != nil {
-		slog.Error("invalid message respone", "error", err)
+		slog.Error("invalid message response", "error", err)
 	}
 	if err := conn.Publish(subj, response); err != nil {
 		slog.Error("publish error", "error", err)
 	}
 }
 
-// Message json encode and publish message
+// Message json encode and publish message.
 func Message(conn *nats.Conn, subj string, data any) {
 	bytes, err := json.Marshal(data)
 	if err != nil {

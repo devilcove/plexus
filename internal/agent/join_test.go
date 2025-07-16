@@ -71,5 +71,4 @@ func TestNewDevice(t *testing.T) {
 	})
 	err = boltdb.Close()
 	assert.Nil(t, err)
-
 }

@@ -25,7 +25,7 @@ import (
 
 var force bool
 
-// dropCmd represents the drop command
+// dropCmd represents the drop command.
 var dropCmd = &cobra.Command{
 	Use:   "drop",
 	Args:  cobra.ExactArgs(0),

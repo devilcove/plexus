@@ -23,7 +23,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// registerCmd represents the register command
+// registerCmd represents the register command.
 var registerCmd = &cobra.Command{
 	Use:   "register token",
 	Args:  cobra.ExactArgs(1),
