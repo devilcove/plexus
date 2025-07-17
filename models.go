@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// nats topics
+// nats topics.
 const (
 	DeletePeer         = ".deletePeer"
 	AddRouter          = ".addRouter"
@@ -113,15 +113,17 @@ type Peer struct {
 }
 
 type ServerRegisterRequest struct {
-	KeyName string
 	Peer
+
+	KeyName string
 }
 
 type JoinRequest struct {
+	Peer
+
 	Network          string
 	ListenPort       int
 	PublicListenPort int
-	Peer
 }
 
 type ServerJoinRequest struct {

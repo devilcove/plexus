@@ -11,9 +11,9 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-// server handlers
+// server handlers.
 func networkUpdates(msg *nats.Msg) {
-	//func networkUpdates(subject string, update plexus.NetworkUpdate) {
+	// func networkUpdates(subject string, update plexus.NetworkUpdate) {
 	networkName := msg.Subject[9:]
 	update := &plexus.NetworkUpdate{}
 	if err := json.Unmarshal(msg.Data, update); err != nil {
@@ -45,7 +45,8 @@ func networkUpdates(msg *nats.Msg) {
 		slog.Debug("add peer")
 		for _, peer := range network.Peers {
 			if peer.WGPublicKey == update.Peer.WGPublicKey {
-				slog.Error("peer already exists", "network", networkName, "peer", update.Peer.HostName, "id", update.Peer.WGPublicKey)
+				slog.Error("peer already exists", "network", networkName, "peer", update.Peer.HostName, "id",
+					update.Peer.WGPublicKey)
 				return
 			}
 		}
@@ -92,7 +93,8 @@ func networkUpdates(msg *nats.Msg) {
 			}
 		}
 		if !found {
-			slog.Error("peer does not exist", "network", networkName, "peer", update.Peer.HostName, "id", update.Peer.WGPublicKey)
+			slog.Error("peer does not exist", "network", networkName, "peer", update.Peer.HostName,
+				"id", update.Peer.WGPublicKey)
 			return
 		}
 		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
@@ -117,7 +119,8 @@ func networkUpdates(msg *nats.Msg) {
 			}
 		}
 		if !found {
-			slog.Error("peer does not exist", "network", networkName, "peer", update.Peer.HostName, "id", update.Peer.WGPublicKey)
+			slog.Error("peer does not exist", "network", networkName, "peer", update.Peer.HostName,
+				"id", update.Peer.WGPublicKey)
 			return
 		}
 		wgPeer, err := convertPeerToWG(update.Peer, network.Peers)
@@ -301,7 +304,6 @@ func processLeave(request *plexus.LeaveRequest) plexus.MessageResponse {
 func handleLeaveServer() ([]byte, error) {
 	response := processLeaveServer()
 	return json.Marshal(response)
-
 }
 
 func processLeaveServer() plexus.MessageResponse {

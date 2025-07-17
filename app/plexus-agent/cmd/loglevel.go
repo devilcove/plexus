@@ -25,7 +25,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// loglevelCmd represents the loglevel command
+// loglevelCmd represents the loglevel command.
 var loglevelCmd = &cobra.Command{
 	Use:       "loglevel level",
 	Args:      cobra.ExactArgs(1),

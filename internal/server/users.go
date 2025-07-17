@@ -46,7 +46,7 @@ func adminExist() bool {
 		if b == nil {
 			return boltdb.ErrNoResults
 		}
-		_ = b.ForEach(func(k, v []byte) error {
+		_ = b.ForEach(func(_, v []byte) error {
 			if err := json.Unmarshal(v, &user); err != nil {
 				return err
 			}

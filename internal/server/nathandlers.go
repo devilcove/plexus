@@ -34,7 +34,7 @@ func saveNewPeer(peer plexus.Peer) error {
 	if _, err := boltdb.Get[plexus.Peer](peer.WGPublicKey, peerTable); err == nil {
 		return errors.New("peer exists")
 	}
-	// save new peer(device)
+	// save new peer(device).
 	if err := boltdb.Save(peer, peer.WGPublicKey, peerTable); err != nil {
 		slog.Debug("unable to save new peer", "error", err)
 		return err
@@ -77,7 +77,7 @@ func addPeerToNetwork(peerID, network string, listenPort, publicListenPort int) 
 		PublicListenPort: publicListenPort,
 		Endpoint:         peer.Endpoint,
 	}
-	// check if peer is already part of network
+	// check if peer is already part of network.
 	for _, existing := range netToUpdate.Peers {
 		if existing.WGPublicKey == peer.WGPublicKey {
 			return netToUpdate, fmt.Errorf("peer exists in network %s", network)
@@ -85,7 +85,7 @@ func addPeerToNetwork(peerID, network string, listenPort, publicListenPort int) 
 	}
 	addr, err := getNextIP(netToUpdate)
 	if err != nil {
-		return netToUpdate, fmt.Errorf("unable to get ip for peer %s %s %v", peer.WGPublicKey, network, err)
+		return netToUpdate, fmt.Errorf("unable to get ip for peer %s %s %w", peer.WGPublicKey, network, err)
 	}
 	slog.Debug("setting ip to", "ip", addr)
 	netPeer.Address = net.IPNet{
@@ -139,7 +139,7 @@ func getNextIP(network plexus.Network) (net.IP, error) {
 	return ipToCheck, nil
 }
 
-// processCheckin handle messages published to checkin.<ID>
+// processCheckin handle messages published to checkin.<ID>.
 func processCheckin(data *plexus.CheckinData) plexus.MessageResponse {
 	publishUpdate := false
 	response := plexus.MessageResponse{}
@@ -175,7 +175,7 @@ func processCheckin(data *plexus.CheckinData) plexus.MessageResponse {
 	return plexus.MessageResponse{Message: "checkin processed"}
 }
 
-// configHandler handles requests for device configuration ie request published to config.<ID>
+// configHandler handles requests for device configuration ie request published to config.<ID>.
 func processReload(id string) plexus.NetworkResponse {
 	slog.Debug("received reload request", "peer", id)
 	networks, err := getNetworksForPeer(id)
@@ -185,7 +185,7 @@ func processReload(id string) plexus.NetworkResponse {
 	return plexus.NetworkResponse{Networks: networks}
 }
 
-// processConnectionData handles connectivity (nats, handshakes) stats
+// processConnectionData handles connectivity (nats, handshakes) stats.
 func processConnectionData(data *plexus.CheckinData) {
 	slog.Debug("received connectivity stats", "device", data.ID)
 	for _, conn := range data.Connections {
@@ -210,7 +210,7 @@ func processConnectionData(data *plexus.CheckinData) {
 	}
 }
 
-// processPrivateEndpoints handles updated private endpoint data
+// processPrivateEndpoints handles updated private endpoint data.
 func processPrivateEndpoints(id string, endpoints []plexus.PrivateEndpoint) {
 	if len(endpoints) == 0 {
 		return
@@ -233,7 +233,8 @@ func processPrivateEndpoints(id string, endpoints []plexus.PrivateEndpoint) {
 				Action: plexus.UpdatePeer,
 				Peer:   network.Peers[i],
 			}
-			slog.Debug("publish network update", "network", network.Name, "peer", network.Peers[i], "reason", "private endpoint update")
+			slog.Debug("publish network update", "network", network.Name, "peer",
+				network.Peers[i], "reason", "private endpoint update")
 			publish.Message(natsConn, plexus.Networks+network.Name, data)
 			if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 				slog.Error("save network", "network", network.Name, "error", err)
@@ -242,7 +243,7 @@ func processPrivateEndpoints(id string, endpoints []plexus.PrivateEndpoint) {
 	}
 }
 
-// processLeave handles leaving a network
+// processLeave handles leaving a network.
 func processLeave(id string, request *plexus.LeaveRequest) plexus.MessageResponse {
 	slog.Debug("leave handler", "peer", id, "network", request.Network)
 	network, err := boltdb.Get[plexus.Network](request.Network, networkTable)
@@ -286,7 +287,7 @@ func publishNetworkPeerUpdate(peer plexus.Peer, why string) error {
 	for i, network := range networks {
 		for j, netPeer := range network.Peers {
 			if netPeer.WGPublicKey == peer.WGPublicKey {
-				//netPeer.PublicListenPort = peer.PublicListenPort
+				// netPeer.PublicListenPort = peer.PublicListenPort.
 				netPeer.Endpoint = peer.Endpoint
 				networks[i].Peers[j] = netPeer
 				data := plexus.NetworkUpdate{
@@ -321,7 +322,7 @@ func processJoin(id string, request *plexus.JoinRequest) plexus.JoinResponse {
 		return plexus.JoinResponse{Message: err.Error()}
 	}
 	return plexus.JoinResponse{
-		Message: fmt.Sprintf("peer added to network %s", request.Network),
+		Message: "peer added to network " + request.Network,
 		Network: network,
 	}
 }

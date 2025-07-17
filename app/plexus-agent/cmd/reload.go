@@ -23,7 +23,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// reloadCmd represents the reload command
+// reloadCmd represents the reload command.
 var reloadCmd = &cobra.Command{
 	Use:   "reload",
 	Short: "reload network configuration(s)",

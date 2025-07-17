@@ -67,7 +67,6 @@ func startAllInterfaces(self Device) {
 	}
 }
 
-// func startInterfaces(ctx context.Context, wg *sync.WaitGroup) {
 func startInterface(self Device, network Network) error {
 	slog.Info("starting interface", "interface", network.Interface, "network", network.Name)
 	address := netlink.Addr{}
@@ -122,7 +121,8 @@ func startInterface(self Device, network Network) error {
 		go publishDeviceUpdate(&self)
 	}
 	if portChanged {
-		slog.Debug("listenport changed .. saving and publishing update", "port", network.ListenPort, "public port", network.PublicListenPort)
+		slog.Debug("listenport changed .. saving and publishing update", "port",
+			network.ListenPort, "public port", network.PublicListenPort)
 		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 			return err
 		}
@@ -134,7 +134,8 @@ func startInterface(self Device, network Network) error {
 		ReplacePeers: true,
 		Peers:        peers,
 	}
-	slog.Debug("creating new wireguard interface", "name", network.Interface, "address", address, "key", config.PrivateKey, "port", config.ListenPort)
+	slog.Debug("creating new wireguard interface", "name", network.Interface, "address", address,
+		"key", config.PrivateKey, "port", config.ListenPort)
 	wg := plexus.New(network.Interface, mtu, address, config)
 	if err := wg.Up(); err != nil {
 		slog.Error("failed initializition interface", "interface", network.Interface, "error", err)
@@ -257,7 +258,7 @@ func getWGPeers(self Device, network Network) []wgtypes.PeerConfig {
 			}
 			if peer.IsRelay {
 				slog.Info("I am a relay")
-				//turn off relayed status
+				// turn off relayed status.
 				for i := range network.Peers {
 					if slices.Contains(peer.RelayedPeers, network.Peers[i].WGPublicKey) {
 						network.Peers[i].IsRelayed = false
@@ -409,7 +410,7 @@ func convertPeerToWG(netPeer plexus.NetworkPeer, peers []plexus.NetworkPeer) (wg
 
 func connectToPublicEndpoint(peer plexus.NetworkPeer) bool {
 	slog.Debug("checking private endpoint", "peer", peer.HostName)
-	endpoint := ""
+	var endpoint string
 	if peer.PrivateEndpoint.To4() == nil {
 		endpoint = fmt.Sprintf("%s:%d", peer.PrivateEndpoint, peer.ListenPort)
 	} else {

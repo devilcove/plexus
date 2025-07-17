@@ -21,9 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	router *gin.Engine
-)
+var router *gin.Engine
 
 func TestMain(m *testing.M) {
 	if _, err := os.Stat("./test.db"); err == nil {
@@ -32,12 +30,12 @@ func TestMain(m *testing.M) {
 			os.Exit(1)
 		}
 	}
-	if err := boltdb.Initialize("./test.db", []string{userTable, keyTable, networkTable, peerTable, settingTable, "keypairs"}); err != nil {
+	if err := boltdb.Initialize("./test.db",
+		[]string{userTable, keyTable, networkTable, peerTable, settingTable, "keypairs"},
+	); err != nil {
 		log.Println("init db", err)
 		os.Exit(2)
 	}
-	defer boltdb.Close()
-
 	wg := &sync.WaitGroup{}
 	ctx, cancel := context.WithCancel(context.Background())
 	newDevice = make(chan string, 1)
@@ -48,6 +46,7 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 	cancel()
 	wg.Wait()
+	boltdb.Close()
 	os.Exit(code)
 }
 

@@ -27,11 +27,11 @@ func processRegistration(in []byte) []byte {
 	response := handleRegistration(request)
 	bytes, err := json.Marshal(response)
 	if err != nil {
-		slog.Error("invalid registartion response", "error", err, "data", response)
+		slog.Error("invalid registration response", "error", err, "data", response)
 	}
 	return bytes
-
 }
+
 func handleRegistration(request *plexus.RegisterRequest) plexus.MessageResponse {
 	self, err := newDevice()
 	if err != nil {
@@ -147,7 +147,7 @@ func createPeer() (*plexus.Peer, *wgtypes.Key, string, error) {
 	return peer, privKey, string(seed), nil
 }
 
-// generateKeys generates wgkeys that do not have a / in pubkey
+// generateKeys generates wgkeys that do not have a / in pubkey.
 func generateKeys() (*wgtypes.Key, *wgtypes.Key, error) {
 	for {
 		priv, err := wgtypes.GeneratePrivateKey()

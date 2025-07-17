@@ -98,7 +98,6 @@ func TestDelNat(t *testing.T) {
 	}
 	assert.False(t, found)
 	cleanNat(t, c)
-
 }
 
 func TestCheckForNat(t *testing.T) {
@@ -239,7 +238,6 @@ func TestCheckForNat(t *testing.T) {
 		assert.Equal(t, 254, len(rules))
 	})
 	cleanNat(t, c)
-
 }
 
 func cleanNat(t *testing.T, c *nftables.Conn) {

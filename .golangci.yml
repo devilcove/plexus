@@ -1,0 +1,94 @@
+version: "2"
+linters:
+  default: all
+  disable:
+    - depguard
+    - err113
+    - exhaustruct
+    - fatcontext
+    - forcetypeassert
+    - forbidigo
+    - gochecknoglobals
+    - gochecknoinits
+    - gosec
+    - mnd
+    - musttag
+    - nlreturn
+    - noctx
+    - noinlineerr
+    - paralleltest
+    - tagalign
+    - tagliatelle
+    - testifylint
+    - testpackage
+    - thelper
+    - wrapcheck
+    - wsl
+    - wsl_v5
+  settings:
+    cyclop:
+      max-complexity: 20
+    funlen:
+      statements: 60
+      lines: 80
+    gosmopolitan:
+      allow-time-local: true
+    ireturn:
+      allow:
+        - nkeys.KeyPair
+        - error
+    varnamelen:
+      max-distance: 15
+      ignore-names:
+        - i
+        - wg
+      ignore-decls:
+        - c *gin.Context
+        - c *nftables.Conn
+        - c nftables.Conn
+        - ec *nats.Conn
+        - f embed.FS
+        - id string
+        - ns *server.Server
+  exclusions:
+    warn-unused: true
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+    rules:
+      - path: _test\.go
+        linters:
+          - gocognit
+          - goconst
+          - funlen
+          - nonamedreturns
+          - revive
+          - predeclared
+      - path: app/plexus-agent/cmd/
+        linters:
+          - revive
+      - path: wireguard.go
+        linters:
+          - revive
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 0
+  max-same-issue: 0

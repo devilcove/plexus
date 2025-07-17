@@ -21,7 +21,7 @@ func displayPeers(c *gin.Context) {
 		processError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	//set Status for display
+	// set Status for display
 	for _, peer := range peers {
 		if time.Since(peer.Updated) < connectedTime {
 			peer.NatsConnected = true
@@ -95,7 +95,7 @@ func getDeviceUsers() []*server.NkeyUser {
 	devices := []*server.NkeyUser{}
 	peers, err := boltdb.GetAll[plexus.Peer](peerTable)
 	if err != nil {
-		slog.Error("retrive peers", "error", err)
+		slog.Error("retrieve peers", "error", err)
 		return devices
 	}
 	for _, peer := range peers {
@@ -145,7 +145,8 @@ func pingPeers() {
 			}
 		}
 		if peer.NatsConnected != current {
-			slog.Info("nats connection status changed", "peer", peer.Name, "ID", peer.WGPublicKey, "new status", peer.NatsConnected)
+			slog.Info("nats connection status changed", "peer", peer.Name, "ID", peer.WGPublicKey,
+				"new status", peer.NatsConnected)
 			savePeer(peer)
 		}
 	}

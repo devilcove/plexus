@@ -50,7 +50,7 @@ var (
 )
 
 const (
-	//timers
+	// timers.
 	connectedTime = time.Second * 30
 	natsTimeout   = time.Second * 3
 	keyExpiry     = time.Hour * 24
@@ -90,9 +90,8 @@ func configureServer() (*tls.Config, error) {
 		if !emailValid(config.Email) {
 			return nil, errors.New("valid email address required")
 		}
-
 	}
-	// initialize database
+	// initialize database.
 	if err := os.MkdirAll(config.DBPath, os.ModePerm); err != nil {
 		return nil, err
 	}
@@ -100,11 +99,11 @@ func configureServer() (*tls.Config, error) {
 	if err := boltdb.Initialize(config.DBPath+config.DBFile, config.Tables); err != nil {
 		return nil, fmt.Errorf("init database %w", err)
 	}
-	//check default user exists
+	// check default user exists.
 	if err := checkDefaultUser(config.AdminName, config.AdminPass); err != nil {
 		return nil, err
 	}
-	// get TLS
+	// get TLS.
 	if config.Secure {
 		var err error
 		certmagic.DefaultACME.Agreed = true
@@ -114,7 +113,6 @@ func configureServer() (*tls.Config, error) {
 		if err != nil {
 			return nil, err
 		}
-
 	}
 	return tlsConfig, nil
 }

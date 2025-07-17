@@ -29,7 +29,7 @@ var (
 	Config        Configuration
 	serverConn    atomic.Pointer[nats.Conn]
 	subscriptions []*nats.Subscription
-	//errors
+	// errors.
 	ErrNetNotMapped = errors.New("network not mapped to server")
 	ErrNotConnected = errors.New("not connected to server")
 )

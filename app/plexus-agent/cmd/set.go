@@ -25,7 +25,7 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-// setCmd represents the set command
+// setCmd represents the set command.
 var setCmd = &cobra.Command{
 	Use:   "set ip [network]",
 	Args:  cobra.RangeArgs(1, 2),

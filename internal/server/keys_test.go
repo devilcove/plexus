@@ -118,8 +118,8 @@ func TestAddKey(t *testing.T) {
 		key := plexus.Key{
 			DispExp: time.Now().Format("2006-01-02"),
 		}
-		for i := 0; i < 256; i++ {
-			key.Name = key.Name + "A"
+		for range 256 {
+			key.Name += "A"
 		}
 		payload, err := json.Marshal(&key)
 		assert.Nil(t, err)

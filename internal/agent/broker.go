@@ -87,7 +87,6 @@ func subcribe(agentConn *nats.Conn) {
 		newLevel := strings.ToUpper(level.Level)
 		slog.Info("loglevel change", "level", newLevel)
 		plexus.SetLogging(newLevel)
-
 	})
 	_, _ = agentConn.Subscribe(Agent+plexus.Reload, func(msg *nats.Msg) {
 		slog.Debug("reload request")
@@ -116,7 +115,7 @@ func subcribe(agentConn *nats.Conn) {
 			slog.Error("save networks", "error", err)
 		}
 		startAllInterfaces(self)
-		//addNewNetworks(self, resp.Networks)
+		// addNewNetworks(self, resp.Networks).
 	})
 	_, _ = agentConn.Subscribe(Agent+plexus.Reset, func(msg *nats.Msg) {
 		slog.Debug("reset request")
@@ -226,7 +225,7 @@ func subcribe(agentConn *nats.Conn) {
 			}
 		}
 		restartEndpointServer <- struct{}{}
-		//wait to ensure endpoint server is started
+		// wait to ensure endpoint server is started.
 		time.Sleep(time.Millisecond * 10)
 		publish.Message(agentConn, msg.Reply, "private endpoint added")
 	})
@@ -259,7 +258,7 @@ func subcribeToServerTopics(self Device) {
 	}
 	subscriptions = append(subscriptions, ping)
 
-	leaveServer, err := serverConn.Subscribe(plexus.Update+id+plexus.LeaveServer, func(msg *nats.Msg) {
+	leaveServer, err := serverConn.Subscribe(plexus.Update+id+plexus.LeaveServer, func(_ *nats.Msg) {
 		slog.Info("leave server")
 		closeServerConnections()
 		deleteAllInterfaces()
@@ -345,7 +344,6 @@ func subcribeToServerTopics(self Device) {
 	}
 	subscriptions = append(subscriptions, addRouter)
 	delRouter, err := serverConn.Subscribe(plexus.Update+id+plexus.DeleteRouter,
-		//func(subj, reply string, data plexus.NetworkPeer) {
 		func(msg *nats.Msg) {
 			data := &plexus.NetworkPeer{}
 			if err := json.Unmarshal(msg.Data, data); err != nil {

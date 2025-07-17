@@ -34,7 +34,7 @@ func publishDeviceUpdate(self *Device) {
 	}
 }
 
-// publish new listening ports to server
+// publish new listening ports to server.
 func publishListenPortUpdate(self *Device, network *Network) {
 	slog.Info("publishing listen port update")
 	natsConn := serverConn.Load()
@@ -55,7 +55,7 @@ func publishListenPortUpdate(self *Device, network *Network) {
 	}
 }
 
-// publish network peer update to server
+// publish network peer update to server.
 func publishNetworkPeerUpdate(self Device, peer *plexus.NetworkPeer) error {
 	slog.Info("publishing network peer update")
 	natsConn := serverConn.Load()
