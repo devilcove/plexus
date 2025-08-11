@@ -6,7 +6,7 @@ toolchain go1.24.1
 
 require (
 	github.com/c-robinson/iplib v1.0.8
-	github.com/caddyserver/certmagic v0.23.0
+	github.com/caddyserver/certmagic v0.24.0
 	github.com/devilcove/boltdb v0.1.7
 	github.com/fatih/color v1.18.0
 	github.com/gin-contrib/sessions v1.0.4
@@ -14,8 +14,8 @@ require (
 	github.com/google/nftables v0.3.0
 	github.com/kr/pretty v0.3.1
 	github.com/lmittmann/tint v1.1.2
-	github.com/nats-io/nats-server/v2 v2.11.6
-	github.com/nats-io/nats.go v1.43.0
+	github.com/nats-io/nats-server/v2 v2.11.7
+	github.com/nats-io/nats.go v1.44.0
 	github.com/nats-io/nkeys v0.4.11
 	github.com/pion/stun v0.6.1
 	github.com/spf13/cobra v1.9.1
@@ -23,7 +23,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/vishvananda/netlink v1.3.1
 	go.etcd.io/bbolt v1.4.2
-	golang.org/x/crypto v0.40.0
+	golang.org/x/crypto v0.41.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20230429144221-925a1e7659e6
 )
 
@@ -52,7 +52,7 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
-	github.com/libdns/libdns v1.0.0-beta.1 // indirect
+	github.com/libdns/libdns v1.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mdlayher/genetlink v1.3.2 // indirect
@@ -85,13 +85,13 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect
 	golang.org/x/arch v0.16.0 // indirect
-	golang.org/x/mod v0.25.0 // indirect
-	golang.org/x/net v0.41.0 // indirect
+	golang.org/x/mod v0.26.0 // indirect
+	golang.org/x/net v0.42.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
-	golang.org/x/text v0.27.0 // indirect
+	golang.org/x/sys v0.35.0 // indirect
+	golang.org/x/text v0.28.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
-	golang.org/x/tools v0.34.0 // indirect
+	golang.org/x/tools v0.35.0 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20230325221338-052af4a8072b // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
