@@ -18,7 +18,7 @@ func TestAddNAT(t *testing.T) {
 	assert.Nil(t, err)
 	if user.Uid != "0" {
 		t.Log("this test must be run as root")
-		t.FailNow()
+		t.Skip()
 	}
 	c := nftables.Conn{}
 	err = addNat()
@@ -62,7 +62,7 @@ func TestDelNat(t *testing.T) {
 	assert.Nil(t, err)
 	if user.Uid != "0" {
 		t.Log("this test must be run as root")
-		t.FailNow()
+		t.Skip()
 	}
 	c := &nftables.Conn{}
 	table := c.AddTable(&nftables.Table{
@@ -106,7 +106,7 @@ func TestCheckForNat(t *testing.T) {
 	assert.Nil(t, err)
 	if user.Uid != "0" {
 		t.Log("this test must be run as root")
-		t.FailNow()
+		t.Skip()
 	}
 	_, public, err := generateKeys()
 	assert.Nil(t, err)

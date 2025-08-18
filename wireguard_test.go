@@ -16,7 +16,7 @@ func TestNew(t *testing.T) {
 	assert.Nil(t, err)
 	if user.Uid != "0" {
 		t.Log("this test must be run as root")
-		t.FailNow()
+		t.Skip()
 	}
 	key, err := wgtypes.GeneratePrivateKey()
 	assert.Nil(t, err)
