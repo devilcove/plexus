@@ -163,28 +163,31 @@ func printHandshake(handshake time.Time) {
 	case 0:
 		hourString = ""
 	case 1:
-		hourString = "1" + color.GreenString("hour")
+		hourString = "1" + color.GreenString(" hour")
 	default:
 		hourString = fmt.Sprintf("%d %s", hour, color.GreenString("hours"))
 	}
 	switch minute {
 	case 0:
-		minuteString = ""
+		minuteString = fmt.Sprintf("%d %s", minute, color.GreenString("minutes"))
+		if hour == 0 {
+			minuteString = ""
+		}
 	case 1:
-		minuteString = "1" + color.GreenString("minute")
+		minuteString = "1" + color.GreenString(" minute")
 	default:
 		minuteString = fmt.Sprintf("%d %s", minute, color.GreenString("minutes"))
 	}
 	switch second {
-	case 0:
-		secondString = "ago"
+	// case 0:
+	// secondString = "ago"
 	case 1:
-		secondString = "1" + color.GreenString("second ago")
+		secondString = "1" + color.GreenString(" second ago")
 	default:
 		secondString = fmt.Sprintf("%d %s", second, color.GreenString("seconds ago"))
 	}
 	if minute == 0 && hour == 0 && second == 0 {
-		secondString = color.RedString("never")
+		secondString = color.RedString(" never")
 	}
 	fmt.Println("\tlast handshake:", hourString, minuteString, secondString)
 }
