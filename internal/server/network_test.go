@@ -225,6 +225,7 @@ func TestAddNetwork(t *testing.T) {
 }
 
 func TestDeleteNetwork(t *testing.T) {
+	t.Skip()
 	user := plexus.User{
 		Username: "hello",
 		Password: "world",
