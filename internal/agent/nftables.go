@@ -159,7 +159,7 @@ func addVirtualSubnet(virtual, subnet net.IPNet) error {
 			return err
 		}
 	}
-	return nil
+	return nil //nolint: nilerr
 }
 
 func delVirtualSubnet() error {
