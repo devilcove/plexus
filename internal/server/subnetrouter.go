@@ -50,11 +50,10 @@ func addRouter(c *gin.Context) {
 			processError(c, http.StatusBadRequest, message)
 			return
 		}
-	} else {
-		if message, err := validateSubnet(subnet); err != nil {
-			processError(c, http.StatusBadRequest, message)
-			return
-		}
+	}
+	if message, err := validateSubnet(subnet); err != nil {
+		processError(c, http.StatusBadRequest, message)
+		return
 	}
 	if !validateNetworkAddress(*subnet) {
 		processError(c, http.StatusBadRequest, "invalid subnet: must be a private network")
@@ -137,22 +136,32 @@ func subnetInUse(subnet *net.IPNet) (string, string, error) {
 			return "network", network.Name, ErrSubnetInUse
 		}
 		for _, peer := range network.Peers {
-			if peer.IsSubnetRouter {
-				if peer.UseVirtSubnet {
-					if subnet.Contains(peer.VirtSubnet.IP) || peer.VirtSubnet.Contains(subnet.IP) {
-						slog.Debug("virt subnet in use peer", "network", network.Name, "net", network.Net, "subnet", subnet, "peer", peer.VirtSubnet)
-						return "peer", peer.HostName, ErrSubnetInUse
-					}
-				} else {
-					if subnet.Contains(peer.Subnet.IP) || peer.Subnet.Contains(subnet.IP) {
-						slog.Debug("subnet in use by peer", "network", network.Name, "net", network.Net, "subnet", subnet, "peer", peer.Subnet)
-						return "peer", peer.HostName, ErrSubnetInUse
-					}
-				}
+			if err := checkSubNetRouter(peer, network, subnet); err != nil {
+				return "peer", peer.HostName, ErrSubnetInUse
 			}
 		}
 	}
 	return "", "", nil
+}
+
+func checkSubNetRouter(peer plexus.NetworkPeer, network plexus.Network, subnet *net.IPNet) error {
+	if !peer.IsSubnetRouter {
+		return nil
+	}
+	if peer.UseVirtSubnet {
+		if subnet.Contains(peer.VirtSubnet.IP) || peer.VirtSubnet.Contains(subnet.IP) {
+			slog.Debug("virt subnet in use peer", "network", network.Name, "net",
+				network.Net, "subnet", subnet, "peer", peer.VirtSubnet)
+			return ErrSubnetInUse
+		}
+	} else {
+		if subnet.Contains(peer.Subnet.IP) || peer.Subnet.Contains(subnet.IP) {
+			slog.Debug("subnet in use by peer", "network", network.Name, "net",
+				network.Net, "subnet", subnet, "peer", peer.Subnet)
+			return ErrSubnetInUse
+		}
+	}
+	return nil
 }
 
 func validateSubnet(subnet *net.IPNet) (string, error) {

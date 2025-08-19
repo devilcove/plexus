@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"log/slog"
 	"net/http"
 	"os"
@@ -26,17 +27,17 @@ var (
 	natServer   *server.Server
 	natsOptions *server.Options
 	natsConn    *nats.Conn
-	//eConn       *nats.EncodedConn
+	// eConn       *nats.EncodedConn.
 )
 
-// Run - run the server
+// Run - run the server.
 func Run() {
 	tlsConfig, err := configureServer()
 	if err != nil {
 		slog.Error("unable to configure server", "error", err)
 		os.Exit(1)
 	}
-	defer boltdb.Close()
+	// defer boltdb.Close()
 	wg := sync.WaitGroup{}
 	quit := make(chan os.Signal, 1)
 	reset := make(chan os.Signal, 1)
@@ -64,11 +65,13 @@ func Run() {
 			slog.Error("error running broker .... shutting down")
 			cancel()
 			wg.Wait()
+			boltdb.Close()
 			os.Exit(1)
 		case <-webfail:
 			slog.Error("error running web .... shutting down")
 			cancel()
 			wg.Wait()
+			boltdb.Close()
 			os.Exit(2)
 		}
 	}
@@ -96,14 +99,14 @@ func web(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 		server.TLSConfig = tls
 		server.Addr = ":443"
 		go func() {
-			if err := server.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
+			if err := server.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				slog.Error("https server", "error", err)
 				webfail <- 1
 			}
 		}()
 	} else {
 		go func() {
-			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				slog.Error("http server", "error", err)
 				webfail <- 1
 			}

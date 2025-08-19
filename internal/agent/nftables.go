@@ -9,6 +9,8 @@ import (
 	"github.com/google/nftables/expr"
 )
 
+const plexusNat string = "plexus-nat"
+
 func addNat() error {
 	slog.Debug("adding NAT rule")
 	c := &nftables.Conn{}
@@ -20,7 +22,7 @@ func addNat() error {
 		return err
 	}
 	chain := c.AddChain(&nftables.Chain{
-		Name:     "plexus-nat",
+		Name:     plexusNat,
 		Table:    table,
 		Type:     nftables.ChainTypeNAT,
 		Hooknum:  nftables.ChainHookPostrouting,
@@ -45,7 +47,7 @@ func delNat() error {
 		return err
 	}
 	for _, chain := range chains {
-		if chain.Name == "plexus-nat" {
+		if chain.Name == plexusNat {
 			slog.Debug("deleting plexus-nat chain")
 			c.DelChain(chain)
 			err := c.Flush()
@@ -157,7 +159,7 @@ func addVirtualSubnet(virtual, subnet net.IPNet) error {
 			return err
 		}
 	}
-	return nil
+	return nil //nolint: nilerr
 }
 
 func delVirtualSubnet() error {
@@ -165,7 +167,7 @@ func delVirtualSubnet() error {
 	c := &nftables.Conn{}
 	chains, err := c.ListChains()
 	if err != nil {
-		return nil
+		return err
 	}
 	for _, chain := range chains {
 		if chain.Name == "plexus-subnet" {

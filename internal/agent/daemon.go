@@ -53,7 +53,7 @@ func Run() {
 			deleteAllInterfaces()
 			slog.Info("stopping tickers")
 			checkinTicker.Stop()
-			//serverTicker.Stop()
+			// serverTicker.Stop().
 			closeServerConnections()
 			slog.Info("shutdown nats server")
 			_ = ec.Drain()
@@ -67,7 +67,7 @@ func Run() {
 		case <-checkinTicker.C:
 			checkin()
 		case <-serverTicker.C:
-			// check server connection in case server was down when tried to connect earlier
+			// check server connection in case server was down when tried to connect earlier.
 			slog.Debug("check server connection")
 			if serverConn.Load() == nil {
 				slog.Info("not connected to server.... retrying")
@@ -92,7 +92,7 @@ func connectToServer(self Device) error {
 	if err != nil {
 		return err
 	}
-	pk, err := kp.PublicKey()
+	publicKey, err := kp.PublicKey()
 	if err != nil {
 		return err
 	}
@@ -102,23 +102,23 @@ func connectToServer(self Device) error {
 	opts := []nats.Option{nats.Name("plexus-agent " + self.Name)}
 	opts = append(opts, []nats.Option{
 		nats.MaxReconnects(-1),
-		nats.DisconnectErrHandler(func(c *nats.Conn, err error) {
+		nats.DisconnectErrHandler(func(_ *nats.Conn, err error) {
 			slog.Info("disonnected from server", "error", err)
 		}),
-		nats.ClosedHandler(func(c *nats.Conn) {
+		nats.ClosedHandler(func(_ *nats.Conn) {
 			slog.Info("nats connection closed")
 		}),
-		nats.ReconnectHandler(func(c *nats.Conn) {
+		nats.ReconnectHandler(func(_ *nats.Conn) {
 			slog.Info("reconnected to nats server")
 		}),
-		nats.ErrorHandler(func(c *nats.Conn, s *nats.Subscription, err error) {
+		nats.ErrorHandler(func(_ *nats.Conn, s *nats.Subscription, err error) {
 			if s != nil {
 				slog.Info("nats error", "subject", s.Subject, "error", err)
 			} else {
 				slog.Info("nats error", "error", err)
 			}
 		}),
-		nats.Nkey(pk, sign),
+		nats.Nkey(publicKey, sign),
 	}...)
 	slog.Debug("connecting to server", "url", self.Server)
 	nc, err := nats.Connect(self.Server, opts...)

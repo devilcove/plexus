@@ -66,7 +66,6 @@ func setupRouter() *gin.Engine {
 		networks.GET("/router/:id/:peer", displayAddRouter)
 		networks.POST("/router/:id/:peer", addRouter)
 		networks.DELETE("/router/:id/:peer", deleteRouter)
-
 	}
 	keys := router.Group("/keys", auth)
 	{
@@ -74,7 +73,6 @@ func setupRouter() *gin.Engine {
 		keys.GET("/add", displayCreateKey)
 		keys.POST("/add", addKey)
 		keys.DELETE("/:id", deleteKey)
-
 	}
 	peers := router.Group("/peers", auth)
 	{
@@ -138,13 +136,15 @@ func weblogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		c.Next()
-		if c.Writer.Status() >= 500 {
+		status := c.Writer.Status()
+		switch {
+		case status >= 500:
 			slog.Error("request", "Code", c.Writer.Status(), "method", c.Request.Method,
 				"route", c.Request.URL.Path, "latency", time.Since(start), "client", c.ClientIP())
-		} else if c.Writer.Status() >= 400 {
+		case status >= 400:
 			slog.Warn("request", "Code", c.Writer.Status(), "method", c.Request.Method,
 				"route", c.Request.URL.Path, "latency", time.Since(start), "client", c.ClientIP())
-		} else {
+		default:
 			slog.Debug("request", "Code", c.Writer.Status(), "method", c.Request.Method,
 				"route", c.Request.URL.Path, "latency", time.Since(start), "client", c.ClientIP())
 		}

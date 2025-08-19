@@ -2,7 +2,6 @@ package server
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -12,7 +11,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/devilcove/boltdb"
@@ -21,9 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	router *gin.Engine
-)
+var router *gin.Engine
 
 func TestMain(m *testing.M) {
 	if _, err := os.Stat("./test.db"); err == nil {
@@ -32,22 +28,23 @@ func TestMain(m *testing.M) {
 			os.Exit(1)
 		}
 	}
-	if err := boltdb.Initialize("./test.db", []string{userTable, keyTable, networkTable, peerTable, settingTable, "keypairs"}); err != nil {
+	if err := boltdb.Initialize("./test.db",
+		[]string{userTable, keyTable, networkTable, peerTable, settingTable, "keypairs"},
+	); err != nil {
 		log.Println("init db", err)
 		os.Exit(2)
 	}
-	defer boltdb.Close()
-
-	wg := &sync.WaitGroup{}
-	ctx, cancel := context.WithCancel(context.Background())
-	newDevice = make(chan string, 1)
-	wg.Add(1)
-	go broker(ctx, wg, nil)
+	// 	wg := &sync.WaitGroup{}
+	// 	ctx, cancel := context.WithCancel(context.Background())
+	// 	newDevice = make(chan string, 1)
+	// 	wg.Add(1)
+	// 	go broker(ctx, wg, nil)
 	plexus.SetLogging("debug")
 	router = setupRouter()
 	code := m.Run()
-	cancel()
-	wg.Wait()
+	// 	cancel()
+	// 	wg.Wait()
+	boltdb.Close()
 	os.Exit(code)
 }
 

@@ -22,7 +22,6 @@ func displayCreateKey(c *gin.Context) {
 	page := getPage(session.Get("user"))
 	page.Page = "addKey"
 	c.HTML(http.StatusOK, "addKey", page)
-
 }
 
 func addKey(c *gin.Context) {
@@ -76,7 +75,6 @@ func displayKeys(c *gin.Context) {
 		return
 	}
 	c.HTML(http.StatusOK, keyTable, keys)
-
 }
 
 func deleteKey(c *gin.Context) {
@@ -132,7 +130,7 @@ func decrementKeyUsage(name string) error {
 	if key.Usage == 1 {
 		return removeKey(key)
 	}
-	key.Usage = key.Usage - 1
+	key.Usage--
 	if err := boltdb.Save(key, key.Name, keyTable); err != nil {
 		return err
 	}

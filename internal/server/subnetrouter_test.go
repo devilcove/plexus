@@ -97,11 +97,10 @@ func TestSubnetInUse(t *testing.T) {
 		assert.Equal(t, ErrSubnetInUse, err)
 		assert.Equal(t, "peer", kind)
 		assert.Equal(t, "peer1", name)
-
 	})
 }
 
-// generateKeys generates wgkeys that do not have a / in pubkey
+// generateKeys generates wgkeys that do not have a / in pubkey.
 func generateKeys() (*wgtypes.Key, *wgtypes.Key, error) {
 	for {
 		priv, err := wgtypes.GeneratePrivateKey()

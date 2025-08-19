@@ -34,7 +34,7 @@ import (
 
 var long bool
 
-// statusCmd represents the status command
+// statusCmd represents the status command.
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "display status",
@@ -43,7 +43,7 @@ var statusCmd = &cobra.Command{
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
 		status := agent.StatusResponse{}
-		//networks := []Network{}
+		// networks := []Network{}
 		cobra.CheckErr(agent.Request(ec, agent.Agent+plexus.Status, nil, &status, agent.NatsTimeout))
 		if status.Server == "" {
 			fmt.Println("agent running... not connected to servers")
@@ -55,7 +55,6 @@ var statusCmd = &cobra.Command{
 			colour = color.New(color.FgGreen).SprintFunc()
 		} else {
 			colour = color.New(color.FgRed).SprintFunc()
-
 		}
 		fmt.Println("\t", status.Server, ":", colour(status.Connected))
 
@@ -92,7 +91,7 @@ var statusCmd = &cobra.Command{
 					continue
 				}
 				if peer.WGPublicKey == wg.PrivateKey.PublicKey().String() {
-					//self, skip
+					// self, skip
 					continue
 				}
 				for _, x := range wg.Peers {
@@ -116,7 +115,8 @@ var statusCmd = &cobra.Command{
 				}
 				fmt.Println()
 				printHandshake(wgPeer.LastHandshakeTime)
-				fmt.Println("\ttransfer:", prettyByteSize(wgPeer.TransmitBytes), "sent", prettyByteSize(wgPeer.ReceiveBytes), "received")
+				fmt.Println("\ttransfer:", prettyByteSize(wgPeer.TransmitBytes),
+					"sent", prettyByteSize(wgPeer.ReceiveBytes), "received")
 				fmt.Println("\tkeepalive:", wgPeer.PersistentKeepaliveInterval)
 			}
 			fmt.Println()
@@ -159,28 +159,37 @@ func printHandshake(handshake time.Time) {
 	minute := int(d.Minutes()) % 60
 	second := int(d.Seconds()) % 60
 	var hourString, minuteString, secondString string
-	if hour == 0 { //nolint:staticcheck
+	switch hour {
+	case 0:
 		hourString = ""
-	} else if hour == 1 {
-		hourString = fmt.Sprintf("1 %s", color.GreenString("hour"))
-	} else {
+	case 1:
+		hourString = "1" + color.GreenString(" hour")
+	default:
 		hourString = fmt.Sprintf("%d %s", hour, color.GreenString("hours"))
 	}
-	if minute == 0 && hour == 0 {
-		minuteString = ""
-	} else if minute == 1 {
-		minuteString = fmt.Sprintf("1 %s", color.GreenString("minute"))
-	} else {
+	switch minute {
+	case 0:
+		minuteString = fmt.Sprintf("%d %s", minute, color.GreenString("minutes"))
+		if hour == 0 {
+			minuteString = ""
+		}
+	case 1:
+		minuteString = "1" + color.GreenString(" minute")
+	default:
 		minuteString = fmt.Sprintf("%d %s", minute, color.GreenString("minutes"))
 	}
-	if minute == 0 && hour == 0 && second == 0 {
-		secondString = color.RedString("never")
-	} else if second == 1 {
-		secondString = fmt.Sprintf("1 %s", color.GreenString("second"))
-	} else {
-		secondString = fmt.Sprintf("%d %s", second, color.GreenString("seconds"))
+	switch second {
+	// case 0:
+	// secondString = "ago"
+	case 1:
+		secondString = "1" + color.GreenString(" second ago")
+	default:
+		secondString = fmt.Sprintf("%d %s", second, color.GreenString("seconds ago"))
 	}
-	fmt.Println("\tlast handshake:", hourString, minuteString, secondString, "ago")
+	if minute == 0 && hour == 0 && second == 0 {
+		secondString = color.RedString(" never")
+	}
+	fmt.Println("\tlast handshake:", hourString, minuteString, secondString)
 }
 
 func prettyByteSize(b int64) string {

@@ -28,7 +28,7 @@ import (
 
 const version = "v0.3.0"
 
-// versionCmd represents the version command
+// versionCmd represents the version command.
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "display version information",

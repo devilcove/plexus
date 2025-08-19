@@ -10,59 +10,59 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
-// wireguard is a netlink compatible representation of wireguard interface
-type wireguard struct {
+// Wireguard is a netlink compatible representation of Wireguard interface.
+type Wireguard struct {
 	Name    string
 	MTU     int
 	Address netlink.Addr
 	Config  wgtypes.Config
 }
 
-// Attrs satisfies netlink Link interface
-func (w *wireguard) Attrs() *netlink.LinkAttrs {
+// Attrs satisfies netlink Link interface.
+func (wg *Wireguard) Attrs() *netlink.LinkAttrs {
 	attr := netlink.NewLinkAttrs()
-	attr.Name = w.Name
-	attr.MTU = w.MTU
-	if link, err := netlink.LinkByName(w.Name); err == nil {
+	attr.Name = wg.Name
+	attr.MTU = wg.MTU
+	if link, err := netlink.LinkByName(wg.Name); err == nil {
 		attr.Index = link.Attrs().Index
 	}
 	return &attr
 }
 
-// Type satisfies netlink Link interface
-func (w *wireguard) Type() string {
+// Type satisfies netlink Link interface.
+func (wg *Wireguard) Type() string {
 	return "wireguard"
 }
 
-// Apply apply configuration to wireguard device
-func (w *wireguard) Apply() error {
-	slog.Debug("applying wg config", "wireguard", w)
+// Apply apply configuration to wireguard device.
+func (wg *Wireguard) Apply() error {
+	slog.Debug("applying wg config", "wireguard", wg)
 	wgClient, err := wgctrl.New()
 	if err != nil {
 		return fmt.Errorf("wgtcl.New %w", err)
 	}
 	defer wgClient.Close()
-	if err := wgClient.ConfigureDevice(w.Name, w.Config); err != nil {
+	if err := wgClient.ConfigureDevice(wg.Name, wg.Config); err != nil {
 		return fmt.Errorf("wireguard configure device, %w", err)
 	}
-	link, err := netlink.LinkByName(w.Name)
+	link, err := netlink.LinkByName(wg.Name)
 	if err != nil {
-		return fmt.Errorf("get link %v", err)
+		return fmt.Errorf("get link %w", err)
 	}
 	newRoute := netlink.Route{
 		LinkIndex: link.Attrs().Index,
 		Scope:     netlink.SCOPE_LINK,
-		Src:       w.Address.IP,
+		Src:       wg.Address.IP,
 		Protocol:  2,
 	}
 	routes, err := netlink.RouteList(link, netlink.FAMILY_V4)
 	if err != nil {
-		return fmt.Errorf("get routes %v", err)
+		return fmt.Errorf("get routes %w", err)
 	}
 	for _, route := range routes {
-		slog.Debug("checking route", "route", route.Dst, "network address", w.Address.IPNet)
-		if route.Dst.Contains(w.Address.IP) {
-			// don't delete default route for the plexus network
+		slog.Debug("checking route", "route", route.Dst, "network address", wg.Address.IPNet)
+		if route.Dst.Contains(wg.Address.IP) {
+			// don't delete default route for the plexus network.
 			slog.Debug("skipping")
 			continue
 		}
@@ -72,9 +72,9 @@ func (w *wireguard) Apply() error {
 			slog.Error("delete route", "destination", route.Dst, "error", err)
 		}
 	}
-	for _, peer := range w.Config.Peers {
+	for _, peer := range wg.Config.Peers {
 		for _, allowed := range peer.AllowedIPs {
-			if w.Address.Contains(allowed.IP) {
+			if wg.Address.Contains(allowed.IP) {
 				continue
 			}
 			newRoute.Dst = &allowed
@@ -87,32 +87,32 @@ func (w *wireguard) Apply() error {
 	return nil
 }
 
-// Up brings a wireguard interface up
-func (w *wireguard) Up() error {
-	if err := netlink.LinkAdd(w); err != nil {
-		return fmt.Errorf("link add %v", err)
+// Up brings a wireguard interface up.
+func (wg *Wireguard) Up() error {
+	if err := netlink.LinkAdd(wg); err != nil {
+		return fmt.Errorf("link add %w", err)
 	}
-	if err := netlink.AddrAdd(w, &w.Address); err != nil {
-		return fmt.Errorf("add address %v", err)
+	if err := netlink.AddrAdd(wg, &wg.Address); err != nil {
+		return fmt.Errorf("add address %w", err)
 	}
-	if err := netlink.LinkSetUp(w); err != nil {
-		return fmt.Errorf("link up %v", err)
+	if err := netlink.LinkSetUp(wg); err != nil {
+		return fmt.Errorf("link up %w", err)
 	}
-	return w.Apply()
+	return wg.Apply()
 }
 
-// Down removes a wireguard interface
-func (w *wireguard) Down() error {
-	link, err := netlink.LinkByName(w.Name)
+// Down removes a wireguard interface.
+func (wg *Wireguard) Down() error {
+	link, err := netlink.LinkByName(wg.Name)
 	if err != nil {
 		return err
 	}
 	return netlink.LinkDel(link)
 }
 
-// New returns a new wireguard interface
-func New(name string, mtu int, address netlink.Addr, config wgtypes.Config) *wireguard {
-	wg := &wireguard{
+// New returns a new wireguard interface.
+func New(name string, mtu int, address netlink.Addr, config wgtypes.Config) *Wireguard {
+	wg := &Wireguard{
 		Name:    name,
 		MTU:     mtu,
 		Address: address,
@@ -122,7 +122,7 @@ func New(name string, mtu int, address netlink.Addr, config wgtypes.Config) *wir
 	return wg
 }
 
-// GetDevice returns a wireguard device as wgtype.Device
+// GetDevice returns a wireguard device as wgtype.Device.
 func GetDevice(name string) (*wgtypes.Device, error) {
 	client, err := wgctrl.New()
 	if err != nil {
@@ -131,8 +131,8 @@ func GetDevice(name string) (*wgtypes.Device, error) {
 	return client.Device(name)
 }
 
-// Get returns an existing wireguard interface as a plexus.Wireguard
-func Get(name string) (*wireguard, error) {
+// Get returns an existing wireguard interface as a plexus.Wireguard.
+func Get(name string) (*Wireguard, error) {
 	link, err := netlink.LinkByName(name)
 	if err != nil {
 		return nil, err
@@ -145,7 +145,7 @@ func Get(name string) (*wireguard, error) {
 	if err != nil {
 		return nil, err
 	}
-	wg := &wireguard{
+	wg := &Wireguard{
 		Name:    name,
 		MTU:     link.Attrs().MTU,
 		Address: addrs[0],
@@ -173,7 +173,7 @@ func convertPeers(input []wgtypes.Peer) []wgtypes.PeerConfig {
 	return output
 }
 
-func (wg *wireguard) ReplacePeer(newPeer wgtypes.PeerConfig) {
+func (wg *Wireguard) ReplacePeer(newPeer wgtypes.PeerConfig) {
 	slog.Debug("replacing wg peer", "key", newPeer.PublicKey, "allowed", newPeer.AllowedIPs, "endpoint", newPeer.Endpoint)
 	for i, peer := range wg.Config.Peers {
 		if peer.PublicKey != newPeer.PublicKey {
@@ -185,7 +185,7 @@ func (wg *wireguard) ReplacePeer(newPeer wgtypes.PeerConfig) {
 	}
 }
 
-func (wg *wireguard) DeletePeer(key string) {
+func (wg *Wireguard) DeletePeer(key string) {
 	for i, peer := range wg.Config.Peers {
 		if peer.PublicKey.String() == key {
 			wg.Config.Peers[i].Remove = true
@@ -194,7 +194,7 @@ func (wg *wireguard) DeletePeer(key string) {
 	}
 }
 
-func (wg *wireguard) AddPeer(newPeer wgtypes.PeerConfig) {
+func (wg *Wireguard) AddPeer(newPeer wgtypes.PeerConfig) {
 	slog.Debug("adding new wg peer", "peer", newPeer)
 	wg.Config.Peers = append(wg.Config.Peers, newPeer)
 }

@@ -12,7 +12,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// var page Page
+// var page Page.
 var (
 	pages map[string]Page
 )
@@ -73,11 +73,11 @@ func login(c *gin.Context) {
 	session.Options(sessions.Options{MaxAge: sessionAge, Secure: false, SameSite: http.SameSiteLaxMode})
 	_ = session.Save()
 	slog.Info("login", "user", user.Username)
-	//page := getPage(user.Username)
-	//page.NeedsLogin = false
-	//page.Page = "networks"
+	// page := getPage(user.Username).
+	// page.NeedsLogin = false
+	// page.Page = "networks"
 	displayMain(c)
-	//c.HTML(http.StatusOK, "content", page)
+	// c.HTML(http.StatusOK, "content", page).
 }
 
 func validateUser(visitor *plexus.User) bool {
@@ -105,7 +105,7 @@ func logout(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get("user")
 	slog.Info("logout", "user", user)
-	//delete cookie
+	// delete cookie.
 	session.Clear()
 	_ = session.Save()
 	c.HTML(http.StatusOK, "login", "")
@@ -119,7 +119,6 @@ func initialize() Page {
 	}
 	for _, network := range allNetworks {
 		networks = append(networks, network.Name)
-
 	}
 	return Page{
 		Version:     version,

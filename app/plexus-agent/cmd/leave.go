@@ -23,7 +23,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// leaveCmd represents the leave command
+// leaveCmd represents the leave command.
 var leaveCmd = &cobra.Command{
 	Use:   "leave network",
 	Args:  cobra.ExactArgs(1),

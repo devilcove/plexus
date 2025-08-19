@@ -11,9 +11,9 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-// server handlers
+// server handlers.
 func networkUpdates(msg *nats.Msg) {
-	//func networkUpdates(subject string, update plexus.NetworkUpdate) {
+	// func networkUpdates(subject string, update plexus.NetworkUpdate) {
 	networkName := msg.Subject[9:]
 	update := &plexus.NetworkUpdate{}
 	if err := json.Unmarshal(msg.Data, update); err != nil {
@@ -42,152 +42,20 @@ func networkUpdates(msg *nats.Msg) {
 	}
 	switch update.Action {
 	case plexus.AddPeer:
-		slog.Debug("add peer")
-		for _, peer := range network.Peers {
-			if peer.WGPublicKey == update.Peer.WGPublicKey {
-				slog.Error("peer already exists", "network", networkName, "peer", update.Peer.HostName, "id", update.Peer.WGPublicKey)
-				return
-			}
-		}
-		if update.Peer.PrivateEndpoint != nil {
-			if connectToPublicEndpoint(update.Peer) {
-				update.Peer.UsePrivateEndpoint = true
-			}
-		}
-		network.Peers = append(network.Peers, update.Peer)
-		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
-			slog.Error("update network -- add peer", "error", err)
-		}
-		wgPeer, err := convertPeerToWG(update.Peer, network.Peers)
-		if err != nil {
-			slog.Error("convert peer", "peer", update.Peer.HostName, "error", err)
-			return
-		}
-		slog.Debug("adding wg peer", "key", wgPeer.PublicKey, "allowedIPs", wgPeer.AllowedIPs)
-		wg.AddPeer(wgPeer)
-		if err := wg.Apply(); err != nil {
-			slog.Error("apply wg config", "error", err)
-		}
+		processAddPeer(network, update, wg)
 	case plexus.DeletePeer:
-		slog.Debug("delete peer")
-		if update.Peer.WGPublicKey == self.WGPublicKey {
-			slog.Info("self delete --> delete network", "network", networkName)
-			if err := boltdb.Delete[Network](network.Name, networkTable); err != nil {
-				slog.Error("delete network", "error", err)
-			}
-			slog.Info("delete interface", "network", network.Name, "interface", network.Interface)
-			if err := deleteInterface(network.Interface); err != nil {
-				slog.Error("deleting interface", "interface", network.Interface, "error", err)
-			}
-			return
-		}
-		wg.DeletePeer(update.Peer.WGPublicKey)
-		found := false
-		for i, oldpeer := range network.Peers {
-			if oldpeer.WGPublicKey == update.Peer.WGPublicKey {
-				slog.Debug("found peer to delete")
-				found = true
-				network.Peers = slices.Delete(network.Peers, i, i+1)
-				break
-			}
-		}
-		if !found {
-			slog.Error("peer does not exist", "network", networkName, "peer", update.Peer.HostName, "id", update.Peer.WGPublicKey)
-			return
-		}
-		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
-			slog.Error("update network -- delete peer", "error", err)
-		}
-		if err := wg.Apply(); err != nil {
-			slog.Error("apply wg config", "error", err)
-		}
+		processDeletePeer(network, update, self, wg)
 	case plexus.UpdatePeer:
-		slog.Debug("update peer")
-		found := false
-		for i, oldpeer := range network.Peers {
-			if oldpeer.WGPublicKey == update.Peer.WGPublicKey {
-				if update.Peer.PrivateEndpoint != nil {
-					if connectToPublicEndpoint(update.Peer) {
-						update.Peer.UsePrivateEndpoint = true
-					}
-				}
-				network.Peers = slices.Replace(network.Peers, i, i+1, update.Peer)
-				found = true
-				break
-			}
-		}
-		if !found {
-			slog.Error("peer does not exist", "network", networkName, "peer", update.Peer.HostName, "id", update.Peer.WGPublicKey)
-			return
-		}
-		wgPeer, err := convertPeerToWG(update.Peer, network.Peers)
-		if err != nil {
-			slog.Error("convert to WG peer", "error", err)
-			return
-		}
-		wg.ReplacePeer(wgPeer)
-		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
-			slog.Error("update network -- update peer", "error", err)
-		}
-		if err := wg.Apply(); err != nil {
-			slog.Error("apply wg config", "error", err)
-		}
+		processUpdatePeer(network, update, wg)
 	case plexus.AddRelay:
-		slog.Debug("add relay")
-		newPeers := []plexus.NetworkPeer{}
-		for _, existing := range network.Peers {
-			if existing.WGPublicKey == update.Peer.WGPublicKey {
-				newPeers = append(newPeers, update.Peer)
-				continue
-			}
-			if slices.Contains(update.Peer.RelayedPeers, existing.WGPublicKey) {
-				existing.IsRelayed = true
-			}
-			newPeers = append(newPeers, existing)
-		}
-		network.Peers = newPeers
-		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
-			slog.Error("update network with relayed peers", "error", err)
-		}
-		if err := resetPeersOnNetworkInterface(self, network); err != nil {
-			slog.Error("add relay:restart interface", "network", network.Name, "error", err)
-		}
-
+		processAddRelay(network, update, self)
 	case plexus.DeleteRelay:
-		slog.Debug("delete relay")
-		oldRelay := update.Peer
-		newPeers := []plexus.NetworkPeer{}
-		for _, existing := range network.Peers {
-			if existing.WGPublicKey == oldRelay.WGPublicKey {
-				existing.IsRelay = false
-				existing.RelayedPeers = []string{}
-			}
-			if slices.Contains(oldRelay.RelayedPeers, existing.WGPublicKey) {
-				existing.IsRelayed = false
-			}
-			newPeers = append(newPeers, existing)
-		}
-		network.Peers = newPeers
-		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
-			slog.Error("remove relay: save network", "network", network.Name, "error", err)
-		}
-		if err := resetPeersOnNetworkInterface(self, network); err != nil {
-			slog.Error("delete relay:restart interface", "network", network.Name, "error", err)
-		}
+		processDeleteRelay(network, update, self)
 
 	case plexus.DeleteNetwork:
-		slog.Debug("delete network")
-		slog.Info("delete network")
-		if err := boltdb.Delete[Network](network.Name, networkTable); err != nil {
-			slog.Error("delete network", "error", err)
-		}
-		if err := deleteInterface(network.Interface); err != nil {
-			slog.Error("delete interfadce", "interface", network.Interface, "errror", err)
-		}
-		return
+		processDeleteNetwork(network)
 	default:
 		slog.Info("invalid network update type")
-		return
 	}
 }
 
@@ -301,7 +169,6 @@ func processLeave(request *plexus.LeaveRequest) plexus.MessageResponse {
 func handleLeaveServer() ([]byte, error) {
 	response := processLeaveServer()
 	return json.Marshal(response)
-
 }
 
 func processLeaveServer() plexus.MessageResponse {
@@ -342,4 +209,241 @@ func processReload() (plexus.NetworkResponse, error) {
 		return response, err
 	}
 	return response, nil
+}
+
+func processAddPeer(network Network, update *plexus.NetworkUpdate, wg *plexus.Wireguard) {
+	slog.Debug("add peer")
+	for _, peer := range network.Peers {
+		if peer.WGPublicKey == update.Peer.WGPublicKey {
+			slog.Error("peer already exists", "network", network.Name, "peer", update.Peer.HostName, "id",
+				update.Peer.WGPublicKey)
+			return
+		}
+	}
+	if update.Peer.PrivateEndpoint != nil {
+		if connectToPublicEndpoint(update.Peer) {
+			update.Peer.UsePrivateEndpoint = true
+		}
+	}
+	network.Peers = append(network.Peers, update.Peer)
+	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+		slog.Error("update network -- add peer", "error", err)
+	}
+	wgPeer, err := convertPeerToWG(update.Peer, network.Peers)
+	if err != nil {
+		slog.Error("convert peer", "peer", update.Peer.HostName, "error", err)
+		return
+	}
+	slog.Debug("adding wg peer", "key", wgPeer.PublicKey, "allowedIPs", wgPeer.AllowedIPs)
+	wg.AddPeer(wgPeer)
+	if err := wg.Apply(); err != nil {
+		slog.Error("apply wg config", "error", err)
+	}
+}
+
+func processDeletePeer(network Network, update *plexus.NetworkUpdate, self Device, wg *plexus.Wireguard) {
+	slog.Debug("delete peer")
+	if update.Peer.WGPublicKey == self.WGPublicKey {
+		slog.Info("self delete --> delete network", "network", network.Name)
+		if err := boltdb.Delete[Network](network.Name, networkTable); err != nil {
+			slog.Error("delete network", "error", err)
+		}
+		slog.Info("delete interface", "network", network.Name, "interface", network.Interface)
+		if err := deleteInterface(network.Interface); err != nil {
+			slog.Error("deleting interface", "interface", network.Interface, "error", err)
+		}
+		return
+	}
+	wg.DeletePeer(update.Peer.WGPublicKey)
+	found := false
+	for i, oldpeer := range network.Peers {
+		if oldpeer.WGPublicKey == update.Peer.WGPublicKey {
+			slog.Debug("found peer to delete")
+			found = true
+			network.Peers = slices.Delete(network.Peers, i, i+1)
+			break
+		}
+	}
+	if !found {
+		slog.Error("peer does not exist", "network", network.Name, "peer", update.Peer.HostName,
+			"id", update.Peer.WGPublicKey)
+		return
+	}
+	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+		slog.Error("update network -- delete peer", "error", err)
+	}
+	if err := wg.Apply(); err != nil {
+		slog.Error("apply wg config", "error", err)
+	}
+}
+
+func processUpdatePeer(network Network, update *plexus.NetworkUpdate, wg *plexus.Wireguard) {
+	slog.Debug("update peer")
+	found := false
+	for i, oldpeer := range network.Peers {
+		if oldpeer.WGPublicKey == update.Peer.WGPublicKey {
+			if update.Peer.PrivateEndpoint != nil {
+				if connectToPublicEndpoint(update.Peer) {
+					update.Peer.UsePrivateEndpoint = true
+				}
+			}
+			network.Peers = slices.Replace(network.Peers, i, i+1, update.Peer)
+			found = true
+			break
+		}
+	}
+	if !found {
+		slog.Error("peer does not exist", "network", network.Name, "peer", update.Peer.HostName,
+			"id", update.Peer.WGPublicKey)
+		return
+	}
+	wgPeer, err := convertPeerToWG(update.Peer, network.Peers)
+	if err != nil {
+		slog.Error("convert to WG peer", "error", err)
+		return
+	}
+	wg.ReplacePeer(wgPeer)
+	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+		slog.Error("update network -- update peer", "error", err)
+	}
+	if err := wg.Apply(); err != nil {
+		slog.Error("apply wg config", "error", err)
+	}
+}
+
+func processAddRelay(network Network, update *plexus.NetworkUpdate, self Device) {
+	slog.Debug("add relay")
+	newPeers := []plexus.NetworkPeer{}
+	for _, existing := range network.Peers {
+		if existing.WGPublicKey == update.Peer.WGPublicKey {
+			newPeers = append(newPeers, update.Peer)
+			continue
+		}
+		if slices.Contains(update.Peer.RelayedPeers, existing.WGPublicKey) {
+			existing.IsRelayed = true
+		}
+		newPeers = append(newPeers, existing)
+	}
+	network.Peers = newPeers
+	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+		slog.Error("update network with relayed peers", "error", err)
+	}
+	if err := resetPeersOnNetworkInterface(self, network); err != nil {
+		slog.Error("add relay:restart interface", "network", network.Name, "error", err)
+	}
+}
+
+func processDeleteRelay(network Network, update *plexus.NetworkUpdate, self Device) {
+	slog.Debug("delete relay")
+	oldRelay := update.Peer
+	newPeers := []plexus.NetworkPeer{}
+	for _, existing := range network.Peers {
+		if existing.WGPublicKey == oldRelay.WGPublicKey {
+			existing.IsRelay = false
+			existing.RelayedPeers = []string{}
+		}
+		if slices.Contains(oldRelay.RelayedPeers, existing.WGPublicKey) {
+			existing.IsRelayed = false
+		}
+		newPeers = append(newPeers, existing)
+	}
+	network.Peers = newPeers
+	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+		slog.Error("remove relay: save network", "network", network.Name, "error", err)
+	}
+	if err := resetPeersOnNetworkInterface(self, network); err != nil {
+		slog.Error("delete relay:restart interface", "network", network.Name, "error", err)
+	}
+}
+
+func processDeleteNetwork(network Network) {
+	slog.Debug("delete network")
+	slog.Info("delete network")
+	if err := boltdb.Delete[Network](network.Name, networkTable); err != nil {
+		slog.Error("delete network", "error", err)
+	}
+	if err := deleteInterface(network.Interface); err != nil {
+		slog.Error("delete interfadce", "interface", network.Interface, "errror", err)
+	}
+}
+
+func deleteRouter(msg *nats.Msg, id string) {
+	data := &plexus.NetworkPeer{}
+	if err := json.Unmarshal(msg.Data, data); err != nil {
+		slog.Error("invalid network peer", "error", err, "data", string(msg.Data))
+	}
+
+	if data.WGPublicKey != id {
+		slog.Error("add router wrong id", "me", id, "router", data.WGPublicKey)
+		return
+	}
+	if err := delNat(); err != nil {
+		slog.Error("delete nat", "error", err)
+	}
+	if err := delVirtualSubnet(); err != nil {
+		slog.Error("delete virtual subnet", "error", err)
+	}
+}
+
+func addRouter(msg *nats.Msg, id string) {
+	data := &plexus.NetworkPeer{}
+	if err := json.Unmarshal(msg.Data, data); err != nil {
+		slog.Error("invalid network peer", "error", err, "data", string(msg.Data))
+	}
+	if data.WGPublicKey != id {
+		slog.Error("add router wrong id", "me", id, "router", data.WGPublicKey)
+		return
+	}
+	if !data.IsSubnetRouter {
+		return
+	}
+	slog.Debug("adding subnet router")
+	if data.UseNat {
+		if err := addNat(); err != nil {
+			slog.Error("add nat", "error", err)
+		}
+	}
+	if data.UseVirtSubnet {
+		if err := addVirtualSubnet(data.VirtSubnet, data.Subnet); err != nil {
+			slog.Error("add virtual subnet", "error", err)
+		}
+	}
+}
+
+func sendListenPorts(msg *nats.Msg, serverConn *nats.Conn) {
+	data := &plexus.ListenPortRequest{}
+	if err := json.Unmarshal(msg.Data, data); err != nil {
+		slog.Error("invalid server listen port request", "error", err, "data", string(msg.Data))
+	}
+	slog.Info("new listen ports", "network", data.Network)
+	response, err := getNewListenPorts(data.Network)
+	if err != nil {
+		slog.Error(err.Error())
+		return
+	}
+	bytes, err := json.Marshal(response)
+	if err != nil {
+		slog.Error("invalid listen port response", "error", err, "data", response)
+	}
+	if err := serverConn.Publish(msg.Reply, bytes); err != nil {
+		slog.Error("publish reply to SendListenPorts", "error", err)
+	}
+	slog.Debug("sent listenports to server", "public", response.PublicListenPort, "private", response.ListenPort)
+}
+
+func joinNetwork(msg *nats.Msg, self Device) {
+	data := &plexus.ServerJoinRequest{}
+	if err := json.Unmarshal(msg.Data, data); err != nil {
+		slog.Error("invalid server join request", "error", err, "data", string(msg.Data))
+	}
+	slog.Info("join network", "network", data.Network)
+	network, err := saveServerNetwork(data.Network)
+	if err != nil {
+		slog.Error("save network", "error", err)
+		return
+	}
+	if err := startInterface(self, network); err != nil {
+		slog.Error("error starting interface", "interface", network.Interface, "network", network.Name, "error", err)
+		return
+	}
 }
