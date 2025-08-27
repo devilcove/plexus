@@ -15,14 +15,14 @@ require (
 	github.com/kr/pretty v0.3.1
 	github.com/lmittmann/tint v1.1.2
 	github.com/nats-io/nats-server/v2 v2.11.8
-	github.com/nats-io/nats.go v1.44.0
+	github.com/nats-io/nats.go v1.45.0
 	github.com/nats-io/nkeys v0.4.11
 	github.com/pion/stun v0.6.1
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.0
 	github.com/vishvananda/netlink v1.3.1
-	go.etcd.io/bbolt v1.4.2
+	go.etcd.io/bbolt v1.4.3
 	golang.org/x/crypto v0.41.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20230429144221-925a1e7659e6
 )
