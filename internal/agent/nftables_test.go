@@ -5,26 +5,26 @@ import (
 	"os/user"
 	"testing"
 
+	"github.com/Kairum-Labs/should"
 	"github.com/devilcove/plexus"
 	"github.com/google/nftables"
 	"github.com/google/nftables/expr"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestAddNAT(t *testing.T) {
 	table := &nftables.Table{}
 	chain := &nftables.Chain{}
 	user, err := user.Current()
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	if user.Uid != "0" {
 		t.Log("this test must be run as root")
 		t.Skip()
 	}
 	c := nftables.Conn{}
 	err = addNat()
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	tables, err := c.ListTables()
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	tableFound := false
 	for _, t := range tables {
 		if t.Name == "plexus" {
@@ -32,9 +32,9 @@ func TestAddNAT(t *testing.T) {
 			table = t
 		}
 	}
-	assert.True(t, tableFound)
+	should.BeTrue(t, tableFound)
 	chains, err := c.ListChains()
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	chainFound := false
 	for _, c := range chains {
 		if c.Name == "plexus-nat" {
@@ -42,24 +42,24 @@ func TestAddNAT(t *testing.T) {
 			chain = c
 		}
 	}
-	assert.True(t, chainFound)
+	should.BeTrue(t, chainFound)
 	rules, err := c.GetRules(table, chain)
-	assert.Nil(t, err)
-	assert.Equal(t, 1, len(rules))
-	assert.Equal(t, &expr.Masq{
+	should.BeNil(t, err)
+	should.BeEqual(t, len(rules), 1)
+	should.BeEqual(t, rules[0].Exprs[0], &expr.Masq{
 		Random:      false,
 		FullyRandom: false,
 		Persistent:  false,
 		ToPorts:     false,
 		RegProtoMin: 0,
 		RegProtoMax: 0,
-	}, rules[0].Exprs[0])
+	})
 	cleanNat(t, &c)
 }
 
 func TestDelNat(t *testing.T) {
 	user, err := user.Current()
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	if user.Uid != "0" {
 		t.Log("this test must be run as root")
 		t.Skip()
@@ -85,31 +85,31 @@ func TestDelNat(t *testing.T) {
 	}
 	c.AddRule(rule)
 	err = c.Flush()
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	err = delNat()
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	chains, err := c.ListChains()
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	found := false
 	for _, chain := range chains {
 		if chain.Name == "plexus-nat" {
 			found = true
 		}
 	}
-	assert.False(t, found)
+	should.BeFalse(t, found)
 	cleanNat(t, c)
 }
 
 func TestCheckForNat(t *testing.T) {
 	plexus.SetLogging("debug")
 	user, err := user.Current()
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	if user.Uid != "0" {
 		t.Log("this test must be run as root")
 		t.Skip()
 	}
 	_, public, err := generateKeys()
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	self := Device{}
 	self.WGPublicKey = public.String()
 	peer := plexus.NetworkPeer{
@@ -125,19 +125,19 @@ func TestCheckForNat(t *testing.T) {
 	network.Peers = append(network.Peers, peer)
 	c := &nftables.Conn{}
 	tables, err := c.ListTables()
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	for _, table := range tables {
 		if table.Name == "plexus" {
 			c.DelTable(table)
 			err = c.Flush()
-			assert.Nil(t, err)
+			should.BeNil(t, err)
 		}
 	}
 	t.Run("noSubnetRouter", func(t *testing.T) {
 		err := checkForNat(self, network)
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		tables, err := c.ListTables()
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		for _, table := range tables {
 			if table.Name == "plexus" {
 				t.FailNow()
@@ -152,9 +152,9 @@ func TestCheckForNat(t *testing.T) {
 		}
 		network.Peers = []plexus.NetworkPeer{peer}
 		err = checkForNat(self, network)
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		tables, err := c.ListTables()
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		for _, table := range tables {
 			if table.Name == "plexus" {
 				t.FailNow()
@@ -167,9 +167,9 @@ func TestCheckForNat(t *testing.T) {
 		peer.UseNat = true
 		network.Peers = []plexus.NetworkPeer{peer}
 		err = checkForNat(self, network)
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		tables, err := c.ListTables()
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		tableFound := false
 		for _, t := range tables {
 			if t.Name == "plexus" {
@@ -177,9 +177,9 @@ func TestCheckForNat(t *testing.T) {
 				table = t
 			}
 		}
-		assert.True(t, tableFound)
+		should.BeTrue(t, tableFound)
 		chains, err := c.ListChains()
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		chainFound := false
 		for _, c := range chains {
 			if c.Name == "plexus-nat" {
@@ -187,18 +187,18 @@ func TestCheckForNat(t *testing.T) {
 				chain = c
 			}
 		}
-		assert.True(t, chainFound)
+		should.BeTrue(t, chainFound)
 		rules, err := c.GetRules(table, chain)
-		assert.Nil(t, err)
-		assert.Equal(t, 1, len(rules))
-		assert.Equal(t, &expr.Masq{
+		should.BeNil(t, err)
+		should.BeEqual(t, len(rules), 1)
+		should.BeEqual(t, rules[0].Exprs[0], &expr.Masq{
 			Random:      false,
 			FullyRandom: false,
 			Persistent:  false,
 			ToPorts:     false,
 			RegProtoMin: 0,
 			RegProtoMax: 0,
-		}, rules[0].Exprs[0])
+		})
 	})
 	t.Run("virtual subnet", func(t *testing.T) {
 		table := &nftables.Table{}
@@ -212,9 +212,9 @@ func TestCheckForNat(t *testing.T) {
 		network.Peers = []plexus.NetworkPeer{peer}
 		t.Log(self, network)
 		err = checkForNat(self, network)
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		tables, err := c.ListTables()
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		tableFound := false
 		for _, t := range tables {
 			if t.Name == "plexus" {
@@ -222,9 +222,9 @@ func TestCheckForNat(t *testing.T) {
 				table = t
 			}
 		}
-		assert.True(t, tableFound)
+		should.BeTrue(t, tableFound)
 		chains, err := c.ListChains()
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		chainFound := false
 		for _, c := range chains {
 			if c.Name == "plexus-subnet" {
@@ -232,22 +232,22 @@ func TestCheckForNat(t *testing.T) {
 				chain = c
 			}
 		}
-		assert.True(t, chainFound)
+		should.BeTrue(t, chainFound)
 		rules, err := c.GetRules(table, chain)
-		assert.Nil(t, err)
-		assert.Equal(t, 254, len(rules))
+		should.BeNil(t, err)
+		should.BeEqual(t, len(rules), 254)
 	})
 	cleanNat(t, c)
 }
 
 func cleanNat(t *testing.T, c *nftables.Conn) {
 	tables, err := c.ListTables()
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	for _, table := range tables {
 		if table.Name == "plexus" {
 			c.DelTable(table)
 			err := c.Flush()
-			assert.Nil(t, err)
+			should.BeNil(t, err)
 			break
 		}
 	}

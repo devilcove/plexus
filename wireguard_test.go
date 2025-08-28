@@ -6,22 +6,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/Kairum-Labs/should"
 	"github.com/vishvananda/netlink"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
 func TestNew(t *testing.T) {
 	user, err := user.Current()
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	if user.Uid != "0" {
 		t.Log("this test must be run as root")
 		t.Skip()
 	}
 	key, err := wgtypes.GeneratePrivateKey()
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	peerKey, err := wgtypes.ParseKey("uREcerxMksoD3K0dy1ciJDRGzGCJ8jvIzJ5r9jWApXY=")
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	port := 51820
 	keepalive := time.Second * 25
 	config := wgtypes.Config{
@@ -53,17 +53,17 @@ func TestNew(t *testing.T) {
 		},
 	}
 	wg := New("wgtest", 1420, address, config)
-	assert.Equal(t, "wgtest", wg.Attrs().Name)
-	assert.Equal(t, 1420, wg.Attrs().MTU)
+	should.BeEqual(t, wg.Attrs().Name, "wgtest")
+	should.BeEqual(t, wg.Attrs().MTU, 1420)
 	err = wg.Up()
-	assert.Nil(t, err)
-	assert.Equal(t, "wireguard", wg.Type())
+	should.BeNil(t, err)
+	should.BeEqual(t, wg.Type(), "wireguard")
 	link, err := netlink.LinkByName(wg.Name)
-	assert.Nil(t, err)
-	assert.Equal(t, link.Attrs().Index, wg.Attrs().Index)
+	should.BeNil(t, err)
+	should.BeEqual(t, wg.Attrs().Index, link.Attrs().Index)
 	routes, err := netlink.RouteGet(net.ParseIP("10.100.10.10"))
-	assert.Nil(t, err)
-	assert.Equal(t, wg.Attrs().Index, routes[0].LinkIndex)
+	should.BeNil(t, err)
+	should.BeEqual(t, routes[0].LinkIndex, wg.Attrs().Index)
 	err = wg.Down()
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 }

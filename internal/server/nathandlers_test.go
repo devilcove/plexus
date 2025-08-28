@@ -4,14 +4,14 @@ import (
 	"net"
 	"testing"
 
+	"github.com/Kairum-Labs/should"
 	"github.com/c-robinson/iplib"
 	"github.com/devilcove/plexus"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestGetNextIP(t *testing.T) {
 	_, cidr, err := net.ParseCIDR("192.168.0.10/24")
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	network := plexus.Network{
 		Net: *cidr,
 	}
@@ -37,7 +37,7 @@ func TestGetNextIP(t *testing.T) {
 	}
 	network.Peers = peers
 	ip, err := getNextIP(network)
-	assert.Nil(t, err)
-	assert.Equal(t, 0, iplib.CompareIPs(ip, net.ParseIP("192.168.0.3")))
+	should.BeNil(t, err)
+	should.BeEqual(t, iplib.CompareIPs(ip, net.ParseIP("192.168.0.3")), 0)
 	t.Log(ip)
 }

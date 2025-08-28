@@ -10,9 +10,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Kairum-Labs/should"
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestDisplayAddNetwork(t *testing.T) {
@@ -21,18 +21,18 @@ func TestDisplayAddNetwork(t *testing.T) {
 		Password: "world",
 	}
 	err := createTestUser(user)
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	cookie, err := testLogin(user)
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	req, err := http.NewRequest(http.MethodGet, "/networks/add", nil)
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	req.AddCookie(cookie)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusOK, w.Code)
+	should.BeEqual(t, w.Code, http.StatusOK)
 	body, err := io.ReadAll(w.Body)
-	assert.Nil(t, err)
-	assert.Contains(t, string(body), "<h1>Add Network</h1>")
+	should.BeNil(t, err)
+	should.ContainSubstring(t, string(body), "<h1>Add Network</h1>")
 }
 
 func TestAddNetwork(t *testing.T) {
@@ -41,19 +41,19 @@ func TestAddNetwork(t *testing.T) {
 		Password: "world",
 	}
 	err := createTestUser(user)
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	cookie, err := testLogin(user)
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	t.Run("emptydata", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodPost, "/networks/add", nil)
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req.AddCookie(cookie)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		should.BeEqual(t, w.Code, http.StatusBadRequest)
 		body, err := io.ReadAll(w.Body)
-		assert.Nil(t, err)
-		assert.Contains(t, string(body), "Error Processing Request:")
+		should.BeNil(t, err)
+		should.ContainSubstring(t, string(body), "Error Processing Request:")
 	})
 	t.Run("spacesNetworkName", func(t *testing.T) {
 		network := plexus.Network{
@@ -61,17 +61,17 @@ func TestAddNetwork(t *testing.T) {
 			AddressString: "10.10.10.0/24",
 		}
 		payload, err := json.Marshal(&network)
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req, err := http.NewRequest(http.MethodPost, "/networks/add", bytes.NewBuffer(payload))
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req.Header.Set("Content-Type", "application/json")
 		req.AddCookie(cookie)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		should.BeEqual(t, w.Code, http.StatusBadRequest)
 		body, err := io.ReadAll(w.Body)
-		assert.Nil(t, err)
-		assert.Contains(t, string(body), "Error Processing Request: invalid network name")
+		should.BeNil(t, err)
+		should.ContainSubstring(t, string(body), "Error Processing Request: invalid network name")
 	})
 	t.Run("upperCase", func(t *testing.T) {
 		network := plexus.Network{
@@ -79,17 +79,17 @@ func TestAddNetwork(t *testing.T) {
 			AddressString: "10.10.10.0/24",
 		}
 		payload, err := json.Marshal(&network)
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req, err := http.NewRequest(http.MethodPost, "/networks/add", bytes.NewBuffer(payload))
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req.Header.Set("Content-Type", "application/json")
 		req.AddCookie(cookie)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		should.BeEqual(t, w.Code, http.StatusBadRequest)
 		body, err := io.ReadAll(w.Body)
-		assert.Nil(t, err)
-		assert.Contains(t, string(body), "Error Processing Request: invalid network name")
+		should.BeNil(t, err)
+		should.ContainSubstring(t, string(body), "Error Processing Request: invalid network name")
 	})
 	t.Run("nameTooLong", func(t *testing.T) {
 		network := plexus.Network{
@@ -99,17 +99,17 @@ func TestAddNetwork(t *testing.T) {
 			network.Name += "A"
 		}
 		payload, err := json.Marshal(&network)
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req, err := http.NewRequest(http.MethodPost, "/networks/add", bytes.NewBuffer(payload))
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req.Header.Set("Content-Type", "application/json")
 		req.AddCookie(cookie)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		should.BeEqual(t, w.Code, http.StatusBadRequest)
 		body, err := io.ReadAll(w.Body)
-		assert.Nil(t, err)
-		assert.Contains(t, string(body), "Error Processing Request: invalid network name")
+		should.BeNil(t, err)
+		should.ContainSubstring(t, string(body), "Error Processing Request: invalid network name")
 	})
 	t.Run("invalidCIDR", func(t *testing.T) {
 		network := plexus.Network{
@@ -117,17 +117,17 @@ func TestAddNetwork(t *testing.T) {
 			AddressString: "10.10.10.0",
 		}
 		payload, err := json.Marshal(&network)
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req, err := http.NewRequest(http.MethodPost, "/networks/add", bytes.NewBuffer(payload))
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req.Header.Set("Content-Type", "application/json")
 		req.AddCookie(cookie)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		should.BeEqual(t, w.Code, http.StatusBadRequest)
 		body, err := io.ReadAll(w.Body)
-		assert.Nil(t, err)
-		assert.Contains(t, string(body), "Error Processing Request: invalid address for network")
+		should.BeNil(t, err)
+		should.ContainSubstring(t, string(body), "Error Processing Request: invalid address for network")
 	})
 	t.Run("normalizeCidr", func(t *testing.T) {
 		network := plexus.Network{
@@ -135,17 +135,17 @@ func TestAddNetwork(t *testing.T) {
 			AddressString: "10.10.20.100/24",
 		}
 		payload, err := json.Marshal(&network)
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req, err := http.NewRequest(http.MethodPost, "/networks/add", bytes.NewBuffer(payload))
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req.Header.Set("Content-Type", "application/json")
 		req.AddCookie(cookie)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusOK, w.Code)
+		should.BeEqual(t, w.Code, http.StatusOK)
 		body, err := io.ReadAll(w.Body)
-		assert.Nil(t, err)
-		assert.Contains(t, string(body), "<div id=\"error\" class=\"w3-red\"")
+		should.BeNil(t, err)
+		should.ContainSubstring(t, string(body), "<div id=\"error\" class=\"w3-red\"")
 	})
 
 	t.Run("duplicateCidr", func(t *testing.T) {
@@ -154,17 +154,17 @@ func TestAddNetwork(t *testing.T) {
 			AddressString: "10.10.20.100/24",
 		}
 		payload, err := json.Marshal(&network)
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req, err := http.NewRequest(http.MethodPost, "/networks/add", bytes.NewBuffer(payload))
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req.Header.Set("Content-Type", "application/json")
 		req.AddCookie(cookie)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		should.BeEqual(t, w.Code, http.StatusBadRequest)
 		body, err := io.ReadAll(w.Body)
-		assert.Nil(t, err)
-		assert.Contains(t, string(body), "network CIDR in use")
+		should.BeNil(t, err)
+		should.ContainSubstring(t, string(body), "network CIDR in use")
 	})
 	t.Run("addressNotPrivate", func(t *testing.T) {
 		network := plexus.Network{
@@ -172,17 +172,17 @@ func TestAddNetwork(t *testing.T) {
 			AddressString: "8.8.8.0/24",
 		}
 		payload, err := json.Marshal(&network)
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req, err := http.NewRequest(http.MethodPost, "/networks/add", bytes.NewBuffer(payload))
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req.Header.Set("Content-Type", "application/json")
 		req.AddCookie(cookie)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		should.BeEqual(t, w.Code, http.StatusBadRequest)
 		body, err := io.ReadAll(w.Body)
-		assert.Nil(t, err)
-		assert.Contains(t, string(body), "Error Processing Request: network address is not private")
+		should.BeNil(t, err)
+		should.ContainSubstring(t, string(body), "Error Processing Request: network address is not private")
 	})
 	t.Run("valid", func(t *testing.T) {
 		network := plexus.Network{
@@ -190,17 +190,17 @@ func TestAddNetwork(t *testing.T) {
 			AddressString: "10.10.10.0/24",
 		}
 		payload, err := json.Marshal(&network)
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req, err := http.NewRequest(http.MethodPost, "/networks/add", bytes.NewBuffer(payload))
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req.Header.Set("Content-Type", "application/json")
 		req.AddCookie(cookie)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusOK, w.Code)
+		should.BeEqual(t, w.Code, http.StatusOK)
 		body, err := io.ReadAll(w.Body)
-		assert.Nil(t, err)
-		assert.Contains(t, string(body), "<div id=\"error\" class=\"w3-red\"")
+		should.BeNil(t, err)
+		should.ContainSubstring(t, string(body), "<div id=\"error\" class=\"w3-red\"")
 	})
 	t.Run("duplicateName", func(t *testing.T) {
 		network := plexus.Network{
@@ -208,20 +208,20 @@ func TestAddNetwork(t *testing.T) {
 			AddressString: "10.10.10.0/24",
 		}
 		payload, err := json.Marshal(&network)
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req, err := http.NewRequest(http.MethodPost, "/networks/add", bytes.NewBuffer(payload))
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req.Header.Set("Content-Type", "application/json")
 		req.AddCookie(cookie)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		should.BeEqual(t, w.Code, http.StatusBadRequest)
 		body, err := io.ReadAll(w.Body)
-		assert.Nil(t, err)
-		assert.Contains(t, string(body), "Error Processing Request: network name exists")
+		should.BeNil(t, err)
+		should.ContainSubstring(t, string(body), "Error Processing Request: network name exists")
 	})
 	err = deleteAllNetworks()
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 }
 
 func TestDeleteNetwork(t *testing.T) {
@@ -231,35 +231,35 @@ func TestDeleteNetwork(t *testing.T) {
 		Password: "world",
 	}
 	err := createTestUser(user)
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	cookie, err := testLogin(user)
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	t.Run("nosuchnetwork", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodDelete, "/networks/network", nil)
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req.AddCookie(cookie)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		should.BeEqual(t, w.Code, http.StatusBadRequest)
 		body, err := io.ReadAll(w.Body)
-		assert.Nil(t, err)
-		assert.Contains(t, string(body), "network does not exist")
+		should.BeNil(t, err)
+		should.ContainSubstring(t, string(body), "network does not exist")
 	})
 	t.Run("existingNetwork", func(t *testing.T) {
 		err := createTestNetwork(cookie)
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req, err := http.NewRequest(http.MethodDelete, "/networks/valid", nil)
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req.AddCookie(cookie)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusOK, w.Code)
+		should.BeEqual(t, w.Code, http.StatusOK)
 		body, err := io.ReadAll(w.Body)
-		assert.Nil(t, err)
-		assert.Contains(t, string(body), "<div id=\"error\" class=\"w3-red\"")
+		should.BeNil(t, err)
+		should.ContainSubstring(t, string(body), "<div id=\"error\" class=\"w3-red\"")
 	})
 	err = deleteAllNetworks()
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 }
 
 func deleteAllNetworks() error {
