@@ -13,10 +13,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Kairum-Labs/should"
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
 	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
 )
 
 var router *gin.Engine
@@ -50,60 +50,60 @@ func TestMain(m *testing.M) {
 
 func TestDisplayMainPage(t *testing.T) {
 	req, err := http.NewRequest(http.MethodGet, "/", nil)
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 	body, err := io.ReadAll(w.Body)
-	assert.Nil(t, err)
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, string(body), "<title>Plexus</title>")
+	should.BeNil(t, err)
+	should.BeEqual(t, w.Code, http.StatusOK)
+	should.ContainSubstring(t, string(body), "<title>Plexus</title>")
 }
 
 func TestGetPage(t *testing.T) {
 	// no user
 	page := getPage("someone")
-	assert.Equal(t, version, page.Version)
+	should.BeEqual(t, page.Version, version)
 }
 
 func TestLogin(t *testing.T) {
 	err := deleteAllUsers(true)
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	t.Run("nousers", func(t *testing.T) {
 		form := url.Values{}
 		form.Add("username", "admin")
 		form.Add("password", "testing")
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req, err := http.NewRequest(http.MethodPost, "/", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		should.BeEqual(t, w.Code, http.StatusBadRequest)
 		body, err := io.ReadAll(w.Body)
-		assert.Nil(t, err)
-		assert.Contains(t, string(body), "invalid user")
+		should.BeNil(t, err)
+		should.ContainSubstring(t, string(body), "invalid user")
 	})
 	err = createTestUser(plexus.User{
 		Username: "testing",
 		Password: "testing",
 	})
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	t.Run("wronguser", func(t *testing.T) {
 		user := plexus.User{
 			Username: "admin",
 			Password: "testing",
 		}
 		payload, err := json.Marshal(&user)
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req, err := http.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
 		req.Header.Set("Content-Type", "application/json")
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		should.BeEqual(t, w.Code, http.StatusBadRequest)
 		body, err := io.ReadAll(w.Body)
-		assert.Nil(t, err)
-		assert.Contains(t, string(body), "invalid user")
+		should.BeNil(t, err)
+		should.ContainSubstring(t, string(body), "invalid user")
 	})
 	t.Run("wrongpass", func(t *testing.T) {
 		user := plexus.User{
@@ -111,16 +111,16 @@ func TestLogin(t *testing.T) {
 			Password: "testing2",
 		}
 		payload, err := json.Marshal(&user)
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req, err := http.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
 		req.Header.Set("Content-Type", "application/json")
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		should.BeEqual(t, w.Code, http.StatusBadRequest)
 		body, err := io.ReadAll(w.Body)
-		assert.Nil(t, err)
-		assert.Contains(t, string(body), "invalid user")
+		should.BeNil(t, err)
+		should.ContainSubstring(t, string(body), "invalid user")
 	})
 	t.Run("valid", func(t *testing.T) {
 		user := plexus.User{
@@ -128,27 +128,27 @@ func TestLogin(t *testing.T) {
 			Password: "testing",
 		}
 		payload, err := json.Marshal(&user)
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		req, err := http.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
 		req.Header.Set("Content-Type", "application/json")
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusOK, w.Code)
+		should.BeEqual(t, w.Code, http.StatusOK)
 		body, err := io.ReadAll(w.Body)
-		assert.Nil(t, err)
-		assert.Contains(t, string(body), "<title>Plexus</title>")
-		assert.NotNil(t, w.Result().Cookies())
+		should.BeNil(t, err)
+		should.ContainSubstring(t, string(body), "<title>Plexus</title>")
+		should.NotBeNil(t, w.Result().Cookies())
 	})
 }
 
 func TestLogout(t *testing.T) {
 	w := httptest.NewRecorder()
 	req, err := http.NewRequest(http.MethodGet, "/logout", nil)
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	router.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Equal(t, []*http.Cookie{}, w.Result().Cookies())
+	should.BeEqual(t, w.Code, http.StatusOK)
+	should.BeEqual(t, w.Result().Cookies(), []*http.Cookie{})
 }
 
 func deleteAllUsers(deleteAll bool) (errs error) {

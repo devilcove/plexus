@@ -6,49 +6,49 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Kairum-Labs/should"
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestDefaultUser(t *testing.T) {
 	t.Run("noadmim", func(t *testing.T) {
 		err := deleteAllUsers(true)
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		err = checkDefaultUser("admin", "pass")
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		user, err := boltdb.Get[plexus.User]("admin", userTable)
-		assert.Nil(t, err)
-		assert.Equal(t, "admin", user.Username)
-		assert.Equal(t, true, user.IsAdmin)
+		should.BeNil(t, err)
+		should.BeEqual(t, user.Username, "admin")
+		should.BeTrue(t, user.IsAdmin)
 	})
 	t.Run("env", func(t *testing.T) {
 		err := deleteAllUsers(true)
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		err = checkDefaultUser("Administrator", "password")
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		user, err := boltdb.Get[plexus.User]("Administrator", userTable)
-		assert.Nil(t, err)
-		assert.Equal(t, "Administrator", user.Username)
-		assert.Equal(t, true, user.IsAdmin)
+		should.BeNil(t, err)
+		should.BeEqual(t, user.Username, "Administrator")
+		should.BeTrue(t, user.IsAdmin)
 	})
 	t.Run("adminexists", func(t *testing.T) {
 		err := checkDefaultUser("Administator", "password")
-		assert.Nil(t, err)
+		should.BeNil(t, err)
 		user, err := boltdb.Get[plexus.User]("Administrator", userTable)
-		assert.Nil(t, err)
-		assert.Equal(t, "Administrator", user.Username)
-		assert.Equal(t, true, user.IsAdmin)
+		should.BeNil(t, err)
+		should.BeEqual(t, user.Username, "Administrator")
+		should.BeTrue(t, user.IsAdmin)
 	})
 }
 
 func TestAuthFail(t *testing.T) {
 	req, err := http.NewRequest(http.MethodGet, "/server/", nil)
-	assert.Nil(t, err)
+	should.BeNil(t, err)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusOK, w.Code)
+	should.BeEqual(t, w.Code, http.StatusOK)
 	body, err := io.ReadAll(w.Body)
-	assert.Nil(t, err)
-	assert.Contains(t, string(body), "<h1>Login</h1")
+	should.BeNil(t, err)
+	should.ContainSubstring(t, string(body), "<h1>Login</h1")
 }

@@ -3,7 +3,7 @@ package server
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/Kairum-Labs/should"
 )
 
 func Test_emailValid(t *testing.T) {
@@ -32,7 +32,7 @@ func Test_emailValid(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Log(tt.name, tt.args, tt.want)
 			good := emailValid(tt.args)
-			assert.Equal(t, tt.want, good)
+			should.BeEqual(t, good, tt.want)
 		})
 	}
 }
