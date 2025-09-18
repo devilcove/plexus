@@ -46,7 +46,7 @@ func TestAddNAT(t *testing.T) {
 	rules, err := c.GetRules(table, chain)
 	should.BeNil(t, err)
 	should.BeEqual(t, len(rules), 1)
-	should.BeEqual[any](t, rules[0].Exprs[0], &expr.Masq{
+	should.BeEqual(t, rules[0].Exprs[0], &expr.Masq{
 		Random:      false,
 		FullyRandom: false,
 		Persistent:  false,
@@ -191,7 +191,7 @@ func TestCheckForNat(t *testing.T) {
 		rules, err := c.GetRules(table, chain)
 		should.BeNil(t, err)
 		should.BeEqual(t, len(rules), 1)
-		should.BeEqual[any](t, rules[0].Exprs[0], &expr.Masq{
+		should.BeEqual(t, rules[0].Exprs[0], &expr.Masq{
 			Random:      false,
 			FullyRandom: false,
 			Persistent:  false,
