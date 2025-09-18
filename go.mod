@@ -3,7 +3,7 @@ module github.com/devilcove/plexus
 go 1.24.6
 
 require (
-	github.com/Kairum-Labs/should v0.2.0
+	github.com/Kairum-Labs/should v0.2.1
 	github.com/c-robinson/iplib v1.0.8
 	github.com/caddyserver/certmagic v0.25.0
 	github.com/devilcove/boltdb v0.1.7
