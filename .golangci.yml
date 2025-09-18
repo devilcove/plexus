@@ -17,9 +17,6 @@ linters:
     - noctx
     - noinlineerr
     - paralleltest
-    - tagalign
-    - tagliatelle
-    - testifylint
     - testpackage
     - thelper
     - wrapcheck

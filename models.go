@@ -47,8 +47,8 @@ type MessageResponse struct {
 }
 
 type User struct {
-	Username string `json:"username" form:"username"`
-	Password string `json:"password" form:"password"`
+	Username string `form:"username" json:"username"`
+	Password string `form:"password" json:"password"`
 	IsAdmin  bool
 	Updated  time.Time
 }
