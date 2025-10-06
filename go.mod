@@ -14,7 +14,7 @@ require (
 	github.com/kr/pretty v0.3.1
 	github.com/lmittmann/tint v1.1.2
 	github.com/nats-io/nats-server/v2 v2.12.0
-	github.com/nats-io/nats.go v1.46.0
+	github.com/nats-io/nats.go v1.46.1
 	github.com/nats-io/nkeys v0.4.11
 	github.com/pion/stun v0.6.1
 	github.com/spf13/cobra v1.10.1
