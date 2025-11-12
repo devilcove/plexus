@@ -50,7 +50,7 @@ var statusCmd = &cobra.Command{
 			return
 		}
 		color.Green("Server")
-		var colour func(a ...interface{}) string
+		var colour func(a ...any) string
 		if status.Connected {
 			colour = color.New(color.FgGreen).SprintFunc()
 		} else {
