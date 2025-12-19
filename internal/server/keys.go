@@ -8,41 +8,54 @@ import (
 	"net/http"
 	"regexp"
 	"slices"
+	"strconv"
 	"time"
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-gonic/gin"
 	"github.com/nats-io/nkeys"
 )
 
-func displayCreateKey(c *gin.Context) {
-	session := sessions.Default(c)
-	page := getPage(session.Get("user"))
+func displayCreateKey(w http.ResponseWriter, r *http.Request) {
+	session := GetSession(w, r)
+	if session == nil {
+		displayLogin(w, r)
+		return
+	}
+	page := getPage(session.User)
 	page.Page = "addKey"
-	c.HTML(http.StatusOK, "addKey", page)
+	if err := templates.ExecuteTemplate(w, "addKey", page); err != nil {
+		slog.Error("execute template", "template", "addKey", "page", page, "error", err)
+	}
 }
 
-func addKey(c *gin.Context) {
-	var err error
-	key := plexus.Key{}
-	if err := c.Bind(&key); err != nil {
-		processError(c, http.StatusBadRequest, "invalid key data")
+func addKey(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		processError(w, http.StatusBadRequest, "invalid form")
 		return
+	}
+	var err error
+	usage, err := strconv.Atoi(r.FormValue("usage"))
+	if err != nil {
+		usage = 1
+	}
+	key := plexus.Key{
+		Name:    r.FormValue("name"),
+		Usage:   usage,
+		DispExp: r.FormValue("expires"),
 	}
 	key.Expires, err = time.Parse("2006-01-02", key.DispExp)
 	if err != nil {
-		processError(c, http.StatusBadRequest, "invalid key "+err.Error())
+		processError(w, http.StatusBadRequest, "invalid key "+err.Error())
 		return
 	}
 	if err := validateKey(key); err != nil {
-		processError(c, http.StatusBadRequest, "invalid key "+err.Error())
+		processError(w, http.StatusBadRequest, "invalid key "+err.Error())
 		return
 	}
 	key.Value, err = newValue(key.Name)
 	if err != nil {
-		processError(c, http.StatusInternalServerError, "unable to encode key"+err.Error())
+		processError(w, http.StatusInternalServerError, "unable to encode key"+err.Error())
 		return
 	}
 	newDevice <- key.Value
@@ -54,41 +67,43 @@ func addKey(c *gin.Context) {
 	}
 	existing, err := boltdb.Get[plexus.Key](key.Name, keyTable)
 	if err != nil && !errors.Is(err, boltdb.ErrNoResults) {
-		processError(c, http.StatusInternalServerError, "retrieve key"+err.Error())
+		processError(w, http.StatusInternalServerError, "retrieve key"+err.Error())
 		return
 	}
 	if existing.Name != "" {
-		processError(c, http.StatusBadRequest, "key exists with name:"+existing.Name)
+		processError(w, http.StatusBadRequest, "key exists with name:"+existing.Name)
 		return
 	}
 	if err := boltdb.Save(key, key.Name, keyTable); err != nil {
-		processError(c, http.StatusInternalServerError, "saving key "+err.Error())
+		processError(w, http.StatusInternalServerError, "saving key "+err.Error())
 		return
 	}
-	displayKeys(c)
+	displayKeys(w, r)
 }
 
-func displayKeys(c *gin.Context) {
+func displayKeys(w http.ResponseWriter, r *http.Request) {
 	keys, err := boltdb.GetAll[plexus.Key](keyTable)
 	if err != nil {
-		processError(c, http.StatusInternalServerError, err.Error())
+		processError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	c.HTML(http.StatusOK, keyTable, keys)
+	if err := templates.ExecuteTemplate(w, keyTable, keys); err != nil {
+		slog.Error("execute template", "template", keyTable, "keys", keys, "error", err)
+	}
 }
 
-func deleteKey(c *gin.Context) {
-	keyid := c.Param("id")
+func deleteKey(w http.ResponseWriter, r *http.Request) {
+	keyid := r.PathValue("id")
 	key, err := boltdb.Get[plexus.Key](keyid, keyTable)
 	if err != nil {
-		processError(c, http.StatusBadRequest, "key does not exist")
+		processError(w, http.StatusBadRequest, "key does not exist")
 		return
 	}
 	if err := removeKey(key); err != nil {
-		processError(c, http.StatusInternalServerError, "delete key "+err.Error())
+		processError(w, http.StatusInternalServerError, "delete key "+err.Error())
 		return
 	}
-	displayKeys(c)
+	displayKeys(w, r)
 }
 
 func validateKey(key plexus.Key) error {

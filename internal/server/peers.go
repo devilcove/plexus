@@ -10,15 +10,14 @@ import (
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
 	"github.com/devilcove/plexus/internal/publish"
-	"github.com/gin-gonic/gin"
 	"github.com/nats-io/nats-server/v2/server"
 )
 
-func displayPeers(c *gin.Context) {
+func displayPeers(w http.ResponseWriter, r *http.Request) {
 	displayPeers := []plexus.Peer{}
 	peers, err := boltdb.GetAll[plexus.Peer](peerTable)
 	if err != nil {
-		processError(c, http.StatusInternalServerError, err.Error())
+		processError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	// set Status for display
@@ -28,28 +27,32 @@ func displayPeers(c *gin.Context) {
 		}
 		displayPeers = append(displayPeers, peer)
 	}
-	c.HTML(http.StatusOK, peerTable, displayPeers)
+	if err := templates.ExecuteTemplate(w, peerTable, displayPeers); err != nil {
+		slog.Error("template execute", "template", peerTable, "data", displayPeers, "error", err)
+	}
 }
 
-func peerDetails(c *gin.Context) {
-	id := c.Param("id")
+func peerDetails(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
 	peer, err := boltdb.Get[plexus.Peer](id, peerTable)
 	if err != nil {
-		processError(c, http.StatusInternalServerError, err.Error())
+		processError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	c.HTML(http.StatusOK, "peerDetails", peer)
+	if err := templates.ExecuteTemplate(w, "peerDetails", peer); err != nil {
+		slog.Error("template execute", "template", "peerDetails", "data", peer, "error", err)
+	}
 }
 
-func deletePeer(c *gin.Context) {
-	id := c.Param("id")
+func deletePeer(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
 	peer, err := discardPeer(id)
 	if err != nil {
-		processError(c, http.StatusBadRequest, id+" "+err.Error())
+		processError(w, http.StatusBadRequest, id+" "+err.Error())
 		return
 	}
 	deletePeerFromBroker(peer.PubNkey)
-	displayPeers(c)
+	displayPeers(w, r)
 }
 
 func discardPeer(id string) (plexus.Peer, error) {

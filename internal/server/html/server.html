@@ -7,8 +7,10 @@
 <select class="w3-select" style="width: 200px;" name="level">
     <option value="" disabled selected>Select new log level</option>
     <option value="error" hx-post="/server/logs/error" hx-target="#content" hx-target-error="#error">Error</option>
-    <option value="warn" hx-post="/server/logs/warn" hx-target="#content" hx-target-error="#error">Warn</option>
-    <option value="info" hx-post="/server/logs/info" hx-target="#content" hx-target-error="#error">Info</option>
+    <option value="warn" hx-post="/server/logs/warn" hx-target="#content" hx-target-error="#error">
+        Warn</option>
+    <option value="info" hx-post="/server/logs/info" hx-target="#content" hx-target-error="#error">
+        Info</option>
     <option value="debug" hx-post="/server/logs/debug" hx-target="#content" hx-target-error="#error">Debug</option>
 </select>
 {{range .Logs}}

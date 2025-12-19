@@ -46,7 +46,7 @@ var (
 	ErrSubnetInUse   = errors.New("subnet in use")
 	sessionAge       = 60 * 60 * 24
 	version          = "v0.2.3"
-	path             = "/var/lib/plexus/"
+	path             = "/tmp/plexus/"
 )
 
 const (
@@ -95,7 +95,7 @@ func configureServer() (*tls.Config, error) {
 	if err := os.MkdirAll(config.DBPath, os.ModePerm); err != nil {
 		return nil, err
 	}
-	slog.Info("init db", "path", config.DBFile, "file", config.DBFile, "tables", config.Tables)
+	slog.Info("init db", "path", config.DBPath, "file", config.DBFile, "tables", config.Tables)
 	if err := boltdb.Initialize(config.DBPath+config.DBFile, config.Tables); err != nil {
 		return nil, fmt.Errorf("init database %w", err)
 	}

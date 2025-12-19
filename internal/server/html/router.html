@@ -3,8 +3,8 @@
 <div id="error" class="red"></div>
 <h2>Network: {{.Network}}</h2>
 <h2>Create Subnet Router</h2>
-<form class="w3-container w3-card4" hx-post="/networks/router/{{.Network}}/{{.Router}}"
-    hx-target="#content" hx-target-error="#error">
+<form class="w3-container w3-card4" hx-post="/networks/router/{{.Network}}/{{.Router}}" hx-target="#content"
+    hx-target-error="#error">
     <label>Subnet CIDR</label>
     <input class="w3-input" type="text" name="cidr" required style="width:50%"><br>
     <h3>Nat</h3>
@@ -14,14 +14,14 @@
     <input class="w3-radio" type="radio" name="nat" value="nat"
         onclick="document.getElementById('vcidr').disabled=true">
     <label>Masquerade (peer is not default router for subnet)</label><br>
-    <input class="w3-radio" type="radio" name="nat" value="virt" 
+    <input class="w3-radio" type="radio" name="nat" value="virt"
         onclick="document.getElementById('vcidr').disabled=false">
     <label>Use Virtual Subnet (subnet overlaps with another subnet)</label><br>
     <label>Virtual CIDR</label><br>
     <input id="vcidr" class="w3-input" type="text" name="vcidr" disabled style="width:50%">
     <p>
-        <button class="w3-button w3-theme-dark w3-padding large" type="button" 
-            hx-get="/networks/{{.Network}}/" hx-target="#content" hx-target-error="#error">
+        <button class="w3-button w3-theme-dark w3-padding large" type="button" hx-get="/networks/{{.Network}}/"
+            hx-target="#content" hx-target-error="#error">
             Cancel</button>
         <button class="w3-button w3-theme-dark" type="reset">Reset</button>
         <button class="W3-button w3-theme-dark" type="submit">Add</button>

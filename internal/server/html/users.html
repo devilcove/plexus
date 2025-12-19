@@ -61,13 +61,13 @@
 <h1>New User</h1>
 <form name="newUser" hx-post="/users/add" hx-target="#content" hx-target-error="#error" onsubmit="return valPass()">
     <label for="username">Username</label><br>
-    <input type="text" placeholder="enter username" name="Username" required><br>
+    <input type="text" placeholder="enter username" name="username" required><br>
     <label for="pass">Password</label><br>
-    <input type="password" placeholder="enter password" name="Password" required><br>
+    <input type="password" placeholder="enter password" name="password" required><br>
     <label for="verify">Verify Password</label><br>
-    <input type="password" placeholder="enter password" name="Verify" required><br>
+    <input type="password" placeholder="enter password" name="verify" required><br>
     <label for="admin">Admin</label><br>
-    <input type="checkbox" name="Admin"><br>
+    <input type="checkbox" name="admin"><br>
     <p><button class="w3-button" type="button" hx-get="/users/" hx-target="#content">Cancel</button>
         <button class="w3-button w3-theme-dark" type="reset">Reset</button>
         <button class="w3-button w3-theme-dark" type="submit">Create</button>
@@ -75,8 +75,8 @@
 </form>
 <script>
     function valPass() {
-        var x = document.forms["newUser"]["Password"].value;
-        var y = document.forms["newUser"]["Verify"].value;
+        var x = document.forms["newUser"]["password"].value;
+        var y = document.forms["newUser"]["verify"].value;
         console.log(x, y)
         if (x != y) {
             alert("password are not the same");

@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"log/slog"
 	"net/http"
 	"os"
@@ -12,10 +11,11 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
-	"github.com/gin-gonic/gin"
+	"github.com/mattkasun/tools/logging"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 )
@@ -86,42 +86,46 @@ func start(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 func web(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 	defer wg.Done()
 	slog.Info("Starting web server...")
-	router := setupRouter()
-	server := http.Server{
-		Addr:    ":" + config.Port,
-		Handler: router,
-	}
-	if config.Secure {
-		if tls == nil {
-			slog.Error("secure set but tls nil")
-			webfail <- 1
-		}
-		server.TLSConfig = tls
-		server.Addr = ":443"
-		go func() {
-			if err := server.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				slog.Error("https server", "error", err)
-				webfail <- 1
-			}
-		}()
-	} else {
-		go func() {
-			if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				slog.Error("http server", "error", err)
-				webfail <- 1
-			}
-		}()
-	}
+	router := setupRouter(logging.TextLogger(logging.TruncateSource(), logging.TimeFormat(time.DateTime)).Logger)
+	// server := http.Server{
+	// 	Addr:    ":" + config.Port,
+	// 	Handler: router,
+	// }
+	// if config.Secure {
+	// 	if tls == nil {
+	// 		slog.Error("secure set but tls nil")
+	// 		webfail <- 1
+	// 	}
+	// 	server.TLSConfig = tls
+	// 	server.Addr = ":443"
+	// 	go func() {
+	// 		if err := server.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	// 			slog.Error("https server", "error", err)
+	// 			webfail <- 1
+	// 		}
+	// 	}()
+	// } else {
+	// 	go func() {
+	// 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	// 			slog.Error("http server", "error", err)
+	// 			webfail <- 1
+	// 		}
+	// 	}()
+	// }
+
+	go func() {
+		router.Run(":8090")
+	}()
 	slog.Info("web server started")
 	<-ctx.Done()
 	slog.Info("shutting down web server")
-	if err := server.Shutdown(ctx); err != nil {
-		slog.Error("http server shutdown", "error", err.Error())
-	}
+	//if err := server.Shutdown(ctx); err != nil {
+	//slog.Error("http server shutdown", "error", err.Error())
+	//}
 	slog.Info("http server shutdown")
 }
 
-func getServer(c *gin.Context) {
+func getServer(w http.ResponseWriter, r *http.Request) {
 	server := struct {
 		LogLevel string
 		Logs     []string
@@ -135,11 +139,13 @@ func getServer(c *gin.Context) {
 	}
 	logs := string(out)
 	server.Logs = strings.Split(logs, "\n")
-	c.HTML(http.StatusOK, "server", server)
+	if err := templates.ExecuteTemplate(w, "server", server); err != nil {
+		slog.Error("execute template", "template", "server", "data", server, "error", err)
+	}
 }
 
-func setLogLevel(c *gin.Context) {
-	config.Verbosity = c.Param("level")
+func setLogLevel(w http.ResponseWriter, r *http.Request) {
+	config.Verbosity = r.PathValue("level")
 	plexus.SetLogging(config.Verbosity)
-	getServer(c)
+	getServer(w, r)
 }

@@ -6,7 +6,7 @@
     <title>Plexus</title>
     <link rel="icon" href:="/images/icon.svg" type="image/x-icon">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css" type="text/css">
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/5/w3.css" type="text/css">
     <link rel="stylesheet" href="https://www.w3schools.com/lib/w3-theme-{{.Theme}}.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family={{.Font}}">
     <link rel="stylesheet" href="/assets/css/fontawesome.min.css">
@@ -15,7 +15,7 @@
     <script src="https://unpkg.com/htmx.org@1.9.9"
         integrity="sha384-QFjmbokDn2DjBjq+fM+8LUIVrAgqcNW2s0PjAxHETgRn9l4fvX31ZxDxvwQnyMOX"
         crossorigin="anonymous"></script>
-    <script src="https://unpkg.com/htmx.org/dist/ext/response-targets.js"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/response-targets.js"> </script>
     <style>
         body,
         h1,
@@ -50,52 +50,62 @@
             text-align: left;
             padding: 10px, 10px;
         }
+
         .grid6 {
             display: grid;
             grid-template-columns: auto auto auto auto auto auto;
             gap: 10px;
             padding: 10px;
         }
+
         .grid6>div {
             text-align: left;
             padding: 10px, 10px;
         }
+
         .grid5 {
             display: grid;
             grid-template-columns: auto auto auto auto auto;
             gap: 10px;
             padding: 10px;
         }
-        .grid5>div {
+
+        templates .grid5>div {
             text-align: left;
             padding: 10px, 10px;
         }
+
         .grid4 {
             display: grid;
             grid-template-columns: auto auto auto auto;
             gap: 10px;
             padding: 10px;
         }
+
         .grid4>div {
             text-align: left;
             padding: 10px, 10px;
         }
+
         .grid3 {
             display: grid;
             grid-template-columns: auto auto auto;
             gap: 10px;
             padding: 10px;
         }
+
         .grid3>div {
             text-align: left;
             padding: 10px, 10px;
         }
+
         .grid2 {
             display: grid;
             grid-template-columns: auto auto;
             gap: 10px;
             padding: 10px;
         }
+
         .grid2>div {
             text-align: left;
             padding: 10px, 10px;
@@ -104,16 +114,13 @@
 </head>
 
 <body class="w3-theme-dark" id="main">
-    <div hx-ext="response-targets">
-        {{if (eq .NeedsLogin true)}}
-        {{template "login"}}
-        {{else}}
-        {{template "header"}}
-        {{template "about" . }}
-        {{template "sidebar" .Networks}}
-        <div id="content" class="w3-container w3-theme-dark w3-padding" style="margin-left:15%; margin-right:15%">
-        </div>
-        {{end}}
+    {{template "header"}}
+    <div class="w3-container w3-center w3-theme-dark w3-padding">
+        <div id="error" class="w3-red"></div>
+        <br>
+    </div>
+    {{template "content" .}}
+    {{template "about" . }}
     </div>
 </body>
 

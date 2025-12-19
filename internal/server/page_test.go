@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -15,11 +16,11 @@ import (
 
 	"github.com/Kairum-Labs/should"
 	"github.com/devilcove/boltdb"
+	"github.com/devilcove/mux"
 	"github.com/devilcove/plexus"
-	"github.com/gin-gonic/gin"
 )
 
-var router *gin.Engine
+var router *mux.Router
 
 func TestMain(m *testing.M) {
 	if _, err := os.Stat("./test.db"); err == nil {
@@ -40,7 +41,7 @@ func TestMain(m *testing.M) {
 	// 	wg.Add(1)
 	// 	go broker(ctx, wg, nil)
 	plexus.SetLogging("debug")
-	router = setupRouter()
+	router = setupRouter(slog.Default())
 	code := m.Run()
 	// 	cancel()
 	// 	wg.Wait()

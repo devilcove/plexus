@@ -67,7 +67,7 @@ func broker(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 		return adminKey.Sign(nonce)
 	}
 	opts := []nats.Option{nats.Nkey(adminPublicKey, SignatureCB)}
-	natsConn, err = nats.Connect(net.JoinHostPort("nats://"+config.FQDN, "4222"), opts...)
+	natsConn, err = nats.Connect("nats://"+net.JoinHostPort(config.FQDN, "4222"), opts...)
 	if err != nil {
 		slog.Error("nats connect", "error", err)
 		brokerfail <- 1

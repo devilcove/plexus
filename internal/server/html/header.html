@@ -1,12 +1,12 @@
 {{define "header"}}
 <header class="w3-theme-d5 w3-bar w3-hide-small">
-        <a class="w3-bar-item w3-button w3-hover-black" href="/">
-            <img src="images/plexus.svg" alt="Plexus" height="75"></a>
-        <div id="userDropdown" class="w3-bar-item w3-button w3-right">
-            <details>
-                <summary><i class="fa fa-user">User</i></summary>
-                <a hx-get="/logout" hx-target="#content" class="w3-bar-item w3-button">Logout</a>
-            </details>
-        </div>
+    <a class="w3-bar-item w3-button w3-hover-black" href="/">
+        <img src="images/plexus.svg" alt="Plexus" height="75"></a>
+    <div id="userDropdown" class="w3-bar-item w3-button w3-right">
+        <details>
+            <summary><i class="fa fa-user">User</i></summary>
+            <a hx-get="/logout" hx-target="#main" class="w3-bar-item w3-button">Logout</a>
+        </details>
+    </div>
 </header>
 {{end}}

@@ -1,25 +1,21 @@
 {{define "content"}}
 {{if (eq .NeedsLogin true)}}
 {{template "login" .}}
-{{ else if (eq .Page "addNetwork")}}
-{{template "addNetwork"}}
-{{ else if (eq .Page "networks")}}
-{{template "networks" . }}
-{{ else if (eq .Page "peers")}}
-{{template "peers" . }}
-{{ else if (eq .Page "keys")}}
-{{template "keys" . }}
-{{ else if (eq .Page "users")}}
-{{template "users" . }}
-{{ else if (eq .Page "settings")}}
-{{template "settings" . }}
+
 {{ else }}
-<div id="content">
-    <div class="w3-container w3-center w3-theme-dark w3-padding">
-        <div id="error" class="w3-red"></div>
-        <br>
-    </div>
-    {{template "sidebar" .Networks}}
+{{template "sidebar" .Networks}}
+<div id="content" style="margin-left:25%">
+    {{ if (eq .Page "addNetwork")}}
+    {{template "addNetwork"}}
+    {{ else if (eq .Page "networks")}}
+    {{template "networks" . }}
+    {{ else if (eq .Page "peers")}}
+    {{template "peers" . }}
+    {{ else if (eq .Page "keys")}}
+    {{template "keys" . }}
+    {{ else if (eq .Page "users")}}
+    {{template "users" . }}
+    {{end}}
 </div>
 {{end}}
 {{end}}

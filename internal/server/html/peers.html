@@ -73,14 +73,14 @@
     <div class="w3-theme-l1">Is Subnet Router</div>
     <div>{{.IsSubnetRouter}}</div>
     {{if eq .IsSubnetRouter true}}
-        <div class="w3-theme-l1">Subnet</div>
-        <div>{{.Subnet}}</div>
-        <div class="w3-theme-l1">Use Nat</div>
-        <div>{{.UseNat}}</div>
-        {{if eq .UseVirtSubnet true}}
-            <div class="w3-theme-l3">Virtual Subnet</div>
-            <div>{{.VirtSubnet}}</div>
-        {{end}}
+    <div class="w3-theme-l1">Subnet</div>
+    <div>{{.Subnet}}</div>
+    <div class="w3-theme-l1">Use Nat</div>
+    <div>{{.UseNat}}</div>
+    {{if eq .UseVirtSubnet true}}
+    <div class="w3-theme-l3">Virtual Subnet</div>
+    <div>{{.VirtSubnet}}</div>
+    {{end}}
     {{end}}
     {{if eq .IsSubnetRouter}}
 </div>

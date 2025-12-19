@@ -10,8 +10,8 @@
     <label>{{.HostName}} {{.Address.IP}}</label>
     {{end}}
     <p>
-        <button class="w3-button w3-theme-dark w3-padding large" type="button" 
-            hx-get="/networks/{{.Network}}/" hx-target="#content" hx-target-error="#error">
+        <button class="w3-button w3-theme-dark w3-padding large" type="button" hx-get="/networks/{{.Network}}/"
+            hx-target="#content" hx-target-error="#error">
             Cancel</button>
         <button class="w3-button w3-theme-dark" type="reset">Reset</button>
         <button class="W3-button w3-theme-dark" type="submit">Add</button>
