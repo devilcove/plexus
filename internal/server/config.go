@@ -4,18 +4,18 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"io/fs"
 	"log/slog"
 	"net"
 	"net/mail"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/caddyserver/certmagic"
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
-	"github.com/spf13/viper"
+	"github.com/mattkasun/tools/config"
 )
 
 type configuration struct {
@@ -28,7 +28,6 @@ type configuration struct {
 	Verbosity string
 	DBPath    string
 	DBFile    string
-	Tables    []string
 }
 
 const (
@@ -40,7 +39,7 @@ const (
 )
 
 var (
-	config           configuration
+	cfg              *configuration
 	ErrServerURL     = errors.New("invalid server URL")
 	ErrInvalidSubnet = errors.New("invalid subnet")
 	ErrSubnetInUse   = errors.New("subnet in use")
@@ -59,57 +58,93 @@ const (
 )
 
 func configureServer() (*tls.Config, error) {
+	plexus.SetLogging("INFO")
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+	cfg, err = config.Get[configuration]()
+	if err != nil {
+		return nil, err
+	}
+	// set defaults
+	if cfg.AdminName == "" {
+		cfg.AdminName = "admin"
+	}
+	if cfg.AdminPass == "" {
+		cfg.AdminPass = "password"
+	}
+	if cfg.Verbosity == "" {
+		cfg.Verbosity = "INFO"
+	}
+	if cfg.Port == "" {
+		cfg.Port = "8080"
+	}
+	if cfg.DBFile == "" {
+		cfg.DBFile = "plexus-server.db"
+	}
+	if cfg.DBPath == "" {
+		cfg.DBPath = home + "/.local/share/" + filepath.Base(os.Args[0])
+	}
+	if _, err := os.Stat(cfg.DBPath); err != nil {
+		return nil, err
+	}
+
+	slog.Info("configure Server", "config", cfg)
 	var tlsConfig *tls.Config
-	viper.SetDefault("adminname", "admin")
-	viper.SetDefault("adminpass", "password")
-	viper.SetDefault("verbosity", "INFO")
-	viper.SetDefault("secure", true)
-	viper.SetDefault("port", "8080")
-	viper.SetDefault("email", "")
-	viper.SetDefault("dbfile", "plexus-server.db")
-	viper.SetDefault("tables", []string{userTable, keyTable, networkTable, peerTable, settingTable})
-	viper.SetDefault("dbpath", path)
-	viper.SetConfigFile("/etc/plexus/config")
-	viper.SetConfigType("yaml")
-	if err := viper.ReadInConfig(); err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, err
-	}
-	viper.SetEnvPrefix("PLEXUS")
-	viper.AutomaticEnv()
-	if err := viper.UnmarshalExact(&config); err != nil {
-		return nil, err
-	}
-	plexus.SetLogging(config.Verbosity)
-	if config.Secure {
-		if config.FQDN == "" {
+	// viper.SetDefault("adminname", "admin")
+	// viper.SetDefault("adminpass", "password")
+	// viper.SetDefault("verbosity", "INFO")
+	// viper.SetDefault("secure", true)
+	// viper.SetDefault("port", "8080")
+	// viper.SetDefault("email", "")
+	// viper.SetDefault("dbfile", "plexus-server.db")
+	// viper.SetDefault("tables", []string{userTable, keyTable, networkTable, peerTable, settingTable})
+	// viper.SetDefault("dbpath", path)
+	// viper.SetConfigFile("/etc/plexus/config")
+	// viper.SetConfigType("yaml")
+	// if err := viper.ReadInConfig(); err != nil && !errors.Is(err, fs.ErrNotExist) {
+	// 	return nil, err
+	// }
+	// viper.SetEnvPrefix("PLEXUS")
+	// viper.AutomaticEnv()
+	// if err := viper.UnmarshalExact(&cfg); err != nil {
+	// 	return nil, err
+	// }
+	plexus.SetLogging(cfg.Verbosity)
+	if cfg.Secure {
+		if cfg.FQDN == "" {
 			return nil, errors.New("secure server requires FQDN")
 		}
-		if net.ParseIP(config.FQDN) != nil {
+		if net.ParseIP(cfg.FQDN) != nil {
 			return nil, errors.New("cannot use IP address with secure")
 		}
-		if !emailValid(config.Email) {
+		if !emailValid(cfg.Email) {
 			return nil, errors.New("valid email address required")
 		}
 	}
 	// initialize database.
-	if err := os.MkdirAll(config.DBPath, os.ModePerm); err != nil {
+	if err := os.MkdirAll(cfg.DBPath, os.ModePerm); err != nil {
 		return nil, err
 	}
-	slog.Info("init db", "path", config.DBPath, "file", config.DBFile, "tables", config.Tables)
-	if err := boltdb.Initialize(config.DBPath+config.DBFile, config.Tables); err != nil {
+	slog.Info("init db", "path", cfg.DBPath, "file", cfg.DBFile)
+	if err := boltdb.Initialize(
+		cfg.DBPath+cfg.DBFile,
+		[]string{"users", "keys", "networks", "peers", "settings"},
+	); err != nil {
 		return nil, fmt.Errorf("init database %w", err)
 	}
 	// check default user exists.
-	if err := checkDefaultUser(config.AdminName, config.AdminPass); err != nil {
+	if err := checkDefaultUser(cfg.AdminName, cfg.AdminPass); err != nil {
 		return nil, err
 	}
 	// get TLS.
-	if config.Secure {
+	if cfg.Secure {
 		var err error
 		certmagic.DefaultACME.Agreed = true
-		certmagic.DefaultACME.Email = config.Email
+		certmagic.DefaultACME.Email = cfg.Email
 		certmagic.DefaultACME.CA = certmagic.LetsEncryptProductionCA
-		tlsConfig, err = certmagic.TLS([]string{config.FQDN})
+		tlsConfig, err = certmagic.TLS([]string{cfg.FQDN})
 		if err != nil {
 			return nil, err
 		}

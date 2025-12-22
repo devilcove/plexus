@@ -126,7 +126,7 @@ func newValue(name string) (string, error) {
 		return "", err
 	}
 	keyValue := plexus.KeyValue{
-		URL:     config.FQDN,
+		URL:     cfg.FQDN,
 		Seed:    string(seed),
 		KeyName: name,
 	}

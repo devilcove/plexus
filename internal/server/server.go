@@ -130,7 +130,7 @@ func getServer(w http.ResponseWriter, r *http.Request) {
 		LogLevel string
 		Logs     []string
 	}{
-		LogLevel: config.Verbosity,
+		LogLevel: cfg.Verbosity,
 	}
 	cmd := exec.Command("/usr/bin/journalctl", "-eu", "plexus-server", "--no-pager", "-n", "25", "-r")
 	out, err := cmd.CombinedOutput()
@@ -145,7 +145,7 @@ func getServer(w http.ResponseWriter, r *http.Request) {
 }
 
 func setLogLevel(w http.ResponseWriter, r *http.Request) {
-	config.Verbosity = r.PathValue("level")
-	plexus.SetLogging(config.Verbosity)
+	cfg.Verbosity = r.PathValue("level")
+	plexus.SetLogging(cfg.Verbosity)
 	getServer(w, r)
 }
