@@ -34,7 +34,7 @@
         <h2>{{.Username}}</h2>
         <form name="editUser" hx-post="/users/user/{{.Username}}" hx-target="#content" onsubmit="return valPass()">
             <label for="password">New Password: </label>
-            <input type="password" placeholder="new password" name="Password" required><br>
+            <input type="password" placeholder="new password" name="password" required><br>
             <label for="verify">Verify Password: </label>
             <input type="password" placeholder="new password" name="verify" required><br><br>
             <button type="button" hx-get="/users/" hx-target="#content">Cancel</button>
@@ -42,7 +42,7 @@
         </form>
         <script>
             function valPass() {
-                var x = document.forms["editUser"]["Password"].value;
+                var x = document.forms["editUser"]["password"].value;
                 var y = document.forms["editUser"]["verify"].value;
                 console.log(x, y)
                 if (x != y) {

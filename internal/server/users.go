@@ -216,6 +216,10 @@ func editUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input := r.FormValue("password")
+	if input == "" {
+		processError(w, http.StatusBadRequest, "blank password")
+		return
+	}
 	session := GetSession(w, r)
 	if session == nil {
 		displayLogin(w, r)
