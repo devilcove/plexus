@@ -1,6 +1,5 @@
 {{define "addRouterToNetwork"}}
 <!-- [html-validate-disable no-inline-style]-->
-<div id="error" class="red"></div>
 <h2>Network: {{.Network}}</h2>
 <h2>Create Subnet Router</h2>
 <form class="w3-container w3-card4" hx-post="/networks/router/{{.Network}}/{{.Router}}" hx-target="#content"

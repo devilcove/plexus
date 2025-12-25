@@ -1,6 +1,6 @@
 {{define "users"}}
 <!-- [html-validate-disable no-dup-id]-->
-<div id="error" class="w3-red" hx-get="/users/" hx-triger="every 1m" hx-target="#content" hx-target-error="#error">
+<div hx-get="/users/" hx-triger="every 1m" hx-target="#content" hx-target-error="#error">
 </div>
 <div class="w3-container w3-center w3-theme-dark w3-padding">
     <div class="w3-bar w3-theme-d5">
@@ -27,7 +27,6 @@
 {{end}}
 
 {{define "editUser"}}
-<div id="error" class="red"></div>
 <div class="w3-row">
     <div class="w3-third"><br></div>
     <div class="w3-third">
@@ -57,7 +56,6 @@
 {{end}}
 
 {{define "newUser"}}
-<div id="error" class="w3-red"></div>
 <h1>New User</h1>
 <form name="newUser" hx-post="/users/add" hx-target="#content" hx-target-error="#error" onsubmit="return valPass()">
     <label for="username">Username</label><br>

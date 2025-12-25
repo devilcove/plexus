@@ -153,7 +153,7 @@ func createNkeyUser(token string) *server.NkeyUser {
 }
 
 func getAdminKey() nkeys.KeyPair {
-	seed, err := os.ReadFile(path + "server.seed")
+	seed, err := os.ReadFile(cfg.DataHome+ "server.seed")
 	if err != nil {
 		return createAdminNKeyPair()
 	}
@@ -176,7 +176,7 @@ func createAdminNKeyPair() nkeys.KeyPair {
 		slog.Error("admin seed creation", "error", err)
 		return admin
 	}
-	if err := os.WriteFile(path+"server.seed", seed, os.ModePerm); err != nil {
+	if err := os.WriteFile(cfg.DataHome+"server.seed", seed, os.ModePerm); err != nil {
 		slog.Error("save admin seed", "error", err)
 	}
 	return admin

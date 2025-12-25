@@ -1,7 +1,6 @@
 {{define "keys"}}
 <!-- [html-validate-disable no-dup-id]-->
 <!-- [html-validate-disable no-inline-style]-->
-<div id="error" class="w3-red" hx-get="/keys/" hx-trigger="every 1m" hx-target="#content" hx-target-error="#error">
 </div>
 <div class="w3-bar w3-theme-d5">
     <button class="w3-button" type="button" hx-get="/keys/add" hx-target="#content" hx-target-errors="#error">
@@ -31,7 +30,6 @@
 {{end}}
 
 {{define "addKey"}}
-<div id="error" class="w3-red"></div>
 <h1>Create Key</h1>
 <form class="w3-container w3-card4" hx-post="/keys/add" hx-target="#content" hx-target-error="#error">
     <label>Key Name</label>

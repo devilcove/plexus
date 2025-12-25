@@ -2,8 +2,8 @@ package server
 
 import (
 	"bytes"
-	"crypto/rand"
 	"embed"
+	"fmt"
 	"html/template"
 	"log"
 	"log/slog"
@@ -13,10 +13,9 @@ import (
 	"github.com/devilcove/mux"
 )
 
-//go:embed images/* assets/* html/*
-var f embed.FS
+//go:embed images assets html
+var content embed.FS
 
-const htmlFiles = "/home/mkasun/sandbox/plexus/internal/server/html/*"
 
 var (
 	logger    *slog.Logger
@@ -30,12 +29,12 @@ func setupRouter(l *slog.Logger) *mux.Router {
 	logger = l
 	dir, _ := os.Getwd()
 	slog.Info("here", "pwd", dir)
-	templates = template.Must(template.ParseGlob(htmlFiles))
+	templates = template.Must(template.ParseFS(content, "html/*.html"))
 
 	// static files
-	router.StaticFS("/images/", f)
-	router.StaticFS("/assets/", f)
-	router.ServeFileFS("/favicon.ico", "icon.svg", f)
+	router.StaticFS("/images/", content)
+	router.StaticFS("/assets/", content)
+	router.ServeFileFS("/favicon.ico", "images/icon.svg", content)
 
 	// unauthorized routes
 	router.Post("/login/", login)
@@ -88,10 +87,12 @@ func setupRouter(l *slog.Logger) *mux.Router {
 }
 
 func processError(w http.ResponseWriter, status int, message string) {
+	header := fmt.Sprintf(`{"showError":"%s"}`, message)
 	buf := bytes.Buffer{}
 	l := log.New(&buf, "", log.Lshortfile)
 	_ = l.Output(2, message)
 	slog.Error(buf.String())
+	w.Header().Set("HX-Trigger", header)
 	http.Error(w, message, status)
 }
 
@@ -125,20 +126,6 @@ func auth(next http.Handler) http.Handler {
 // 		return
 // 	}
 // }
-
-func sessionKeys() ([]byte, []byte, error) {
-	authKey := make([]byte, 32)
-	encryptKey := make([]byte, 32)
-	_, err := rand.Read(authKey)
-	if err != nil {
-		return authKey, encryptKey, err
-	}
-	_, err = rand.Read(encryptKey)
-	if err != nil {
-		return authKey, encryptKey, err
-	}
-	return authKey, encryptKey, nil
-}
 
 // func weblogger() gin.HandlerFunc {
 // 	return func(w http.ResponseWriter, r *http.Request) {

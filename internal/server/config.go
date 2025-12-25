@@ -26,7 +26,7 @@ type configuration struct {
 	Port      string
 	Email     string
 	Verbosity string
-	DBPath    string
+	DataHome  string
 	DBFile    string
 }
 
@@ -83,34 +83,15 @@ func configureServer() (*tls.Config, error) {
 	if cfg.DBFile == "" {
 		cfg.DBFile = "plexus-server.db"
 	}
-	if cfg.DBPath == "" {
-		cfg.DBPath = home + "/.local/share/" + filepath.Base(os.Args[0])
+	if cfg.DataHome == "" {
+		cfg.DataHome = home + "/.local/share/" + filepath.Base(os.Args[0]) + "/"
 	}
-	if _, err := os.Stat(cfg.DBPath); err != nil {
+	if _, err := os.Stat(cfg.DataHome); err != nil {
 		return nil, err
 	}
 
 	slog.Info("configure Server", "config", cfg)
 	var tlsConfig *tls.Config
-	// viper.SetDefault("adminname", "admin")
-	// viper.SetDefault("adminpass", "password")
-	// viper.SetDefault("verbosity", "INFO")
-	// viper.SetDefault("secure", true)
-	// viper.SetDefault("port", "8080")
-	// viper.SetDefault("email", "")
-	// viper.SetDefault("dbfile", "plexus-server.db")
-	// viper.SetDefault("tables", []string{userTable, keyTable, networkTable, peerTable, settingTable})
-	// viper.SetDefault("dbpath", path)
-	// viper.SetConfigFile("/etc/plexus/config")
-	// viper.SetConfigType("yaml")
-	// if err := viper.ReadInConfig(); err != nil && !errors.Is(err, fs.ErrNotExist) {
-	// 	return nil, err
-	// }
-	// viper.SetEnvPrefix("PLEXUS")
-	// viper.AutomaticEnv()
-	// if err := viper.UnmarshalExact(&cfg); err != nil {
-	// 	return nil, err
-	// }
 	plexus.SetLogging(cfg.Verbosity)
 	if cfg.Secure {
 		if cfg.FQDN == "" {
@@ -124,12 +105,12 @@ func configureServer() (*tls.Config, error) {
 		}
 	}
 	// initialize database.
-	if err := os.MkdirAll(cfg.DBPath, os.ModePerm); err != nil {
+	if err := os.MkdirAll(cfg.DataHome, os.ModePerm); err != nil {
 		return nil, err
 	}
-	slog.Info("init db", "path", cfg.DBPath, "file", cfg.DBFile)
+	slog.Info("init db", "path", cfg.DataHome, "file", cfg.DBFile)
 	if err := boltdb.Initialize(
-		cfg.DBPath+cfg.DBFile,
+		cfg.DataHome+cfg.DBFile,
 		[]string{"users", "keys", "networks", "peers", "settings"},
 	); err != nil {
 		return nil, fmt.Errorf("init database %w", err)

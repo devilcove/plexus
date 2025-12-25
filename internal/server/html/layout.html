@@ -113,15 +113,18 @@
     </style>
 </head>
 
-<body class="w3-theme-dark" id="main">
+<body class="w3-theme-dark" id="main" hx-ext="response-targets">
     {{template "header"}}
-    <div class="w3-container w3-center w3-theme-dark w3-padding">
-        <div id="error" class="w3-red"></div>
-        <br>
-    </div>
     {{template "content" .}}
     {{template "about" . }}
+    {{template "error"}}
     </div>
+    <script>
+        document.body.addEventListener("showError", function (evt) {
+            document.getElementById('errorMessage').innerHTML = evt.detail.value;
+            document.getElementById('Error').style.display = 'block';
+        });
+    </script>
 </body>
 
 </html>

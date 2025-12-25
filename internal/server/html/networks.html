@@ -4,7 +4,7 @@
 <!-- [html-validate-disable no-dup-id]-->
 <!-- [html-validate-disable no-inline-style]-->
 <!-- Network Nav Bar-->
-<div id="error" class="w3-red" hx-get="/networks/" hx-trigger="every 1m" hx-target="#content" hx-target-error="#error">
+<div hx-get="/networks/" hx-trigger="every 1m" hx-target="#content" hx-target-error="#error">
 </div>
 <div class="w3-bar w3-theme-d5">
     <button class="w3-button" type="button" hx-get="networks/add" hx-target="#content" hx-target-error="#error">
@@ -37,7 +37,6 @@
 {{end}}
 
 {{ define "addNetwork"}}
-<div id="error"></div>
 <h1>Add Network</h1>
 <form class="w3-container w3-card4" hx-post="/networks/add" hx-target="#content" hx-target-error="#error">
     <label>Network Name</label>
@@ -54,8 +53,7 @@
 {{end}}
 
 {{define "networkDetails"}}
-<div id="error" class="w3-red" hx-get="/networks/{{.Name}}" hx-trigger="every 1m" hx-target="#content"
-    hx-target-error="#error"></div>
+<div hx-get="/networks/{{.Name}}" hx-trigger="every 1m" hx-target="#content" hx-target-error="#error"></div>
 <div class="w3-container w3-theme-dark w3-padding">
     <!-- Network Details Nav Bar-->
     <div class="w3-bar w3-theme-d5 w3-center">

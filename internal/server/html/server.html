@@ -1,6 +1,6 @@
 {{define "server"}}
 <!-- [html-validate-disable no-inline-style]-->
-<div id="error" class="w3-red" hx-get="/server/" hx-trigger="every 10s" hx-target="#content" hx-target-error="#error">
+<div hx-get="/server/" hx-trigger="every 10s" hx-target="#content" hx-target-error="#error">
 </div>
 <h1>Server Logs</h1>
 <p>Current Log Level: {{.LogLevel}}</p>
