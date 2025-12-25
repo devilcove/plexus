@@ -77,7 +77,7 @@ func setupRouter(l *slog.Logger) *mux.Router {
 	users.Post("/add", addUser)
 	users.Delete("/{name}", deleteUser)
 	users.Get("/user/{name}", getUser)
-	users.Post("user/{name}", editUser)
+	users.Post("/user/{name}", editUser)
 
 	server := router.Group("/server", auth)
 	server.Get("/", getServer)
