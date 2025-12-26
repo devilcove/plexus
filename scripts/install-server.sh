@@ -23,18 +23,20 @@ useradd -r -d /var/lib/plexus -G systemd-journal -s /sbin/nologin -m plexus
 
 ##get files
 echo "installing files"
-wget https://raw.githubusercontent.com/devilcove/plexus/master/files/plexus-agent.service -O /lib/systemd/system/plexus-agent.service
-wget https://github.com/devilcove/plexus/releases/latest/download/plexus-agent-linux-amd64 -O /usr/local/bin/plexus-agent
-wget https://raw.githubusercontent.com/devilcove/plexus/master/files/plexus-server.service -O /lib/systemd/system/plexus-server.service
-wget https://github.com/devilcove/plexus/releases/latest/download/plexus-server-linux-amd64 -O /usr/local/bin/plexus-server
+wget -4 https://raw.githubusercontent.com/devilcove/plexus/master/files/plexus-agent.service -O /lib/systemd/system/plexus-agent.service
+wget -4 https://file.nusak.ca/plexus/plexus-agent -O /usr/local/bin/plexus-agent
+wget -4 https://raw.githubusercontent.com/devilcove/plexus/master/files/plexus-server.service -O /lib/systemd/system/plexus-server.service
+wget -4 https://file.nusak.ca/plexus/plexus-server -O /usr/local/bin/plexus-server
 setcap cap_net_admin=ep /usr/local/bin/plexus-agent
 setcap cap_net_bind_service=ep /usr/local/bin/plexus-server
 chmod +x /usr/local/bin/plexus-agent
 chmod +x /usr/local/bin/plexus-server
-mkdir /etc/plexus
-chown plexus:plexus /etc/plexus
-mkdir /etc/plexus-agent
-chown plexus:plexus /etc/plexus-agent
+install -o plexus -g plexus -d /var/lib/plexus/.config/plexus-server
+install -o plexus -g plexus -d /var/lib/plexus/.local/share/plexus-server
+install -o plexus -g plexus -d /var/lib/plexus/.local/share/plexus-agent
+cd /var/lib/plexus
+chown plexus:plexus .config
+chown -R plexus:plexus .local/share/
 
 #get input
 echo "Enter Fully Qualified Domain Name of plexus server (eg. plexus.example.com)"
@@ -52,12 +54,15 @@ do
     get_passwd
 done
 
-cat << EOF > /etc/plexus/config
+cat << EOF > /tmp/plexus.config
 fqdn: $fqdn
 email: $email
 adminname: $user
 adminpass: $pass1
+secure: true
 EOF
+
+install -o plexus -g plexus -D /tmp/plexus.config /var/lib/plexus/.config/plexus-server/config
 
 set +e
 echo "installing systemd service"
