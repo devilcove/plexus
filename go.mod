@@ -7,15 +7,15 @@ require (
 	github.com/c-robinson/iplib v1.0.8
 	github.com/caddyserver/certmagic v0.25.0
 	github.com/devilcove/boltdb v0.1.7
-	github.com/devilcove/mux v0.2.0
+	github.com/devilcove/mux v0.2.1
 	github.com/fatih/color v1.18.0
 	github.com/google/nftables v0.3.0
 	github.com/gorilla/sessions v1.4.0
 	github.com/kr/pretty v0.3.1
 	github.com/lmittmann/tint v1.1.2
 	github.com/mattkasun/tools v0.2.3
-	github.com/nats-io/nats-server/v2 v2.12.2
-	github.com/nats-io/nats.go v1.47.0
+	github.com/nats-io/nats-server/v2 v2.12.3
+	github.com/nats-io/nats.go v1.48.0
 	github.com/nats-io/nkeys v0.4.12
 	github.com/pion/stun v0.6.1
 	github.com/spf13/cobra v1.10.2
@@ -26,13 +26,13 @@ require (
 )
 
 require (
-	github.com/antithesishq/antithesis-sdk-go v0.4.3-default-no-op // indirect
+	github.com/antithesishq/antithesis-sdk-go v0.5.0-default-no-op // indirect
 	github.com/caddyserver/zerossl v0.1.3 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/go-tpm v0.9.6 // indirect
+	github.com/google/go-tpm v0.9.7 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/klauspost/compress v1.18.1 // indirect
+	github.com/klauspost/compress v1.18.2 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/libdns/libdns v1.1.1 // indirect
@@ -67,5 +67,3 @@ require (
 	golang.org/x/tools v0.39.0 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173 // indirect
 )
-
-replace github.com/devilcove/mux => /home/mkasun/sandbox/router
