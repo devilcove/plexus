@@ -32,8 +32,7 @@ func setupRouter(l *slog.Logger) *mux.Router {
 	templates = template.Must(template.ParseFS(content, "html/*.html"))
 
 	// static files
-	router.StaticFS("/images/", content)
-	router.StaticFS("/assets/", content)
+	router.StaticFS("/content/", content)
 	router.ServeFileFS("/favicon.ico", "images/icon.svg", content)
 
 	// unauthorized routes
