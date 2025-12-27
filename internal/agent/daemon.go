@@ -22,7 +22,7 @@ var restartEndpointServer chan struct{}
 
 func Run() {
 	plexus.SetLogging(Config.Verbosity)
-	if err := boltdb.Initialize(path+"plexus-agent.db", []string{deviceTable, networkTable}); err != nil {
+	if err := boltdb.Initialize(Config.DataDir+"plexus-agent.db", []string{deviceTable, networkTable}); err != nil {
 		slog.Error("failed to initialize database", "error", err)
 		return
 	}

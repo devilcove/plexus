@@ -22,7 +22,6 @@ const (
 	version               = "v0.3.0"
 	networkTable          = "networks"
 	deviceTable           = "devices"
-	path                  = "/var/lib/plexus/"
 )
 
 var (
@@ -37,4 +36,5 @@ var (
 type Configuration struct {
 	NatsPort  int
 	Verbosity string
+	DataDir string
 }

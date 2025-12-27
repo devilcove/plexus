@@ -18,11 +18,11 @@ package cmd
 import (
 	"log/slog"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 
 	"github.com/devilcove/plexus"
 	"github.com/devilcove/plexus/internal/agent"
-	"github.com/mattkasun/tools/config"
 	"github.com/spf13/cobra"
 )
 
@@ -67,13 +67,13 @@ func init() {
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	plexus.SetLogging("INFO")
-	cfg, err := config.Get[agent.Configuration]()
+	home, err := os.UserHomeDir()
 	if err != nil {
-		slog.Error("get configuration", "error", err)
-		os.Exit(1)
+		panic(err)
 	}
+	agent.Config.DataDir = home + "/.local/share/" + filepath.Base(os.Args[0]) + "/"
+
 	// set defaults
-	agent.Config = *cfg
-	slog.Debug("using configuration", "config", cfg)
+	slog.Debug("using configuration", "config", agent.Config)
 	debug.SetTraceback("single")
 }
