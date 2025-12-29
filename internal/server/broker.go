@@ -153,7 +153,7 @@ func createNkeyUser(token string) *server.NkeyUser {
 }
 
 func getAdminKey() nkeys.KeyPair {
-	seed, err := os.ReadFile(cfg.DataHome+ "server.seed")
+	seed, err := os.ReadFile(cfg.DataHome + "server.seed")
 	if err != nil {
 		return createAdminNKeyPair()
 	}

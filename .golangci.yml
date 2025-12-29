@@ -26,28 +26,33 @@ linters:
   settings:
     cyclop:
       max-complexity: 20
+    errcheck:
+      exclude-functions:
+        - crypto/rand.Read
     funlen:
       statements: 60
-      lines: 80
+      lines: 82
     gosmopolitan:
       allow-time-local: true
     ireturn:
       allow:
         - nkeys.KeyPair
         - error
+        - net/http.Handler
     varnamelen:
       max-distance: 15
       ignore-names:
         - i
         - wg
       ignore-decls:
-        - c *gin.Context
         - c *nftables.Conn
         - c nftables.Conn
         - ec *nats.Conn
         - f embed.FS
         - id string
         - ns *server.Server
+        - r *http.Request
+        - w http.ResponseWriter
   exclusions:
     warn-unused: true
     generated: lax
@@ -73,9 +78,7 @@ linters:
           - revive
 formatters:
   enable:
-    - gci
-    - gofmt
     - gofumpt
-    - goimports
+    - golines
   exclusions:
     generated: lax

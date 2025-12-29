@@ -46,5 +46,6 @@ var dropCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(dropCmd)
-	statusCmd.Flags().BoolVarP(&force, "force", "f", false, "force deletion even when not connected")
+	statusCmd.Flags().
+		BoolVarP(&force, "force", "f", false, "force deletion even when not connected")
 }

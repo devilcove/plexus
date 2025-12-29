@@ -61,7 +61,10 @@ func addNKeyUser(peer plexus.Peer) error {
 	return nil
 }
 
-func addPeerToNetwork(peerID, network string, listenPort, publicListenPort int) (plexus.Network, error) {
+func addPeerToNetwork(
+	peerID, network string,
+	listenPort, publicListenPort int,
+) (plexus.Network, error) {
 	netToUpdate, err := boltdb.Get[plexus.Network](network, networkTable)
 	if err != nil {
 		return netToUpdate, err
@@ -85,7 +88,12 @@ func addPeerToNetwork(peerID, network string, listenPort, publicListenPort int) 
 	}
 	addr, err := getNextIP(netToUpdate)
 	if err != nil {
-		return netToUpdate, fmt.Errorf("unable to get ip for peer %s %s %w", peer.WGPublicKey, network, err)
+		return netToUpdate, fmt.Errorf(
+			"unable to get ip for peer %s %s %w",
+			peer.WGPublicKey,
+			network,
+			err,
+		)
 	}
 	slog.Debug("setting ip to", "ip", addr)
 	netPeer.Address = net.IPNet{
@@ -156,7 +164,12 @@ func processCheckin(data *plexus.CheckinData) plexus.MessageResponse {
 		peer.Version = data.Version
 	}
 	if !peer.Endpoint.Equal(data.Endpoint) {
-		slog.Debug("endpoint changed", "peer", peer.Name, "old", peer.Endpoint, "new", data.Endpoint)
+		slog.Debug(
+			"endpoint changed",
+			"peer", peer.Name,
+			"old", peer.Endpoint,
+			"new", data.Endpoint,
+		)
 		peer.Endpoint = data.Endpoint
 		publishUpdate = true
 	}
@@ -266,7 +279,11 @@ func processLeave(id string, request *plexus.LeaveRequest) plexus.MessageRespons
 			Action: plexus.DeletePeer,
 			Peer:   peer,
 		}
-		slog.Debug("publishing network update for peer leaving network", "network", request.Network, "peer", id)
+		slog.Debug(
+			"publishing network update for peer leaving network",
+			"network", request.Network,
+			"peer", id,
+		)
 		publish.Message(natsConn, plexus.Networks+request.Network, update)
 	}
 	if !found {
@@ -413,7 +430,11 @@ func processPortUpdate(id string, ports *plexus.ListenPortResponse) {
 					Action: plexus.UpdatePeer,
 					Peer:   peer,
 				}
-				slog.Debug("publish network update for port change", "network", network.Name, "peer", peer.HostName)
+				slog.Debug(
+					"publish network update for port change",
+					"network", network.Name,
+					"peer", peer.HostName,
+				)
 				publish.Message(natsConn, plexus.Networks+network.Name, data)
 			}
 		}

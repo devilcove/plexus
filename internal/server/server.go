@@ -87,50 +87,61 @@ func start(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 func web(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 	defer wg.Done()
 	slog.Info("Starting web server...")
-	router := setupRouter(logging.TextLogger(logging.TruncateSource(), logging.TimeFormat(time.DateTime)).Logger)
+	router := setupRouter(
+		logging.TextLogger(logging.TruncateSource(), logging.TimeFormat(time.DateTime)).Logger,
+	)
 	server := http.Server{
-	 	Addr:    ":" + cfg.Port,
-	 	Handler: router,
-	 }
-	 if cfg.Secure {
-	 	if tls == nil {
-	 		slog.Error("secure set but tls nil")
- 		webfail <- 1
-	 	}
-	 	server.TLSConfig = tls
-	 	server.Addr = ":443"
-	 	go func() {
-	 		if err := server.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
-	 			slog.Error("https server", "error", err)
-	 			webfail <- 1
-	 		}
-	 	}()
-	 } else {
-	 	go func() {
-	 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-	 			slog.Error("http server", "error", err)
-	 			webfail <- 1
-	 		}
-	 	}()
-	 }
+		Addr:    ":" + cfg.Port,
+		Handler: router,
+	}
+	if cfg.Secure {
+		if tls == nil {
+			slog.Error("secure set but tls nil")
+			webfail <- 1
+		}
+		server.TLSConfig = tls
+		server.Addr = ":443"
+		go func() {
+			if err := server.ListenAndServeTLS("", ""); err != nil &&
+				!errors.Is(err, http.ErrServerClosed) {
+				slog.Error("https server", "error", err)
+				webfail <- 1
+			}
+		}()
+	} else {
+		go func() {
+			if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				slog.Error("http server", "error", err)
+				webfail <- 1
+			}
+		}()
+	}
 
 	slog.Info("web server started")
 	<-ctx.Done()
 	slog.Info("shutting down web server")
 	if err := server.Shutdown(ctx); err != nil {
-	slog.Error("http server shutdown", "error", err.Error())
+		slog.Error("http server shutdown", "error", err.Error())
 	}
 	slog.Info("http server shutdown")
 }
 
-func getServer(w http.ResponseWriter, r *http.Request) {
+func getServer(w http.ResponseWriter, _ *http.Request) {
 	server := struct {
 		LogLevel string
 		Logs     []string
 	}{
 		LogLevel: cfg.Verbosity,
 	}
-	cmd := exec.Command("/usr/bin/journalctl", "-eu", "plexus-server", "--no-pager", "-n", "25", "-r")
+	cmd := exec.Command(
+		"/usr/bin/journalctl",
+		"-eu",
+		"plexus-server",
+		"--no-pager",
+		"-n",
+		"25",
+		"-r",
+	)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		slog.Error("journalctl", "error", err)

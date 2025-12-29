@@ -104,10 +104,13 @@ func checkin() {
 				continue
 			}
 			if peer.PrivateEndpoint != nil {
-				checkinData.PrivateEndpoints = append(checkinData.PrivateEndpoints, plexus.PrivateEndpoint{
-					IP:      peer.PrivateEndpoint.String(),
-					Network: network.Name,
-				})
+				checkinData.PrivateEndpoints = append(
+					checkinData.PrivateEndpoints,
+					plexus.PrivateEndpoint{
+						IP:      peer.PrivateEndpoint.String(),
+						Network: network.Name,
+					},
+				)
 			}
 		}
 	}

@@ -62,7 +62,12 @@ func startAllInterfaces(self Device) {
 	for _, network := range networks {
 		slog.Debug("starting interface", "interface", network.Interface, "network", network.Name)
 		if err := startInterface(self, network); err != nil {
-			slog.Error("start interface", "network", network.Name, "interface", network.Interface, "error", err)
+			slog.Error(
+				"start interface",
+				"network", network.Name,
+				"interface", network.Interface,
+				"error", err,
+			)
 		}
 	}
 }
@@ -114,7 +119,10 @@ func startInterface(self Device, network Network) error {
 		network.ListenPort = port
 	}
 	if addressChanged {
-		slog.Debug("public address changed ... saving and publishing update", "address", self.Endpoint)
+		slog.Debug(
+			"public address changed ... saving and publishing update",
+			"address", self.Endpoint,
+		)
 		if err := boltdb.Save(self, "self", deviceTable); err != nil {
 			return err
 		}
@@ -232,7 +240,12 @@ func getAllowedIPs(node plexus.NetworkPeer, peers []plexus.NetworkPeer) []net.IP
 		} else {
 			allowed = append(allowed, node.Subnet)
 		}
-		slog.Debug("new allowed ips", "allowed", allowed, "virt", node.VirtSubnet, "subnet", node.Subnet)
+		slog.Debug(
+			"new allowed ips",
+			"allowed", allowed,
+			"virt", node.VirtSubnet,
+			"subnet", node.Subnet,
+		)
 	}
 	if node.IsRelay {
 		for _, peer := range peers {
@@ -250,7 +263,12 @@ func getWGPeers(self Device, network Network) []wgtypes.PeerConfig {
 	keepalive := defaultKeepalive
 	peers := []wgtypes.PeerConfig{}
 	for _, peer := range network.Peers {
-		slog.Debug("checking peer", "peer", peer.WGPublicKey, "address", peer.Address, "mask", network.Net.Mask)
+		slog.Debug(
+			"checking peer",
+			"peer", peer.WGPublicKey,
+			"address", peer.Address,
+			"mask", network.Net.Mask,
+		)
 		if peer.WGPublicKey == self.WGPublicKey {
 			if peer.IsRelayed {
 				slog.Info("I am relayed")
@@ -381,7 +399,10 @@ func getNewListenPorts(name string) (plexus.NetworkPeer, error) {
 	}, nil
 }
 
-func convertPeerToWG(netPeer plexus.NetworkPeer, peers []plexus.NetworkPeer) (wgtypes.PeerConfig, error) {
+func convertPeerToWG(
+	netPeer plexus.NetworkPeer,
+	peers []plexus.NetworkPeer,
+) (wgtypes.PeerConfig, error) {
 	var addr *net.UDPAddr
 	keepalive := defaultKeepalive
 	key, err := wgtypes.ParseKey(netPeer.WGPublicKey)
@@ -389,7 +410,10 @@ func convertPeerToWG(netPeer plexus.NetworkPeer, peers []plexus.NetworkPeer) (wg
 		return wgtypes.PeerConfig{}, err
 	}
 	if netPeer.UsePrivateEndpoint {
-		addr, err = net.ResolveUDPAddr("udp", netPeer.PrivateEndpoint.String()+":"+strconv.Itoa(netPeer.ListenPort))
+		addr, err = net.ResolveUDPAddr(
+			"udp",
+			netPeer.PrivateEndpoint.String()+":"+strconv.Itoa(netPeer.ListenPort),
+		)
 		if err != nil {
 			return wgtypes.PeerConfig{}, err
 		}

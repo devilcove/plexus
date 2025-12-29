@@ -158,8 +158,15 @@ func privateEndpointServer(ctx context.Context, wg *sync.WaitGroup) {
 		if me.PrivateEndpoint == nil {
 			continue
 		}
-		slog.Info("tcp listener starting on private endpoint", "endpoint", me.PrivateEndpoint, "port", me.ListenPort)
-		listener, err := net.ListenTCP("tcp", &net.TCPAddr{IP: me.PrivateEndpoint, Port: me.ListenPort})
+		slog.Info(
+			"tcp listener starting on private endpoint",
+			"endpoint", me.PrivateEndpoint,
+			"port", me.ListenPort,
+		)
+		listener, err := net.ListenTCP(
+			"tcp",
+			&net.TCPAddr{IP: me.PrivateEndpoint, Port: me.ListenPort},
+		)
 		if err != nil {
 			slog.Error("public endpoint server", "error", err)
 			return

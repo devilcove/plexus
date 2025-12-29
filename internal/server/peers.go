@@ -13,7 +13,7 @@ import (
 	"github.com/nats-io/nats-server/v2/server"
 )
 
-func displayPeers(w http.ResponseWriter, r *http.Request) {
+func displayPeers(w http.ResponseWriter, _ *http.Request) {
 	displayPeers := []plexus.Peer{}
 	peers, err := boltdb.GetAll[plexus.Peer](peerTable)
 	if err != nil {
@@ -74,7 +74,11 @@ func discardPeer(id string) (plexus.Peer, error) {
 					Action: plexus.DeletePeer,
 					Peer:   netpeer,
 				}
-				slog.Info("publishing network update", "type", update.Action, "network", network.Name)
+				slog.Info(
+					"publishing network update",
+					"type", update.Action,
+					"network", network.Name,
+				)
 				publish.Message(natsConn, "networks."+network.Name, update)
 			}
 		}
@@ -168,7 +172,12 @@ func savePeer(peer plexus.Peer) {
 		for i, netPeer := range network.Peers {
 			if netPeer.WGPublicKey == peer.WGPublicKey {
 				network.Peers[i].NatsConnected = peer.NatsConnected
-				slog.Debug("saving network peer", "network", network.Name, "peer", netPeer.HostName, "key", netPeer.WGPublicKey)
+				slog.Debug(
+					"saving network peer",
+					"network", network.Name,
+					"peer", netPeer.HostName,
+					"key", netPeer.WGPublicKey,
+				)
 				if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 					slog.Error("save network", "network", network.Name, "error", err)
 				}

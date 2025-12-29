@@ -74,7 +74,12 @@ func checkForNat(self Device, network Network) error {
 				return addNat()
 			}
 			if peer.UseVirtSubnet {
-				slog.Debug("adding virtual subnet", "peer", peer.HostName, "virtual subnet", peer.VirtSubnet, "subnet", peer.Subnet)
+				slog.Debug(
+					"adding virtual subnet",
+					"peer", peer.HostName,
+					"virtual subnet", peer.VirtSubnet,
+					"subnet", peer.Subnet,
+				)
 				return addVirtualSubnet(peer.VirtSubnet, peer.Subnet)
 			}
 		}

@@ -172,7 +172,7 @@ func testLogin(data plexus.User) (*http.Cookie, error) {
 	form := url.Values{}
 	form.Add("username", data.Username)
 	form.Add("password", data.Password)
-	req, err := http.NewRequest(http.MethodPost, "/", strings.NewReader(form.Encode()))
+	req, err := http.NewRequest(http.MethodPost, "/login/", strings.NewReader(form.Encode()))
 	if err != nil {
 		return nil, err
 	}

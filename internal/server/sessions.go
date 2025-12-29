@@ -22,7 +22,7 @@ var (
 	sessionInitialized bool
 )
 
-// Session represents a user session
+// Session represents a user session.
 type Session struct {
 	User     string
 	LoggedIn bool
@@ -50,33 +50,32 @@ func keypairs() ([]byte, []byte) {
 	return buf1, buf2
 }
 
-func GetSession(w http.ResponseWriter, r *http.Request) *Session {
-	s := &Session{}
+func GetSession(_ http.ResponseWriter, r *http.Request) *Session {
+	sess := &Session{}
 	session, err := store.Get(r, sessionName)
 	if err != nil {
 		slog.Error("session err", "error", err)
-		//NewSession(w, r, plexus.User{}, false, "network")
 		return nil
 	}
 	user := session.Values["user"]
 	if u, ok := user.(string); ok {
-		s.User = u
+		sess.User = u
 	}
 	loggedIn := session.Values["loggedIn"]
 	if l, ok := loggedIn.(bool); ok {
-		s.LoggedIn = l
+		sess.LoggedIn = l
 	}
 	admin := session.Values["admin"]
 	if a, ok := admin.(bool); ok {
-		s.Admin = a
+		sess.Admin = a
 	}
 
 	page := session.Values["page"]
 	if p, ok := page.(string); ok {
-		s.Page = p
+		sess.Page = p
 	}
-	s.Session = session
-	return s
+	sess.Session = session
+	return sess
 }
 
 func ClearSession(w http.ResponseWriter, r *http.Request) {
@@ -84,8 +83,9 @@ func ClearSession(w http.ResponseWriter, r *http.Request) {
 	if session == nil {
 		s := sessions.NewSession(store, sessionName)
 		s.Options.MaxAge = -1
-		s.Save(r, w)
-		//NewSession(w, r, plexus.User{}, false, "network")
+		if err := s.Save(r, w); err != nil {
+			slog.Error("save session", "error", err)
+		}
 		return
 	}
 	session.Session.Options.MaxAge = -1
@@ -94,7 +94,13 @@ func ClearSession(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func NewSession(w http.ResponseWriter, r *http.Request, user plexus.User, loggedIn bool, page string) {
+func NewSession(
+	w http.ResponseWriter,
+	r *http.Request,
+	user plexus.User,
+	loggedIn bool,
+	page string,
+) {
 	session := sessions.NewSession(store, sessionName)
 	session.Values["username"] = user.Username
 	session.Values["admin"] = user.IsAdmin

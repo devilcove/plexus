@@ -172,7 +172,11 @@ func TestAddKey(t *testing.T) {
 		should.ContainSubstring(t, string(body), "<h1>Plexus Keys</h1>")
 		keys, err := boltdb.GetAll[plexus.Key](keyTable)
 		should.BeNil(t, err)
-		should.BeEqual(t, keys[0].Expires.Format("2006-01-02 03-04"), time.Now().Add(24*time.Hour).Format("2006-01-02 03-04"))
+		should.BeEqual(
+			t,
+			keys[0].Expires.Format("2006-01-02 03-04"),
+			time.Now().Add(24*time.Hour).Format("2006-01-02 03-04"),
+		)
 	})
 	t.Run("valid", func(t *testing.T) {
 		key := plexus.Key{

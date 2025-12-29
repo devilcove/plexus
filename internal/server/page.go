@@ -42,7 +42,6 @@ func displayMain(w http.ResponseWriter, r *http.Request) {
 		}
 		page.Data = networks
 		page.NeedsLogin = !session.LoggedIn
-		//page.Page = "networks"
 	}
 	slog.Info("display main page", "session", session, "page", page)
 
@@ -52,7 +51,6 @@ func displayMain(w http.ResponseWriter, r *http.Request) {
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
-	//session := sessions.Default(c)
 	var user plexus.User
 	if err := r.ParseForm(); err != nil {
 		processError(w, http.StatusBadRequest, "invalid login form")
@@ -62,8 +60,6 @@ func login(w http.ResponseWriter, r *http.Request) {
 	user.Password = r.FormValue("password")
 
 	if !validateUser(&user) {
-		//session.Clear()
-		//_ = session.Save()
 		processError(w, http.StatusBadRequest, "invalid user")
 		return
 	}
@@ -73,7 +69,6 @@ func login(w http.ResponseWriter, r *http.Request) {
 	page := getPage(user.Username)
 	page.NeedsLogin = false
 	page.Page = "networks"
-	//displayMain(w, r)
 	if err := templates.ExecuteTemplate(w, "layout", page); err != nil {
 		slog.Error("execute template", "template", "layout", "page", page, "error", err)
 	}
@@ -106,9 +101,6 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	page := initialize()
 	page.NeedsLogin = true
 	slog.Warn("logout", "page", page)
-	//if err := templates.ExecuteTemplate(w, "layout", page); err != nil {
-	//slog.Error("logout", "error", err)
-	//}
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 

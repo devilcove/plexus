@@ -53,7 +53,7 @@ func TestAddNetwork(t *testing.T) {
 		should.BeEqual(t, w.Code, http.StatusBadRequest)
 		body, err := io.ReadAll(w.Body)
 		should.BeNil(t, err)
-		should.ContainSubstring(t, string(body), "Error Processing Request:")
+		should.ContainSubstring(t, string(body), "invalid form")
 	})
 	t.Run("spacesNetworkName", func(t *testing.T) {
 		network := plexus.Network{
@@ -127,7 +127,11 @@ func TestAddNetwork(t *testing.T) {
 		should.BeEqual(t, w.Code, http.StatusBadRequest)
 		body, err := io.ReadAll(w.Body)
 		should.BeNil(t, err)
-		should.ContainSubstring(t, string(body), "Error Processing Request: invalid address for network")
+		should.ContainSubstring(
+			t,
+			string(body),
+			"Error Processing Request: invalid address for network",
+		)
 	})
 	t.Run("normalizeCidr", func(t *testing.T) {
 		network := plexus.Network{
@@ -182,7 +186,11 @@ func TestAddNetwork(t *testing.T) {
 		should.BeEqual(t, w.Code, http.StatusBadRequest)
 		body, err := io.ReadAll(w.Body)
 		should.BeNil(t, err)
-		should.ContainSubstring(t, string(body), "Error Processing Request: network address is not private")
+		should.ContainSubstring(
+			t,
+			string(body),
+			"Error Processing Request: network address is not private",
+		)
 	})
 	t.Run("valid", func(t *testing.T) {
 		network := plexus.Network{

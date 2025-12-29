@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"os"
 	"regexp"
 	"slices"
 	"time"
@@ -99,15 +98,13 @@ func displayNetworks(w http.ResponseWriter, r *http.Request) {
 	page.Data = networks
 
 	session.Save(w, r)
-	w.Header().Add("HX-Trigger", "networkChange")
+	w.Header().Add("Hx-Trigger", "networkChange")
 	if err := templates.ExecuteTemplate(w, "networks", page); err != nil {
 		slog.Error("template", "name", "networks", "page", page, "error", err)
 	}
-	templates.ExecuteTemplate(os.Stdout, "networks", page)
-
 }
 
-func networksSideBar(w http.ResponseWriter, r *http.Request) {
+func networksSideBar(w http.ResponseWriter, _ *http.Request) {
 	networks, err := boltdb.GetAll[plexus.Network](networkTable)
 	if err != nil {
 		processError(w, http.StatusInternalServerError, err.Error())
@@ -174,13 +171,23 @@ func networkDetails(w http.ResponseWriter, r *http.Request) {
 	for _, peer := range network.Peers {
 		p, err := boltdb.Get[plexus.Peer](peer.WGPublicKey, peerTable)
 		if err != nil {
-			slog.Error("could not obtains peer for network details", "peer", peer.WGPublicKey, "network", network, "error", err)
+			slog.Error(
+				"could not obtains peer for network details",
+				"peer", peer.WGPublicKey,
+				"network", network,
+				"error", err,
+			)
 			continue
 		}
 		slog.Debug("network details", "peer", peer.HostName, "connected",
 			time.Since(p.Updated) < time.Second*10, "connectivity", peer.Connectivity)
 		details.Peers = append(details.Peers, peer)
-		slog.Debug("connectivity", "network", network.Name, "peer", peer.HostName, "connectivity", peer.Connectivity)
+		slog.Debug(
+			"connectivity",
+			"network", network.Name,
+			"peer", peer.HostName,
+			"connectivity", peer.Connectivity,
+		)
 	}
 	details.Name = networkName
 	details.AvailablePeers = getAvailablePeers(network)
@@ -205,11 +212,19 @@ func deleteNetwork(w http.ResponseWriter, r *http.Request) {
 	log.Println("deleting network", network)
 	if natsConn == nil {
 		slog.Error("not connected to nats")
-		processError(w, http.StatusInternalServerError, "nats failure:  network update not published")
+		processError(
+			w,
+			http.StatusInternalServerError,
+			"nats failure:  network update not published",
+		)
 		return
 	}
 	slog.Debug("publish network update", "network", network, "reason", "delete network")
-	publish.Message(natsConn, plexus.Networks+network, plexus.NetworkUpdate{Action: plexus.DeleteNetwork})
+	publish.Message(
+		natsConn,
+		plexus.Networks+network,
+		plexus.NetworkUpdate{Action: plexus.DeleteNetwork},
+	)
 	displayNetworks(w, r)
 }
 
@@ -379,7 +394,12 @@ func deleteRelay(w http.ResponseWriter, r *http.Request) {
 		processError(w, http.StatusBadRequest, "failed to save update network peers "+err.Error())
 		return
 	}
-	slog.Debug("publish network update", "network", network.Name, "peer", update.Peer.HostName, "reason", "delete relay")
+	slog.Debug(
+		"publish network update",
+		"network", network.Name,
+		"peer", update.Peer.HostName,
+		"reason", "delete relay",
+	)
 	publish.Message(natsConn, plexus.Networks+network.Name, update)
 	networkDetails(w, r)
 }
@@ -396,7 +416,12 @@ func networkPeerDetails(w http.ResponseWriter, r *http.Request) {
 		if peer.WGPublicKey == peerID {
 			peer.Connectivity *= 100
 			if err := templates.ExecuteTemplate(w, "displayNetworkPeer", peer); err != nil {
-				slog.Error("template execute", "template", "displayNetworkPeer", "peer", peer, "error", err)
+				slog.Error(
+					"template execute",
+					"template", "displayNetworkPeer",
+					"peer", peer,
+					"error", err,
+				)
 			}
 			return
 		}

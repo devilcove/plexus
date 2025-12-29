@@ -36,5 +36,5 @@ var (
 type Configuration struct {
 	NatsPort  int
 	Verbosity string
-	DataDir string
+	DataDir   string
 }

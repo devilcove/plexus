@@ -81,7 +81,7 @@ func addKey(w http.ResponseWriter, r *http.Request) {
 	displayKeys(w, r)
 }
 
-func displayKeys(w http.ResponseWriter, r *http.Request) {
+func displayKeys(w http.ResponseWriter, _ *http.Request) {
 	keys, err := boltdb.GetAll[plexus.Key](keyTable)
 	if err != nil {
 		processError(w, http.StatusInternalServerError, err.Error())
@@ -160,7 +160,11 @@ func expireKeys() {
 	}
 	for _, key := range keys {
 		if key.Expires.Before(time.Now()) {
-			slog.Info("key has expired ...deleting", "key", key.Name, "expiry time", key.Expires.Format(time.RFC822))
+			slog.Info(
+				"key has expired ...deleting",
+				"key", key.Name,
+				"expiry time", key.Expires.Format(time.RFC822),
+			)
 			if err := removeKey(key); err != nil {
 				slog.Error("remove key", "error", err)
 			}

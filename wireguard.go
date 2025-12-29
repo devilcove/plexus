@@ -174,7 +174,12 @@ func convertPeers(input []wgtypes.Peer) []wgtypes.PeerConfig {
 }
 
 func (wg *Wireguard) ReplacePeer(newPeer wgtypes.PeerConfig) {
-	slog.Debug("replacing wg peer", "key", newPeer.PublicKey, "allowed", newPeer.AllowedIPs, "endpoint", newPeer.Endpoint)
+	slog.Debug(
+		"replacing wg peer",
+		"key", newPeer.PublicKey,
+		"allowed", newPeer.AllowedIPs,
+		"endpoint", newPeer.Endpoint,
+	)
 	for i, peer := range wg.Config.Peers {
 		if peer.PublicKey != newPeer.PublicKey {
 			continue

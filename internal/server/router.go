@@ -16,17 +16,12 @@ import (
 //go:embed images assets html
 var content embed.FS
 
-
-var (
-	logger    *slog.Logger
-	templates *template.Template
-)
+var templates *template.Template
 
 func setupRouter(l *slog.Logger) *mux.Router {
 	InitializeSession()
 
 	router := mux.NewRouter(l, mux.Logger)
-	logger = l
 	dir, _ := os.Getwd()
 	slog.Info("here", "pwd", dir)
 	templates = template.Must(template.ParseFS(content, "html/*.html"))
@@ -91,7 +86,7 @@ func processError(w http.ResponseWriter, status int, message string) {
 	l := log.New(&buf, "", log.Lshortfile)
 	_ = l.Output(2, message)
 	slog.Error(buf.String())
-	w.Header().Set("HX-Trigger", header)
+	w.Header().Set("Hx-Trigger", header)
 	http.Error(w, message, status)
 }
 

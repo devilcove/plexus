@@ -119,9 +119,17 @@ func deleteRouter(w http.ResponseWriter, r *http.Request) {
 		processError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	slog.Debug("publish network update - delete router", "network", network.Name, "peer", update.Peer.HostName)
+	slog.Debug(
+		"publish network update - delete router",
+		"network", network.Name,
+		"peer", update.Peer.HostName,
+	)
 	publish.Message(natsConn, "networks."+network.Name, update)
-	publish.Message(natsConn, plexus.Update+update.Peer.WGPublicKey+plexus.DeleteRouter, update.Peer)
+	publish.Message(
+		natsConn,
+		plexus.Update+update.Peer.WGPublicKey+plexus.DeleteRouter,
+		update.Peer,
+	)
 	networkDetails(w, r)
 }
 
@@ -133,7 +141,12 @@ func subnetInUse(subnet *net.IPNet) (string, string, error) {
 	}
 	for _, network := range networks {
 		if network.Net.Contains(subnet.IP) || subnet.Contains(network.Net.IP) {
-			slog.Debug("subnet in use - network", "network", network.Name, "net", network.Net, "subnet", subnet)
+			slog.Debug(
+				"subnet in use - network",
+				"network", network.Name,
+				"net", network.Net,
+				"subnet", subnet,
+			)
 			return "network", network.Name, ErrSubnetInUse
 		}
 		for _, peer := range network.Peers {

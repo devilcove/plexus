@@ -40,7 +40,13 @@ var versionCmd = &cobra.Command{
 			cobra.CheckErr(err)
 			response := plexus.VersionResponse{}
 			// need longer timeout is case of server timeout
-			err = agent.Request(nc, agent.Agent+plexus.Version, long, &response, agent.NatsLongTimeout)
+			err = agent.Request(
+				nc,
+				agent.Agent+plexus.Version,
+				long,
+				&response,
+				agent.NatsLongTimeout,
+			)
 			if err != nil {
 				fmt.Println("error", err)
 			}
@@ -71,5 +77,6 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	versionCmd.Flags().BoolVarP(&long, "long", "l", false, "display server(s)/agent version information")
+	versionCmd.Flags().
+		BoolVarP(&long, "long", "l", false, "display server(s)/agent version information")
 }
