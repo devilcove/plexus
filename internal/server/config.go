@@ -14,11 +14,11 @@ import (
 
 	"github.com/caddyserver/certmagic"
 	"github.com/devilcove/boltdb"
+	"github.com/devilcove/configuration"
 	"github.com/devilcove/plexus"
-	"github.com/mattkasun/tools/config"
 )
 
-type configuration struct {
+type Configuration struct {
 	AdminName string
 	AdminPass string
 	FQDN      string
@@ -39,11 +39,14 @@ const (
 )
 
 var (
-	cfg              *configuration
-	ErrServerURL     = errors.New("invalid server URL")
-	ErrInvalidSubnet = errors.New("invalid subnet")
-	ErrSubnetInUse   = errors.New("subnet in use")
-	version          = "v0.3.0"
+	ErrServerURL       = errors.New("invalid server URL")
+	ErrInvalidSubnet   = errors.New("invalid subnet")
+	ErrSubnetInUse     = errors.New("subnet in use")
+	ErrDataDir         = errors.New("data dir not found")
+	ErrSecureBlankFQDN = errors.New("secure server requires FQDN")
+	ErrSecureWithIP    = errors.New("cannot use IP address with secure")
+	ErrInValidEmail    = errors.New("valid email address required")
+	version            = "v0.3.0"
 )
 
 const (
@@ -61,69 +64,69 @@ func configureServer() (*tls.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	cfg, err = config.Get[configuration]()
-	if err != nil {
+	config := Configuration{}
+	if err := configuration.Get(&config); err != nil {
 		return nil, err
 	}
 	// set defaults
-	if cfg.AdminName == "" {
-		cfg.AdminName = "admin"
+	if config.AdminName == "" {
+		config.AdminName = "admin"
 	}
-	if cfg.AdminPass == "" {
-		cfg.AdminPass = "password"
+	if config.AdminPass == "" {
+		config.AdminPass = "password"
 	}
-	if cfg.Verbosity == "" {
-		cfg.Verbosity = "INFO"
+	if config.Verbosity == "" {
+		config.Verbosity = "INFO"
 	}
-	if cfg.Port == "" {
-		cfg.Port = "8080"
+	if config.Port == "" {
+		config.Port = "8080"
 	}
-	if cfg.DBFile == "" {
-		cfg.DBFile = "plexus-server.db"
+	if config.DBFile == "" {
+		config.DBFile = "plexus-server.db"
 	}
-	if cfg.DataHome == "" {
-		cfg.DataHome = home + "/.local/share/" + filepath.Base(os.Args[0]) + "/"
+	if config.DataHome == "" {
+		config.DataHome = home + "/.local/share/" + filepath.Base(os.Args[0]) + "/"
 	}
-	if _, err := os.Stat(cfg.DataHome); err != nil {
-		return nil, err
+	if _, err := os.Stat(config.DataHome); err != nil {
+		return nil, ErrDataDir
 	}
 
-	slog.Info("configure Server", "config", cfg)
+	slog.Info("configure Server", "config", config)
 	var tlsConfig *tls.Config
-	plexus.SetLogging(cfg.Verbosity)
-	if cfg.Secure {
-		if cfg.FQDN == "" {
-			return nil, errors.New("secure server requires FQDN")
+	plexus.SetLogging(config.Verbosity)
+	if config.Secure {
+		if config.FQDN == "" {
+			return nil, ErrSecureBlankFQDN
 		}
-		if net.ParseIP(cfg.FQDN) != nil {
-			return nil, errors.New("cannot use IP address with secure")
+		if net.ParseIP(config.FQDN) != nil {
+			return nil, ErrSecureWithIP
 		}
-		if !emailValid(cfg.Email) {
-			return nil, errors.New("valid email address required")
+		if !emailValid(config.Email) {
+			return nil, ErrInValidEmail
 		}
 	}
 	// initialize database.
-	if err := os.MkdirAll(cfg.DataHome, os.ModePerm); err != nil {
+	if err := os.MkdirAll(config.DataHome, os.ModePerm); err != nil {
 		return nil, err
 	}
-	slog.Info("init db", "path", cfg.DataHome, "file", cfg.DBFile)
+	slog.Info("init db", "path", config.DataHome, "file", config.DBFile)
 	if err := boltdb.Initialize(
-		cfg.DataHome+cfg.DBFile,
+		filepath.Join(config.DataHome, config.DBFile),
 		[]string{"users", "keys", "networks", "peers", "settings"},
 	); err != nil {
 		return nil, fmt.Errorf("init database %w", err)
 	}
 	// check default user exists.
-	if err := checkDefaultUser(cfg.AdminName, cfg.AdminPass); err != nil {
+	if err := checkDefaultUser(config.AdminName, config.AdminPass); err != nil {
 		return nil, err
 	}
 	// get TLS.
-	if cfg.Secure {
+	if config.Secure {
 		var err error
 		certmagic.DefaultACME.Agreed = true
-		certmagic.DefaultACME.Email = cfg.Email
+		certmagic.DefaultACME.Email = config.Email
 		certmagic.DefaultACME.CA = certmagic.LetsEncryptProductionCA
-		tlsConfig, err = certmagic.TLS([]string{cfg.FQDN})
+		tlsConfig, err = certmagic.TLS([]string{config.FQDN})
 		if err != nil {
 			return nil, err
 		}

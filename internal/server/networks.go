@@ -21,7 +21,7 @@ func displayAddNetwork(w http.ResponseWriter, r *http.Request) {
 		displayLogin(w, r)
 		return
 	}
-	page := getPage(session.User)
+	page := getPage(session.UserName)
 	page.Page = "addNetwork"
 
 	if err := session.Session.Save(r, w); err != nil {
@@ -33,10 +33,6 @@ func displayAddNetwork(w http.ResponseWriter, r *http.Request) {
 }
 
 func addNetwork(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		processError(w, http.StatusBadRequest, "invalid form")
-		return
-	}
 	var errs error
 	network := plexus.Network{
 		Name:          r.FormValue("name"),
@@ -75,7 +71,7 @@ func addNetwork(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	slog.Info("network validation complete ... saving", "network", network)
+	slog.Debug("network validation complete ... saving", "network", network)
 	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 		processError(w, http.StatusInternalServerError, "unable to save network "+err.Error())
 		return
@@ -89,7 +85,7 @@ func displayNetworks(w http.ResponseWriter, r *http.Request) {
 		displayLogin(w, r)
 		return
 	}
-	page := getPage(session.User)
+	page := getPage(session.UserName)
 	networks, err := boltdb.GetAll[plexus.Network](networkTable)
 	if err != nil {
 		processError(w, http.StatusInternalServerError, err.Error())
@@ -289,119 +285,6 @@ func getNetworksForPeer(id string) ([]plexus.Network, error) {
 		}
 	}
 	return response, nil
-}
-
-func displayAddRelay(w http.ResponseWriter, r *http.Request) {
-	data := struct {
-		Network        string
-		Relay          plexus.NetworkPeer
-		AvailablePeers []plexus.NetworkPeer
-	}{}
-	data.Network = r.PathValue("id")
-	relay := r.PathValue("peer")
-	slog.Debug("add relay", "network", data.Network, "relay", relay)
-	network, err := boltdb.Get[plexus.Network](data.Network, networkTable)
-	if err != nil {
-		processError(w, http.StatusBadGateway, err.Error())
-		return
-	}
-	for _, peer := range network.Peers {
-		if peer.WGPublicKey == relay {
-			data.Relay = peer
-			continue
-		}
-		if peer.IsRelay || peer.IsRelayed || peer.IsSubnetRouter {
-			continue
-		}
-		data.AvailablePeers = append(data.AvailablePeers, peer)
-	}
-	if err := templates.ExecuteTemplate(w, "addRelayToNetwork", data); err != nil {
-		slog.Error("execute template", "template", "addRelayToNetwork", "data", data, "error", err)
-	}
-}
-
-func addRelay(w http.ResponseWriter, r *http.Request) {
-	netID := r.PathValue("id")
-	relayID := r.PathValue("peer")
-	relayedIDs := r.PostForm["relayed"]
-	network, err := boltdb.Get[plexus.Network](netID, networkTable)
-	if err != nil {
-		processError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	update := plexus.NetworkUpdate{
-		Action: plexus.AddRelay,
-	}
-	peers := []plexus.NetworkPeer{}
-	for _, peer := range network.Peers {
-		if peer.WGPublicKey == relayID {
-			peer.IsRelay = true
-			peer.RelayedPeers = relayedIDs
-			update.Peer = peer
-		}
-		if slices.Contains(relayedIDs, peer.WGPublicKey) {
-			peer.IsRelayed = true
-		}
-		peers = append(peers, peer)
-	}
-	network.Peers = peers
-	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
-		processError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	slog.Debug("publish network update - add relay", "network", network.Name, "relay", relayID)
-	publish.Message(natsConn, "networks."+network.Name, update)
-	networkDetails(w, r)
-}
-
-func deleteRelay(w http.ResponseWriter, r *http.Request) {
-	netName := r.PathValue("id")
-	peerID := r.PathValue("peer")
-	slog.Info("delete relay", "network", netName, "relay", peerID)
-	network, err := boltdb.Get[plexus.Network](netName, networkTable)
-	if err != nil {
-		processError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	update := plexus.NetworkUpdate{
-		Action: plexus.DeleteRelay,
-	}
-	peersToUnrelay := []string{}
-	updatedPeers := []plexus.NetworkPeer{}
-	for _, peer := range network.Peers {
-		if peer.WGPublicKey == peerID {
-			// send the original peer to agents which will include the list of peers to unrelay
-			update.Peer = peer
-			peer.IsRelay = false
-			peersToUnrelay = peer.RelayedPeers
-			peer.RelayedPeers = []string{}
-			updatedPeers = append(updatedPeers, peer)
-			break
-		}
-	}
-	for _, peer := range network.Peers {
-		if peer.WGPublicKey == peerID {
-			// already added above.
-			continue
-		}
-		if slices.Contains(peersToUnrelay, peer.WGPublicKey) {
-			peer.IsRelayed = false
-		}
-		updatedPeers = append(updatedPeers, peer)
-	}
-	network.Peers = updatedPeers
-	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
-		processError(w, http.StatusBadRequest, "failed to save update network peers "+err.Error())
-		return
-	}
-	slog.Debug(
-		"publish network update",
-		"network", network.Name,
-		"peer", update.Peer.HostName,
-		"reason", "delete relay",
-	)
-	publish.Message(natsConn, plexus.Networks+network.Name, update)
-	networkDetails(w, r)
 }
 
 func networkPeerDetails(w http.ResponseWriter, r *http.Request) {

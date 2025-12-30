@@ -46,6 +46,7 @@ func addRouter(w http.ResponseWriter, r *http.Request) {
 		}
 		if virtSubnet.Mask.String() != subnet.Mask.String() {
 			processError(w, http.StatusBadRequest, "subnet/virtual subnet masks must be the same")
+			return
 		}
 		if message, err := validateSubnet(virtSubnet); err != nil {
 			processError(w, http.StatusBadRequest, message)
@@ -54,10 +55,6 @@ func addRouter(w http.ResponseWriter, r *http.Request) {
 	}
 	if message, err := validateSubnet(subnet); err != nil {
 		processError(w, http.StatusBadRequest, message)
-		return
-	}
-	if !validateNetworkAddress(*subnet) {
-		processError(w, http.StatusBadRequest, "invalid subnet: must be a private network")
 		return
 	}
 	network, err := boltdb.Get[plexus.Network](netID, networkTable)

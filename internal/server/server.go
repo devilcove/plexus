@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/devilcove/boltdb"
+	"github.com/devilcove/configuration"
 	"github.com/devilcove/plexus"
 	"github.com/mattkasun/tools/logging"
 	"github.com/nats-io/nats-server/v2/server"
@@ -22,7 +23,6 @@ import (
 )
 
 var (
-	newDevice   chan string
 	brokerfail  chan int
 	webfail     chan int
 	natServer   *server.Server
@@ -44,7 +44,6 @@ func Run() {
 	reset := make(chan os.Signal, 1)
 	brokerfail = make(chan int, 1)
 	webfail = make(chan int, 1)
-	newDevice = make(chan string, 1)
 	signal.Notify(quit, syscall.SIGTERM, os.Interrupt)
 	signal.Notify(reset, syscall.SIGHUP)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -86,15 +85,20 @@ func start(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 
 func web(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 	defer wg.Done()
-	slog.Info("Starting web server...")
+	config := Configuration{}
+	if err := configuration.Get(&config); err != nil {
+		slog.Error("configuration", "error", err)
+		webfail <- 1
+		return
+	}
 	router := setupRouter(
 		logging.TextLogger(logging.TruncateSource(), logging.TimeFormat(time.DateTime)).Logger,
 	)
 	server := http.Server{
-		Addr:    ":" + cfg.Port,
+		Addr:    ":" + config.Port,
 		Handler: router,
 	}
-	if cfg.Secure {
+	if config.Secure {
 		if tls == nil {
 			slog.Error("secure set but tls nil")
 			webfail <- 1
@@ -117,7 +121,7 @@ func web(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 		}()
 	}
 
-	slog.Info("web server started")
+	slog.Info("web server started", "at", server.Addr)
 	<-ctx.Done()
 	slog.Info("shutting down web server")
 	if err := server.Shutdown(ctx); err != nil {
@@ -127,11 +131,17 @@ func web(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 }
 
 func getServer(w http.ResponseWriter, _ *http.Request) {
+	config := Configuration{}
+	if err := configuration.Get(&config); err != nil {
+		slog.Error("configuration", "error", err)
+		processError(w, http.StatusInternalServerError, "unable to read configuration")
+		return
+	}
 	server := struct {
 		LogLevel string
 		Logs     []string
 	}{
-		LogLevel: cfg.Verbosity,
+		LogLevel: config.Verbosity,
 	}
 	cmd := exec.Command(
 		"/usr/bin/journalctl",
@@ -154,7 +164,13 @@ func getServer(w http.ResponseWriter, _ *http.Request) {
 }
 
 func setLogLevel(w http.ResponseWriter, r *http.Request) {
-	cfg.Verbosity = r.PathValue("level")
-	plexus.SetLogging(cfg.Verbosity)
+	config := Configuration{}
+	if err := configuration.Get(&config); err != nil {
+		slog.Error("configuration", "error", err)
+		processError(w, http.StatusInternalServerError, "unable to read configuration")
+		return
+	}
+	config.Verbosity = r.PathValue("level")
+	plexus.SetLogging(config.Verbosity)
 	getServer(w, r)
 }

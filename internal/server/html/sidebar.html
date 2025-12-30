@@ -9,8 +9,8 @@
             <summary><i class="fa fa-network-wired w3-large"></i>
                 Networks</summary>
             {{range .}}
-            <button type="button" class="w3-bar-item w3-button w3-padding-large w3-theme-dark" hx-get="/networks/{{.}}"
-                hx-target="#content" hx-target-error="#error">
+            <button type="button" class="w3-bar-item w3-button w3-padding-large w3-theme-dark"
+                hx-get="/networks/details/{{.}}" hx-target="#content" hx-target-error="#error">
                 <i class="fa fa-cloud w3-small"></i>
                 {{.}}</button>
             {{end}}
@@ -62,8 +62,8 @@
     <summary><i class="fa fa-network-wired w3-large"></i>
         Networks</summary>
     {{range .}}
-    <button type="button" class="w3-bar-item w3-button w3-padding-large w3-theme-dark" hx-get="/networks/{{.Name}}"
-        hx-target="#content" hx-target-error="#error">
+    <button type="button" class="w3-bar-item w3-button w3-padding-large w3-theme-dark"
+        hx-get="/networks/details/{{.Name}}" hx-target="#content" hx-target-error="#error">
         <i class="fa fa-cloud w3-small"></i>
         {{.Name}}</button>
     {{end}}

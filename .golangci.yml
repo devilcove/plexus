@@ -36,9 +36,10 @@ linters:
       allow-time-local: true
     ireturn:
       allow:
-        - nkeys.KeyPair
         - error
+        - io.Reader
         - net/http.Handler
+        - nkeys.KeyPair
     varnamelen:
       max-distance: 15
       ignore-names:
@@ -64,16 +65,13 @@ linters:
     rules:
       - path: _test\.go
         linters:
+          - dupl
+          - funlen
           - gocognit
           - goconst
-          - funlen
-          - nonamedreturns
-          - revive
           - predeclared
-      - path: app/plexus-agent/cmd/
-        linters:
           - revive
-      - path: wireguard.go
+      - path: app/plexus-agent/cmd/*
         linters:
           - revive
 formatters:

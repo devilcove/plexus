@@ -86,7 +86,7 @@ func startInterface(self Device, network Network) error {
 		}
 	}
 	if address.IPNet == nil {
-		return errors.New("no address for network" + network.Name)
+		return errors.New("no address for network " + network.Name)
 	}
 	privKey, err := wgtypes.ParseKey(self.WGPrivateKey)
 	if err != nil {

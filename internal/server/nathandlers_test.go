@@ -11,7 +11,7 @@ import (
 
 func TestGetNextIP(t *testing.T) {
 	_, cidr, err := net.ParseCIDR("192.168.0.10/24")
-	should.BeNil(t, err)
+	should.NotBeError(t, err)
 	network := plexus.Network{
 		Net: *cidr,
 	}
@@ -37,7 +37,7 @@ func TestGetNextIP(t *testing.T) {
 	}
 	network.Peers = peers
 	ip, err := getNextIP(network)
-	should.BeNil(t, err)
+	should.NotBeError(t, err)
 	should.BeEqual(t, iplib.CompareIPs(ip, net.ParseIP("192.168.0.3")), 0)
 	t.Log(ip)
 }

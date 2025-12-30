@@ -19,7 +19,7 @@
     <div class="w3-theme-l3">Delete</div>
     {{range .Data}}
     <div>
-        <button class="w3-button" type="button" hx-get="networks/{{.Name}}" hx-target="#content"
+        <button class="w3-button" type="button" hx-get="networks/details/{{.Name}}" hx-target="#content"
             hx-target-error="#error">
             <i class="fas fa-desktop"></i>
             {{.Name}}</button>
@@ -44,7 +44,7 @@
     <label>Network CIDR</label>
     <input class="w3-input" type="text" value="10.10.10.0/24" name="addressstring" required style="width:50%"><br>
     <p>
-        <button class="w3-button w3-theme-dark w3-padding large" type="button" hx-get="/networks" hx-target="#content">
+        <button class="w3-button w3-theme-dark w3-padding large" type="button" hx-get="/networks/" hx-target="#content">
             Cancel</button>
         <button class="w3-button w3-theme-dark" type="reset">Reset</button>
         <button class="W3-button w3-theme-dark" type="submit">Add</button>

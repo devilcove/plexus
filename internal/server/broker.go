@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/devilcove/boltdb"
+	"github.com/devilcove/configuration"
 	"github.com/devilcove/plexus"
 	"github.com/devilcove/plexus/internal/publish"
 	"github.com/nats-io/nats-server/v2/server"
@@ -49,9 +50,14 @@ func broker(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 	natsOptions.Nkeys = append(natsOptions.Nkeys, tokensUsers...)
 	natsOptions.Nkeys = append(natsOptions.Nkeys, deviceUsers...)
 	natsOptions.NoSigs = true
-	if cfg.Secure {
+	config := &Configuration{}
+	if err := configuration.Get(config); err != nil {
+		slog.Error("configuration", "error", err)
+		return
+	}
+	if config.Secure {
 		natsOptions.TLSConfig = tls
-		natsOptions.Host = cfg.FQDN
+		natsOptions.Host = config.FQDN
 	}
 	natServer, err = server.NewServer(natsOptions)
 	if err != nil {
@@ -67,7 +73,7 @@ func broker(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 		return adminKey.Sign(nonce)
 	}
 	opts := []nats.Option{nats.Nkey(adminPublicKey, SignatureCB)}
-	natsConn, err = nats.Connect("nats://"+net.JoinHostPort(cfg.FQDN, "4222"), opts...)
+	natsConn, err = nats.Connect("nats://"+net.JoinHostPort(config.FQDN, "4222"), opts...)
 	if err != nil {
 		slog.Error("nats connect", "error", err)
 		brokerfail <- 1
@@ -90,27 +96,6 @@ func startBroker(ctx context.Context) {
 				_ = sub.Drain()
 			}
 			return
-		case token := <-newDevice:
-			slog.Info("new login device", "device", token)
-			keyValue, err := plexus.DecodeToken(token)
-			if err != nil {
-				slog.Error("decode token", "error", err)
-			}
-			key, err := nkeys.FromSeed([]byte(keyValue.Seed))
-			if err != nil {
-				slog.Error("seed failure", "error", err)
-				continue
-			}
-			nPubKey, err := key.PublicKey()
-			if err != nil {
-				slog.Error("publickey", "error", err)
-				continue
-			}
-			natsOptions.Nkeys = append(natsOptions.Nkeys, &server.NkeyUser{
-				Nkey:        nPubKey,
-				Permissions: registerPermissions(),
-			})
-			_ = natServer.ReloadOptions(natsOptions)
 		case <-pingTicker.C:
 			pingPeers()
 		case <-keyTicker.C:
@@ -153,7 +138,12 @@ func createNkeyUser(token string) *server.NkeyUser {
 }
 
 func getAdminKey() nkeys.KeyPair {
-	seed, err := os.ReadFile(cfg.DataHome + "server.seed")
+	config := Configuration{}
+	if err := configuration.Get(&config); err != nil {
+		slog.Error("configuration", "error", err)
+		return nil
+	}
+	seed, err := os.ReadFile(config.DataHome + "server.seed")
 	if err != nil {
 		return createAdminNKeyPair()
 	}
@@ -176,7 +166,12 @@ func createAdminNKeyPair() nkeys.KeyPair {
 		slog.Error("admin seed creation", "error", err)
 		return admin
 	}
-	if err := os.WriteFile(cfg.DataHome+"server.seed", seed, os.ModePerm); err != nil {
+	config := Configuration{}
+	if err := configuration.Get(&config); err != nil {
+		slog.Error("configuration", "error", err)
+		return nil
+	}
+	if err := os.WriteFile(config.DataHome+"/server.seed", seed, os.ModePerm); err != nil {
 		slog.Error("save admin seed", "error", err)
 	}
 	return admin

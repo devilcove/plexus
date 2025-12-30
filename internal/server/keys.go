@@ -12,7 +12,9 @@ import (
 	"time"
 
 	"github.com/devilcove/boltdb"
+	"github.com/devilcove/configuration"
 	"github.com/devilcove/plexus"
+	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nkeys"
 )
 
@@ -22,7 +24,7 @@ func displayCreateKey(w http.ResponseWriter, r *http.Request) {
 		displayLogin(w, r)
 		return
 	}
-	page := getPage(session.User)
+	page := getPage(session.UserName)
 	page.Page = "addKey"
 	if err := templates.ExecuteTemplate(w, "addKey", page); err != nil {
 		slog.Error("execute template", "template", "addKey", "page", page, "error", err)
@@ -30,10 +32,6 @@ func displayCreateKey(w http.ResponseWriter, r *http.Request) {
 }
 
 func addKey(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		processError(w, http.StatusBadRequest, "invalid form")
-		return
-	}
 	var err error
 	usage, err := strconv.Atoi(r.FormValue("usage"))
 	if err != nil {
@@ -58,7 +56,9 @@ func addKey(w http.ResponseWriter, r *http.Request) {
 		processError(w, http.StatusInternalServerError, "unable to encode key"+err.Error())
 		return
 	}
-	newDevice <- key.Value
+	if err := addDevice(key.Value); err != nil {
+		processError(w, http.StatusInternalServerError, "unable to add device"+err.Error())
+	}
 	if key.Usage == 0 {
 		key.Usage = 1
 	}
@@ -117,6 +117,11 @@ func validateKey(key plexus.Key) error {
 }
 
 func newValue(name string) (string, error) {
+	config := Configuration{}
+	if err := configuration.Get(&config); err != nil {
+		slog.Error("configuration", "error", err)
+		return "", err
+	}
 	device, err := nkeys.CreateUser()
 	if err != nil {
 		return "", err
@@ -126,7 +131,7 @@ func newValue(name string) (string, error) {
 		return "", err
 	}
 	keyValue := plexus.KeyValue{
-		URL:     cfg.FQDN,
+		URL:     config.FQDN,
 		Seed:    string(seed),
 		KeyName: name,
 	}
@@ -196,4 +201,28 @@ func removeKey(key plexus.Key) error {
 		errs = errors.Join(errs, err)
 	}
 	return errs
+}
+
+func addDevice(token string) error {
+	slog.Info("new login device", "device", token)
+	keyValue, err := plexus.DecodeToken(token)
+	if err != nil {
+		slog.Error("decode token", "error", err)
+		return err
+	}
+	key, err := nkeys.FromSeed([]byte(keyValue.Seed))
+	if err != nil {
+		slog.Error("seed failure", "error", err)
+		return err
+	}
+	nPubKey, err := key.PublicKey()
+	if err != nil {
+		slog.Error("publickey", "error", err)
+		return err
+	}
+	natsOptions.Nkeys = append(natsOptions.Nkeys, &server.NkeyUser{
+		Nkey:        nPubKey,
+		Permissions: registerPermissions(),
+	})
+	return natServer.ReloadOptions(natsOptions)
 }

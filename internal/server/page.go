@@ -52,10 +52,6 @@ func displayMain(w http.ResponseWriter, r *http.Request) {
 
 func login(w http.ResponseWriter, r *http.Request) {
 	var user plexus.User
-	if err := r.ParseForm(); err != nil {
-		processError(w, http.StatusBadRequest, "invalid login form")
-		return
-	}
 	user.Username = r.FormValue("username")
 	user.Password = r.FormValue("password")
 
@@ -65,7 +61,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 	}
 	NewSession(w, r, user, true, "networks")
 
-	slog.Info("login", "user", user.Username)
+	slog.Debug("login", "user", user.Username)
 	page := getPage(user.Username)
 	page.NeedsLogin = false
 	page.Page = "networks"
@@ -97,10 +93,9 @@ func checkPassword(plain, hash *plexus.User) bool {
 
 func logout(w http.ResponseWriter, r *http.Request) {
 	ClearSession(w, r)
-	slog.Info("logout")
-	page := initialize()
-	page.NeedsLogin = true
-	slog.Warn("logout", "page", page)
+	slog.Debug("logout")
+	// page := initialize()
+	// page.NeedsLogin = true
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 

@@ -75,7 +75,7 @@ func getUsers(w http.ResponseWriter, r *http.Request) {
 		getCurrentUser(w, r)
 		return
 	}
-	slog.Debug("getting uses", "admin", session.Admin)
+	slog.Debug("getting users", "admin", session.Admin)
 	users, err := boltdb.GetAll[plexus.User](userTable)
 	if err != nil {
 		processError(w, http.StatusBadRequest, err.Error())
@@ -105,8 +105,16 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userToEdit := r.PathValue("name")
-	slog.Debug("getUser", "admin", session.Admin, "visitor", session.User, "to edit", userToEdit)
-	if !session.Admin && session.User != userToEdit {
+	slog.Debug(
+		"getUser",
+		"admin",
+		session.Admin,
+		"visitor",
+		session.UserName,
+		"to edit",
+		userToEdit,
+	)
+	if !session.Admin && session.UserName != userToEdit {
 		processError(w, http.StatusUnauthorized, "you need to be an admin to edit other users")
 		return
 	}
@@ -131,7 +139,8 @@ func getCurrentUser(w http.ResponseWriter, r *http.Request) {
 		displayLogin(w, r)
 		return
 	}
-	user, err := boltdb.Get[plexus.User](session.User, userTable)
+	slog.Error("session", "session", session)
+	user, err := boltdb.Get[plexus.User](session.UserName, userTable)
 	if err != nil {
 		processError(w, http.StatusBadRequest, "no such user "+err.Error())
 		return
@@ -156,7 +165,7 @@ func deleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 	user := r.PathValue("name")
 	if err := boltdb.Delete[plexus.User](user, userTable); err != nil {
-		processError(w, http.StatusFailedDependency, err.Error())
+		processError(w, http.StatusNotFound, err.Error())
 		return
 	}
 	getUsers(w, r)
@@ -183,9 +192,6 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 		processError(w, http.StatusUnauthorized, "admin rights required")
 		return
 	}
-	if err := r.ParseForm(); err != nil {
-		processError(w, http.StatusBadRequest, "invalid form")
-	}
 	user := plexus.User{
 		Username: r.FormValue("username"),
 	}
@@ -211,10 +217,6 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func editUser(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		processError(w, http.StatusBadRequest, "invalid form")
-		return
-	}
 	input := r.FormValue("password")
 	if input == "" {
 		processError(w, http.StatusBadRequest, "blank password")
@@ -226,8 +228,8 @@ func editUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userToEdit := r.PathValue("name")
-	if !session.Admin && session.User != userToEdit {
-		processError(w, http.StatusUnauthorized, "admin right required to update other users")
+	if !session.Admin && session.UserName != userToEdit {
+		processError(w, http.StatusUnauthorized, "admin rights required to update other users")
 		return
 	}
 	user, err := boltdb.Get[plexus.User](userToEdit, userTable)

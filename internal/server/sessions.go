@@ -24,7 +24,7 @@ var (
 
 // Session represents a user session.
 type Session struct {
-	User     string
+	UserName string
 	LoggedIn bool
 	Admin    bool
 	Page     string
@@ -57,9 +57,10 @@ func GetSession(_ http.ResponseWriter, r *http.Request) *Session {
 		slog.Error("session err", "error", err)
 		return nil
 	}
-	user := session.Values["user"]
+	user := session.Values["username"]
+	slog.Debug("GetSession", "userName", session.Values)
 	if u, ok := user.(string); ok {
-		sess.User = u
+		sess.UserName = u
 	}
 	loggedIn := session.Values["loggedIn"]
 	if l, ok := loggedIn.(bool); ok {
@@ -74,6 +75,7 @@ func GetSession(_ http.ResponseWriter, r *http.Request) *Session {
 	if p, ok := page.(string); ok {
 		sess.Page = p
 	}
+	slog.Debug("getSession", "session", sess, "values", session.Values)
 	sess.Session = session
 	return sess
 }
@@ -110,7 +112,7 @@ func NewSession(
 	if err := session.Save(r, w); err != nil {
 		slog.Error("save session", "error", err)
 	}
-	slog.Info("new session created")
+	slog.Debug("NewSession", "session", session.Values)
 }
 
 func (s *Session) Save(w http.ResponseWriter, r *http.Request) {

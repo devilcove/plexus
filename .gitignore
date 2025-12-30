@@ -9,3 +9,4 @@ time.db
 devops/experiment/*
 devops/plexus-update/*
 devops/deploy/*
+internal/agent/agent.seed
