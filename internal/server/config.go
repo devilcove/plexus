@@ -46,7 +46,7 @@ var (
 	ErrSecureBlankFQDN = errors.New("secure server requires FQDN")
 	ErrSecureWithIP    = errors.New("cannot use IP address with secure")
 	ErrInValidEmail    = errors.New("valid email address required")
-	version            = "v0.3.0"
+	version            = "v0.4.0"
 )
 
 const (
