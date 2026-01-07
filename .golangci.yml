@@ -19,7 +19,6 @@ linters:
     - noinlineerr
     - paralleltest
     - testpackage
-    - thelper
     - wrapcheck
     - wsl
     - wsl_v5
