@@ -8,8 +8,6 @@ import (
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-gonic/gin"
 	"go.etcd.io/bbolt"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -67,22 +65,24 @@ func hashPassword(password string) (string, error) {
 	return string(bytes), err
 }
 
-func getUsers(c *gin.Context) {
-	session := sessions.Default(c)
-	admin := session.Get("admin").(bool)
-	slog.Debug("getUsers", "admin", admin, "ad", session.Get("admin"), "visitor", session.Get("user"))
-	if !admin {
-		getCurrentUser(c)
+func getUsers(w http.ResponseWriter, r *http.Request) {
+	session := GetSession(w, r)
+	if session == nil {
+		displayLogin(w, r)
 		return
 	}
-	slog.Debug("getting uses", "admin", admin)
+	if !session.Admin {
+		getCurrentUser(w, r)
+		return
+	}
+	slog.Debug("getting users", "admin", session.Admin)
 	users, err := boltdb.GetAll[plexus.User](userTable)
 	if err != nil {
-		processError(c, http.StatusBadRequest, err.Error())
+		processError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	if len(users) == 0 {
-		processError(c, http.StatusFailedDependency, "no users")
+		processError(w, http.StatusFailedDependency, "no users")
 		return
 	}
 	returnedUsers := []plexus.User{}
@@ -90,137 +90,162 @@ func getUsers(c *gin.Context) {
 		user.Password = ""
 		returnedUsers = append(returnedUsers, user)
 	}
-	_ = session.Save()
-	c.HTML(http.StatusOK, "users", returnedUsers)
+	if err := session.Session.Save(r, w); err != nil {
+		slog.Error("save session", "error", err)
+	}
+	if err := templates.ExecuteTemplate(w, "users", returnedUsers); err != nil {
+		slog.Error("template execute", "template", "users", "data", returnedUsers, "error", err)
+	}
 }
 
-func getUser(c *gin.Context) {
-	session := sessions.Default(c)
-	visitor := session.Get("user").(string)
-	admin := session.Get("admin").(bool)
-	userToEdit := c.Param("name")
-	slog.Debug("getUser", "admin", admin, "visitor", visitor, "to edit", userToEdit)
-	if !admin && visitor != userToEdit {
-		processError(c, http.StatusUnauthorized, "you need to be an admin to edit other users")
+func getUser(w http.ResponseWriter, r *http.Request) {
+	session := GetSession(w, r)
+	if session == nil {
+		displayLogin(w, r)
+		return
+	}
+	userToEdit := r.PathValue("name")
+	slog.Debug(
+		"getUser",
+		"admin",
+		session.Admin,
+		"visitor",
+		session.UserName,
+		"to edit",
+		userToEdit,
+	)
+	if !session.Admin && session.UserName != userToEdit {
+		processError(w, http.StatusUnauthorized, "you need to be an admin to edit other users")
 		return
 	}
 	user, err := boltdb.Get[plexus.User](userToEdit, userTable)
 	if err != nil {
-		processError(c, http.StatusBadRequest, err.Error())
+		processError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	user.Password = ""
-	_ = session.Save()
-	c.HTML(http.StatusOK, "editUser", user)
+	if err := session.Session.Save(r, w); err != nil {
+		slog.Error("session save", "error", err)
+	}
+	if err := templates.ExecuteTemplate(w, "editUser", user); err != nil {
+		slog.Error("template execute", "template", "editUser", "data", user, "error", err)
+	}
 }
 
-func getCurrentUser(c *gin.Context) {
+func getCurrentUser(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("get current user")
-	session := sessions.Default(c)
-	visitor := session.Get("user").(string)
-	user, err := boltdb.Get[plexus.User](visitor, userTable)
-	if err != nil {
-		processError(c, http.StatusBadRequest, "no such user "+err.Error())
+	session := GetSession(w, r)
+	if session == nil {
+		displayLogin(w, r)
 		return
 	}
-	_ = session.Save()
-	c.HTML(http.StatusOK, "editUser", user)
+	slog.Error("session", "session", session)
+	user, err := boltdb.Get[plexus.User](session.UserName, userTable)
+	if err != nil {
+		processError(w, http.StatusBadRequest, "no such user "+err.Error())
+		return
+	}
+	if err := session.Session.Save(r, w); err != nil {
+		slog.Error("session save", "error", err)
+	}
+	if err := templates.ExecuteTemplate(w, "editUser", user); err != nil {
+		slog.Error("template execute", "template", "editUser", "data", user, "error", err)
+	}
 }
 
-func deleteUser(c *gin.Context) {
-	session := sessions.Default(c)
-	admin := session.Get("admin").(bool)
-	if !admin {
-		processError(c, http.StatusUnauthorized, "admin rights required")
+func deleteUser(w http.ResponseWriter, r *http.Request) {
+	session := GetSession(w, r)
+	if session == nil {
+		displayLogin(w, r)
 		return
 	}
-	user := c.Param("name")
+	if !session.Admin {
+		processError(w, http.StatusUnauthorized, "admin rights required")
+		return
+	}
+	user := r.PathValue("name")
 	if err := boltdb.Delete[plexus.User](user, userTable); err != nil {
-		processError(c, http.StatusFailedDependency, err.Error())
+		processError(w, http.StatusNotFound, err.Error())
 		return
 	}
-	getUsers(c)
+	getUsers(w, r)
 }
 
-func displayAddUser(c *gin.Context) {
-	session := sessions.Default(c)
-	if !session.Get("admin").(bool) {
-		processError(c, http.StatusUnauthorized, "admin rights required")
+func displayAddUser(w http.ResponseWriter, r *http.Request) {
+	session := GetSession(w, r)
+	if !session.Admin {
+		processError(w, http.StatusUnauthorized, "admin rights required")
 		return
 	}
-	c.HTML(http.StatusOK, "newUser", nil)
+	if err := templates.ExecuteTemplate(w, "newUser", nil); err != nil {
+		slog.Error("template execute", "template", "newUser", "data", "nil", "error", err)
+	}
 }
 
-func addUser(c *gin.Context) {
-	input := struct {
-		Username string
-		Password string
-		Admin    string
-	}{}
-	session := sessions.Default(c)
-	if !session.Get("admin").(bool) {
-		processError(c, http.StatusUnauthorized, "admin rights required")
+func addUser(w http.ResponseWriter, r *http.Request) {
+	session := GetSession(w, r)
+	if session == nil {
+		displayLogin(w, r)
 		return
 	}
-	if err := c.Bind(&input); err != nil {
-		processError(c, http.StatusBadRequest, "invalid user data")
-		return
-	}
-	password, err := hashPassword(input.Password)
-	if err != nil {
-		processError(c, http.StatusInternalServerError, err.Error())
+	if !session.Admin {
+		processError(w, http.StatusUnauthorized, "admin rights required")
 		return
 	}
 	user := plexus.User{
-		Username: input.Username,
-		Password: password,
-		Updated:  time.Now(),
+		Username: r.FormValue("username"),
 	}
-	if input.Admin == "on" {
+	password, err := hashPassword(r.FormValue("password"))
+	if err != nil {
+		processError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	user.Password = password
+	if r.FormValue("admin") == "on" {
 		user.IsAdmin = true
 	}
 	if _, err := boltdb.Get[plexus.User](user.Username, userTable); err == nil {
-		processError(c, http.StatusBadRequest, "user exists")
+		processError(w, http.StatusBadRequest, "user exists")
 		return
 	}
-	slog.Debug("saving new user", "user", user)
-	if err := boltdb.Save(user, input.Username, userTable); err != nil {
-		processError(c, http.StatusInternalServerError, "unable to save user "+err.Error())
+	slog.Info("saving new user", "user", user)
+	if err := boltdb.Save(user, user.Username, userTable); err != nil {
+		processError(w, http.StatusInternalServerError, "unable to save user "+err.Error())
 		return
 	}
-	getUsers(c)
+	getUsers(w, r)
 }
 
-func editUser(c *gin.Context) {
-	input := struct {
-		Password string
-	}{}
-	if err := c.Bind(&input); err != nil {
-		processError(c, http.StatusBadRequest, "invalid user data")
+func editUser(w http.ResponseWriter, r *http.Request) {
+	input := r.FormValue("password")
+	if input == "" {
+		processError(w, http.StatusBadRequest, "blank password")
 		return
 	}
-	session := sessions.Default(c)
-	admin := session.Get("admin").(bool)
-	visitor := session.Get("user").(string)
-	userToEdit := c.Param("name")
-	if !admin && visitor != userToEdit {
-		processError(c, http.StatusUnauthorized, "admin right required to update other users")
+	session := GetSession(w, r)
+	if session == nil {
+		displayLogin(w, r)
+		return
+	}
+	userToEdit := r.PathValue("name")
+	if !session.Admin && session.UserName != userToEdit {
+		processError(w, http.StatusUnauthorized, "admin rights required to update other users")
 		return
 	}
 	user, err := boltdb.Get[plexus.User](userToEdit, userTable)
 	if err != nil {
-		processError(c, http.StatusBadRequest, err.Error())
+		processError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	password, err := hashPassword(input.Password)
+	password, err := hashPassword(input)
 	if err != nil {
-		processError(c, http.StatusInternalServerError, err.Error())
+		processError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	user.Password = password
 	if err := boltdb.Save(user, user.Username, userTable); err != nil {
-		processError(c, http.StatusInternalServerError, err.Error())
+		processError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	getUsers(c)
+	getUsers(w, r)
 }

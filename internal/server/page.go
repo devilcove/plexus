@@ -7,8 +7,6 @@ import (
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -33,51 +31,43 @@ func init() {
 	pages = make(map[string]Page)
 }
 
-func displayMain(c *gin.Context) {
-	session := sessions.Default(c)
-	user := session.Get("user")
-	loggedin := session.Get("loggedin")
-	page := getPage(user)
-	if loggedin == nil {
-		page.NeedsLogin = true
+func displayMain(w http.ResponseWriter, r *http.Request) {
+	page := initialize()
+	page.NeedsLogin = true
+	session := GetSession(w, r)
+	if session != nil {
+		networks, err := boltdb.GetAll[plexus.Network](networkTable)
+		if err != nil {
+			slog.Error("get networks for main display", "error", err)
+		}
+		page.Data = networks
+		page.NeedsLogin = !session.LoggedIn
 	}
-	networks, err := boltdb.GetAll[plexus.Network](networkTable)
-	if err != nil {
-		slog.Error("get networks for main display", "error", err)
+	slog.Info("display main page", "session", session, "page", page)
+
+	if err := templates.ExecuteTemplate(w, "layout", page); err != nil {
+		slog.Error("display main", "template", "layout", "page", page, "error", err)
 	}
-	page.Data = networks
-	page.Page = "networks"
-	slog.Debug("display main page", "user", user, "page", page)
-	c.HTML(http.StatusOK, "layout", page)
 }
 
-func login(c *gin.Context) {
-	session := sessions.Default(c)
+func login(w http.ResponseWriter, r *http.Request) {
 	var user plexus.User
-	if err := c.Bind(&user); err != nil {
-		processError(c, http.StatusBadRequest, "invalid user")
-		slog.Error("bind err", "error", err)
-		return
-	}
+	user.Username = r.FormValue("username")
+	user.Password = r.FormValue("password")
+
 	if !validateUser(&user) {
-		session.Clear()
-		_ = session.Save()
-		processError(c, http.StatusBadRequest, "invalid user")
-		slog.Warn("validation error", "user", user.Username)
+		processError(w, http.StatusBadRequest, "invalid user")
 		return
 	}
-	session.Set("loggedin", true)
-	session.Set("user", user.Username)
-	session.Set("admin", user.IsAdmin)
-	session.Set("page", "networks")
-	session.Options(sessions.Options{MaxAge: sessionAge, Secure: false, SameSite: http.SameSiteLaxMode})
-	_ = session.Save()
-	slog.Info("login", "user", user.Username)
-	// page := getPage(user.Username).
-	// page.NeedsLogin = false
-	// page.Page = "networks"
-	displayMain(c)
-	// c.HTML(http.StatusOK, "content", page).
+	NewSession(w, r, user, true, "networks")
+
+	slog.Debug("login", "user", user.Username)
+	page := getPage(user.Username)
+	page.NeedsLogin = false
+	page.Page = "networks"
+	if err := templates.ExecuteTemplate(w, "layout", page); err != nil {
+		slog.Error("execute template", "template", "layout", "page", page, "error", err)
+	}
 }
 
 func validateUser(visitor *plexus.User) bool {
@@ -101,14 +91,12 @@ func checkPassword(plain, hash *plexus.User) bool {
 	return err == nil
 }
 
-func logout(c *gin.Context) {
-	session := sessions.Default(c)
-	user := session.Get("user")
-	slog.Info("logout", "user", user)
-	// delete cookie.
-	session.Clear()
-	_ = session.Save()
-	c.HTML(http.StatusOK, "login", "")
+func logout(w http.ResponseWriter, r *http.Request) {
+	ClearSession(w, r)
+	slog.Debug("logout")
+	// page := initialize()
+	// page.NeedsLogin = true
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 func initialize() Page {
@@ -150,4 +138,10 @@ func getPage(user any) Page {
 	}
 	pages[user.(string)] = initialize()
 	return pages[user.(string)]
+}
+
+func displayLogin(w http.ResponseWriter, _ *http.Request) {
+	if err := templates.ExecuteTemplate(w, "layout", Page{NeedsLogin: true}); err != nil {
+		slog.Error("display login", "error", err)
+	}
 }

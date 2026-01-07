@@ -1,3 +1,13 @@
 {{define "error"}}
-<p class="w3-red w3-center">Error Processing Request: {{ . }}</p>
+<div id="Error" class="w3-modal">
+    <div class="w3-modal-content w3-card-4 w3-animate-zoom w3-padding" style="width:50%">
+        <div class="w3-container w3-center w3-theme-dark">
+            <img src="content/images/plexus.svg" alt="logo" height="75"><br>
+            <p id="errorMessage" class="w3-red w3-center">Error Processing Request: {{ . }}</p>
+            <br><br>
+            <button type="submit" class="w3-button w3-block w3-padding"
+                onclick="document.getElementById('Error').style.display='none'">Close</button>
+        </div>
+    </div>
+</div>
 {{end}}

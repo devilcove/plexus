@@ -54,7 +54,7 @@ Agent
 Tech Stack
 ==========
 * Language: [Go](https://go.dev)
-* HTTP Framework: [Gin](https://github.com/gin-gonic/gin)
+* HTTP Router: [devilcove/mux](https://github.com/devilcove/mux)
 * FrontEnd Framework: html/[htmx](https://htmx.org)
 * CSS Library: [w3schools](https://w3schools.com/w3css)
 * Database(key/value): [bbolt](https://github.com/etcd-io/bbolt)

@@ -12,16 +12,17 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/devilcove/boltdb"
+	"github.com/devilcove/configuration"
 	"github.com/devilcove/plexus"
-	"github.com/gin-gonic/gin"
+	"github.com/mattkasun/tools/logging"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 )
 
 var (
-	newDevice   chan string
 	brokerfail  chan int
 	webfail     chan int
 	natServer   *server.Server
@@ -43,7 +44,6 @@ func Run() {
 	reset := make(chan os.Signal, 1)
 	brokerfail = make(chan int, 1)
 	webfail = make(chan int, 1)
-	newDevice = make(chan string, 1)
 	signal.Notify(quit, syscall.SIGTERM, os.Interrupt)
 	signal.Notify(reset, syscall.SIGHUP)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -85,8 +85,15 @@ func start(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 
 func web(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 	defer wg.Done()
-	slog.Info("Starting web server...")
-	router := setupRouter()
+	config := Configuration{}
+	if err := configuration.Get(&config); err != nil {
+		slog.Error("configuration", "error", err)
+		webfail <- 1
+		return
+	}
+	router := setupRouter(
+		logging.TextLogger(logging.TruncateSource(), logging.TimeFormat(time.DateTime)).Logger,
+	)
 	server := http.Server{
 		Addr:    ":" + config.Port,
 		Handler: router,
@@ -99,7 +106,8 @@ func web(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 		server.TLSConfig = tls
 		server.Addr = ":443"
 		go func() {
-			if err := server.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			if err := server.ListenAndServeTLS("", ""); err != nil &&
+				!errors.Is(err, http.ErrServerClosed) {
 				slog.Error("https server", "error", err)
 				webfail <- 1
 			}
@@ -112,7 +120,8 @@ func web(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 			}
 		}()
 	}
-	slog.Info("web server started")
+
+	slog.Info("web server started", "at", server.Addr)
 	<-ctx.Done()
 	slog.Info("shutting down web server")
 	if err := server.Shutdown(ctx); err != nil {
@@ -121,25 +130,47 @@ func web(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 	slog.Info("http server shutdown")
 }
 
-func getServer(c *gin.Context) {
+func getServer(w http.ResponseWriter, _ *http.Request) {
+	config := Configuration{}
+	if err := configuration.Get(&config); err != nil {
+		slog.Error("configuration", "error", err)
+		processError(w, http.StatusInternalServerError, "unable to read configuration")
+		return
+	}
 	server := struct {
 		LogLevel string
 		Logs     []string
 	}{
 		LogLevel: config.Verbosity,
 	}
-	cmd := exec.Command("/usr/bin/journalctl", "-eu", "plexus-server", "--no-pager", "-n", "25", "-r")
+	cmd := exec.Command(
+		"/usr/bin/journalctl",
+		"-eu",
+		"plexus-server",
+		"--no-pager",
+		"-n",
+		"25",
+		"-r",
+	)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		slog.Error("journalctl", "error", err)
 	}
 	logs := string(out)
 	server.Logs = strings.Split(logs, "\n")
-	c.HTML(http.StatusOK, "server", server)
+	if err := templates.ExecuteTemplate(w, "server", server); err != nil {
+		slog.Error("execute template", "template", "server", "data", server, "error", err)
+	}
 }
 
-func setLogLevel(c *gin.Context) {
-	config.Verbosity = c.Param("level")
+func setLogLevel(w http.ResponseWriter, r *http.Request) {
+	config := Configuration{}
+	if err := configuration.Get(&config); err != nil {
+		slog.Error("configuration", "error", err)
+		processError(w, http.StatusInternalServerError, "unable to read configuration")
+		return
+	}
+	config.Verbosity = r.PathValue("level")
 	plexus.SetLogging(config.Verbosity)
-	getServer(c)
+	getServer(w, r)
 }

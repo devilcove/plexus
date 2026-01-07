@@ -44,7 +44,9 @@ var statusCmd = &cobra.Command{
 		cobra.CheckErr(err)
 		status := agent.StatusResponse{}
 		// networks := []Network{}
-		cobra.CheckErr(agent.Request(ec, agent.Agent+plexus.Status, nil, &status, agent.NatsTimeout))
+		cobra.CheckErr(
+			agent.Request(ec, agent.Agent+plexus.Status, nil, &status, agent.NatsTimeout),
+		)
 		if status.Server == "" {
 			fmt.Println("agent running... not connected to servers")
 			return
@@ -105,7 +107,11 @@ var statusCmd = &cobra.Command{
 					fmt.Println("\trelay: true")
 					showRelayedPeers(peer.RelayedPeers, network)
 				}
-				fmt.Println("\tprivate-endpoint:", peer.PrivateEndpoint.String()+":", peer.ListenPort)
+				fmt.Println(
+					"\tprivate-endpoint:",
+					peer.PrivateEndpoint.String()+":",
+					peer.ListenPort,
+				)
 				fmt.Println("\tpublic-endpoint:", peer.Endpoint.String()+":", peer.PublicListenPort)
 				fmt.Println("\twg-endpoint:", wgPeer.Endpoint)
 				fmt.Print("\tallowed ips:")

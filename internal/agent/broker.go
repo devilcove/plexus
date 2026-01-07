@@ -20,7 +20,9 @@ import (
 
 func startBroker() (*server.Server, *nats.Conn) {
 	defer log.Println("Agent server halting")
-	ns, err := server.NewServer(&server.Options{Host: "localhost", Port: Config.NatsPort, NoSigs: true})
+	ns, err := server.NewServer(
+		&server.Options{Host: "localhost", Port: Config.NatsPort, NoSigs: true},
+	)
 	if err != nil {
 		slog.Error("start nats", "error", err)
 		panic(err)
@@ -129,12 +131,15 @@ func subcribeToServerTopics(self Device) {
 	}
 	subscriptions = append(subscriptions, ping)
 
-	leaveServer, err := serverConn.Subscribe(plexus.Update+id+plexus.LeaveServer, func(_ *nats.Msg) {
-		slog.Info("leave server")
-		closeServerConnections()
-		deleteAllInterfaces()
-		deleteAllNetworks()
-	})
+	leaveServer, err := serverConn.Subscribe(
+		plexus.Update+id+plexus.LeaveServer,
+		func(_ *nats.Msg) {
+			slog.Info("leave server")
+			closeServerConnections()
+			deleteAllInterfaces()
+			deleteAllNetworks()
+		},
+	)
 	if err != nil {
 		slog.Error("leave server subscription", "error", err)
 	}
@@ -271,7 +276,11 @@ func sendVersion(msg *nats.Msg, agentConn *nats.Conn) {
 			slog.Error("version request", "error", err)
 		}
 		if err := json.Unmarshal(resp.Data, &response); err != nil {
-			slog.Error("invalid version response from server", "error", err, "data", string(resp.Data))
+			slog.Error(
+				"invalid version response from server",
+				"error", err,
+				"data", string(resp.Data),
+			)
 		}
 	} else {
 		slog.Debug("not connected to server")

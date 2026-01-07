@@ -19,10 +19,9 @@ const (
 	connectivityTimeout   = time.Minute * 3
 	endpointServerTimeout = time.Second * 30
 	networkNotMapped      = "network not mapped to server"
-	version               = "v0.2.3"
+	version               = "v0.4.0"
 	networkTable          = "networks"
 	deviceTable           = "devices"
-	path                  = "/var/lib/plexus/"
 )
 
 var (
@@ -37,4 +36,5 @@ var (
 type Configuration struct {
 	NatsPort  int
 	Verbosity string
+	DataDir   string
 }

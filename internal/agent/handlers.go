@@ -20,7 +20,12 @@ func networkUpdates(msg *nats.Msg) {
 		slog.Error("invalid network update", "error", err, "data", string(msg.Data))
 		return
 	}
-	slog.Info("network update for", "network", networkName, "action", update.Action, "peer", update.Peer)
+	slog.Info(
+		"network update for",
+		"network", networkName,
+		"action", update.Action,
+		"peer", update.Peer,
+	)
 	network, err := boltdb.Get[Network](networkName, networkTable)
 	if err != nil {
 		if errors.Is(err, boltdb.ErrNoResults) {
@@ -215,8 +220,12 @@ func processAddPeer(network Network, update *plexus.NetworkUpdate, wg *plexus.Wi
 	slog.Debug("add peer")
 	for _, peer := range network.Peers {
 		if peer.WGPublicKey == update.Peer.WGPublicKey {
-			slog.Error("peer already exists", "network", network.Name, "peer", update.Peer.HostName, "id",
-				update.Peer.WGPublicKey)
+			slog.Error(
+				"peer already exists",
+				"network", network.Name,
+				"peer", update.Peer.HostName,
+				"id", update.Peer.WGPublicKey,
+			)
 			return
 		}
 	}
@@ -241,7 +250,12 @@ func processAddPeer(network Network, update *plexus.NetworkUpdate, wg *plexus.Wi
 	}
 }
 
-func processDeletePeer(network Network, update *plexus.NetworkUpdate, self Device, wg *plexus.Wireguard) {
+func processDeletePeer(
+	network Network,
+	update *plexus.NetworkUpdate,
+	self Device,
+	wg *plexus.Wireguard,
+) {
 	slog.Debug("delete peer")
 	if update.Peer.WGPublicKey == self.WGPublicKey {
 		slog.Info("self delete --> delete network", "network", network.Name)
@@ -428,7 +442,11 @@ func sendListenPorts(msg *nats.Msg, serverConn *nats.Conn) {
 	if err := serverConn.Publish(msg.Reply, bytes); err != nil {
 		slog.Error("publish reply to SendListenPorts", "error", err)
 	}
-	slog.Debug("sent listenports to server", "public", response.PublicListenPort, "private", response.ListenPort)
+	slog.Debug(
+		"sent listenports to server",
+		"public", response.PublicListenPort,
+		"private", response.ListenPort,
+	)
 }
 
 func joinNetwork(msg *nats.Msg, self Device) {
@@ -443,7 +461,12 @@ func joinNetwork(msg *nats.Msg, self Device) {
 		return
 	}
 	if err := startInterface(self, network); err != nil {
-		slog.Error("error starting interface", "interface", network.Interface, "network", network.Name, "error", err)
+		slog.Error(
+			"error starting interface",
+			"interface", network.Interface,
+			"network", network.Name,
+			"error", err,
+		)
 		return
 	}
 }

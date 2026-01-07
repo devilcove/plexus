@@ -67,7 +67,15 @@ var setCmd = &cobra.Command{
 		resp := plexus.MessageResponse{}
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
-		cobra.CheckErr(agent.Request(ec, agent.Agent+plexus.SetPrivateEndpoint, request, &resp, agent.NatsTimeout))
+		cobra.CheckErr(
+			agent.Request(
+				ec,
+				agent.Agent+plexus.SetPrivateEndpoint,
+				request,
+				&resp,
+				agent.NatsTimeout,
+			),
+		)
 		fmt.Println(resp.Message)
 	},
 }

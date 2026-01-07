@@ -8,44 +8,57 @@ import (
 	"net/http"
 	"regexp"
 	"slices"
+	"strconv"
 	"time"
 
 	"github.com/devilcove/boltdb"
+	"github.com/devilcove/configuration"
 	"github.com/devilcove/plexus"
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-gonic/gin"
+	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nkeys"
 )
 
-func displayCreateKey(c *gin.Context) {
-	session := sessions.Default(c)
-	page := getPage(session.Get("user"))
+func displayCreateKey(w http.ResponseWriter, r *http.Request) {
+	session := GetSession(w, r)
+	if session == nil {
+		displayLogin(w, r)
+		return
+	}
+	page := getPage(session.UserName)
 	page.Page = "addKey"
-	c.HTML(http.StatusOK, "addKey", page)
+	if err := templates.ExecuteTemplate(w, "addKey", page); err != nil {
+		slog.Error("execute template", "template", "addKey", "page", page, "error", err)
+	}
 }
 
-func addKey(c *gin.Context) {
+func addKey(w http.ResponseWriter, r *http.Request) {
 	var err error
-	key := plexus.Key{}
-	if err := c.Bind(&key); err != nil {
-		processError(c, http.StatusBadRequest, "invalid key data")
-		return
+	usage, err := strconv.Atoi(r.FormValue("usage"))
+	if err != nil {
+		usage = 1
+	}
+	key := plexus.Key{
+		Name:    r.FormValue("name"),
+		Usage:   usage,
+		DispExp: r.FormValue("expires"),
 	}
 	key.Expires, err = time.Parse("2006-01-02", key.DispExp)
 	if err != nil {
-		processError(c, http.StatusBadRequest, "invalid key "+err.Error())
+		processError(w, http.StatusBadRequest, "invalid key "+err.Error())
 		return
 	}
 	if err := validateKey(key); err != nil {
-		processError(c, http.StatusBadRequest, "invalid key "+err.Error())
+		processError(w, http.StatusBadRequest, "invalid key "+err.Error())
 		return
 	}
 	key.Value, err = newValue(key.Name)
 	if err != nil {
-		processError(c, http.StatusInternalServerError, "unable to encode key"+err.Error())
+		processError(w, http.StatusInternalServerError, "unable to encode key"+err.Error())
 		return
 	}
-	newDevice <- key.Value
+	if err := addDevice(key.Value); err != nil {
+		processError(w, http.StatusInternalServerError, "unable to add device"+err.Error())
+	}
 	if key.Usage == 0 {
 		key.Usage = 1
 	}
@@ -54,41 +67,43 @@ func addKey(c *gin.Context) {
 	}
 	existing, err := boltdb.Get[plexus.Key](key.Name, keyTable)
 	if err != nil && !errors.Is(err, boltdb.ErrNoResults) {
-		processError(c, http.StatusInternalServerError, "retrieve key"+err.Error())
+		processError(w, http.StatusInternalServerError, "retrieve key"+err.Error())
 		return
 	}
 	if existing.Name != "" {
-		processError(c, http.StatusBadRequest, "key exists with name:"+existing.Name)
+		processError(w, http.StatusBadRequest, "key exists with name:"+existing.Name)
 		return
 	}
 	if err := boltdb.Save(key, key.Name, keyTable); err != nil {
-		processError(c, http.StatusInternalServerError, "saving key "+err.Error())
+		processError(w, http.StatusInternalServerError, "saving key "+err.Error())
 		return
 	}
-	displayKeys(c)
+	displayKeys(w, r)
 }
 
-func displayKeys(c *gin.Context) {
+func displayKeys(w http.ResponseWriter, _ *http.Request) {
 	keys, err := boltdb.GetAll[plexus.Key](keyTable)
 	if err != nil {
-		processError(c, http.StatusInternalServerError, err.Error())
+		processError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	c.HTML(http.StatusOK, keyTable, keys)
+	if err := templates.ExecuteTemplate(w, keyTable, keys); err != nil {
+		slog.Error("execute template", "template", keyTable, "keys", keys, "error", err)
+	}
 }
 
-func deleteKey(c *gin.Context) {
-	keyid := c.Param("id")
+func deleteKey(w http.ResponseWriter, r *http.Request) {
+	keyid := r.PathValue("id")
 	key, err := boltdb.Get[plexus.Key](keyid, keyTable)
 	if err != nil {
-		processError(c, http.StatusBadRequest, "key does not exist")
+		processError(w, http.StatusBadRequest, "key does not exist")
 		return
 	}
 	if err := removeKey(key); err != nil {
-		processError(c, http.StatusInternalServerError, "delete key "+err.Error())
+		processError(w, http.StatusInternalServerError, "delete key "+err.Error())
 		return
 	}
-	displayKeys(c)
+	displayKeys(w, r)
 }
 
 func validateKey(key plexus.Key) error {
@@ -102,6 +117,11 @@ func validateKey(key plexus.Key) error {
 }
 
 func newValue(name string) (string, error) {
+	config := Configuration{}
+	if err := configuration.Get(&config); err != nil {
+		slog.Error("configuration", "error", err)
+		return "", err
+	}
 	device, err := nkeys.CreateUser()
 	if err != nil {
 		return "", err
@@ -145,7 +165,11 @@ func expireKeys() {
 	}
 	for _, key := range keys {
 		if key.Expires.Before(time.Now()) {
-			slog.Info("key has expired ...deleting", "key", key.Name, "expiry time", key.Expires.Format(time.RFC822))
+			slog.Info(
+				"key has expired ...deleting",
+				"key", key.Name,
+				"expiry time", key.Expires.Format(time.RFC822),
+			)
 			if err := removeKey(key); err != nil {
 				slog.Error("remove key", "error", err)
 			}
@@ -177,4 +201,28 @@ func removeKey(key plexus.Key) error {
 		errs = errors.Join(errs, err)
 	}
 	return errs
+}
+
+func addDevice(token string) error {
+	slog.Info("new login device", "device", token)
+	keyValue, err := plexus.DecodeToken(token)
+	if err != nil {
+		slog.Error("decode token", "error", err)
+		return err
+	}
+	key, err := nkeys.FromSeed([]byte(keyValue.Seed))
+	if err != nil {
+		slog.Error("seed failure", "error", err)
+		return err
+	}
+	nPubKey, err := key.PublicKey()
+	if err != nil {
+		slog.Error("publickey", "error", err)
+		return err
+	}
+	natsOptions.Nkeys = append(natsOptions.Nkeys, &server.NkeyUser{
+		Nkey:        nPubKey,
+		Permissions: registerPermissions(),
+	})
+	return natServer.ReloadOptions(natsOptions)
 }

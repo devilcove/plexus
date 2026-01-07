@@ -25,8 +25,8 @@ Available Commands:
   version     display version information
 
 Flags:
-      --config string      config file (default is /etc/plexus/plexus-agent.yaml)
   -h, --help               help for plexus-agent
+  -p, --natsport int       nats port for cli <-> agent comms (default 4223)
   -v, --verbosity string   logging verbosity (default "INFO")
 
 Use "plexus-agent [command] --help" for more information about a command.
@@ -48,7 +48,7 @@ Flags:
   -h, --help   help for register
 
 Global Flags:
-      --config string      config file (default is /etc/plexus/plexus-agent.yaml)
+  -p, --natsport int       nats port for cli <-> agent comms (default 4223)
   -v, --verbosity string   logging verbosity (default "INFO")
 ```
 
@@ -65,7 +65,7 @@ Flags:
   -h, --help   help for drop
 
 Global Flags:
-      --config string      config file (default is /etc/plexus/plexus-agent.yaml)
+  -p, --natsport int       nats port for cli <-> agent comms (default 4223)
   -v, --verbosity string   logging verbosity (default "INFO")
 ```
 
@@ -82,7 +82,7 @@ Flags:
   -h, --help   help for join
 
 Global Flags:
-      --config string      config file (default is /etc/plexus/plexus-agent.yaml)
+  -p, --natsport int       nats port for cli <-> agent comms (default 4223)
   -v, --verbosity string   logging verbosity (default "INFO")
 ```
 
@@ -97,7 +97,7 @@ Flags:
   -h, --help   help for leave
 
 Global Flags:
-      --config string      config file (default is /etc/plexus/plexus-agent.yaml)
+  -p, --natsport int       nats port for cli <-> agent comms (default 4223)
   -v, --verbosity string   logging verbosity (default "INFO")
 Leave command deletes current network on peer
 ```
@@ -157,7 +157,7 @@ Flags:
   -h, --help   help for reload
 
 Global Flags:
-      --config string      config file (default is /etc/plexus/plexus-agent.yaml)
+  -p, --natsport int       nats port for cli <-> agent comms (default 4223)
   -v, --verbosity string   logging verbosity (default "INFO")
 ```
 
@@ -174,7 +174,7 @@ Flags:
   -h, --help   help for reset
 
 Global Flags:
-      --config string      config file (default is /etc/plexus/plexus-agent.yaml)
+  -p, --natsport int       nats port for cli <-> agent comms (default 4223)
   -v, --verbosity string   logging verbosity (default "INFO")
 ```
 
@@ -215,7 +215,7 @@ Flags:
   -h, --help   help for loglevel
 
 Global Flags:
-      --config string      config file (default is /etc/plexus/plexus-agent.yaml)
+  -p, --natsport int       nats port for cli <-> agent comms (default 4223)
   -v, --verbosity string   logging verbosity (default "INFO")
 ```
 

@@ -1,12 +1,11 @@
 package server
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -20,19 +19,14 @@ func TestDisplayKeys(t *testing.T) {
 		Username: "hello",
 		Password: "world",
 	}
-	err := createTestUser(user)
-	should.BeNil(t, err)
-	cookie, err := testLogin(user)
-	should.BeNil(t, err)
-	should.NotBeNil(t, cookie)
-	req, err := http.NewRequest(http.MethodGet, "/keys/", nil)
-	should.BeNil(t, err)
-	req.AddCookie(cookie)
+	createTestUser(t, user)
+	r := httptest.NewRequest(http.MethodGet, "/keys/", nil)
+	r.AddCookie(testLogin(t, user))
 	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+	router.ServeHTTP(w, r)
 	should.BeEqual(t, w.Code, http.StatusOK)
 	body, err := io.ReadAll(w.Body)
-	should.BeNil(t, err)
+	should.NotBeError(t, err)
 	should.ContainSubstring(t, string(body), "<h1>Plexus Keys</h1>")
 }
 
@@ -41,234 +35,191 @@ func TestDisplayAddKey(t *testing.T) {
 		Username: "hello",
 		Password: "world",
 	}
-	err := createTestUser(user)
-	should.BeNil(t, err)
-	cookie, err := testLogin(user)
-	should.BeNil(t, err)
-	req, err := http.NewRequest(http.MethodGet, "/keys/add", nil)
-	should.BeNil(t, err)
+	createTestUser(t, user)
+	cookie := testLogin(t, user)
+
+	req := httptest.NewRequest(http.MethodGet, "/keys/add", nil)
 	req.AddCookie(cookie)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 	should.BeEqual(t, w.Code, http.StatusOK)
 	body, err := io.ReadAll(w.Body)
-	should.BeNil(t, err)
+	should.NotBeError(t, err)
 	should.ContainSubstring(t, string(body), "<h1>Create Key</h1>")
 }
 
 func TestAddKey(t *testing.T) {
-	t.Skip()
-	err := deleteAllKeys()
-	should.BeNil(t, err)
+	deleteAllKeys(t)
 	user := plexus.User{
 		Username: "hello",
 		Password: "world",
 	}
-	err = createTestUser(user)
-	should.BeNil(t, err)
-	cookie, err := testLogin(user)
-	should.BeNil(t, err)
+	createTestUser(t, user)
+	cookie := testLogin(t, user)
+	setup(t)
+	defer shutdown(t)
+
 	t.Run("emptydata", func(t *testing.T) {
-		req, err := http.NewRequest(http.MethodPost, "/keys/add", nil)
-		should.BeNil(t, err)
-		req.AddCookie(cookie)
+		r := httptest.NewRequest(http.MethodPost, "/keys/add", nil)
+		r.AddCookie(testLogin(t, user))
 		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
+		router.ServeHTTP(w, r)
 		should.BeEqual(t, w.Code, http.StatusBadRequest)
 		body, err := io.ReadAll(w.Body)
-		should.BeNil(t, err)
-		should.ContainSubstring(t, string(body), "Error Processing Request")
+		should.NotBeError(t, err)
+		should.ContainSubstring(t, string(body), "invalid key")
 	})
 	t.Run("spaceInName", func(t *testing.T) {
-		key := plexus.Key{
-			Name:    "this has spaces",
-			DispExp: time.Now().Format("2006-01-02"),
-		}
-		payload, err := json.Marshal(&key)
-		should.BeNil(t, err)
-		req, err := http.NewRequest(http.MethodPost, "/keys/add", bytes.NewBuffer(payload))
-		should.BeNil(t, err)
-		req.AddCookie(cookie)
-		req.Header.Set("Content-Type", "application/json")
+		payload := bodyParams("name", "this has spaces", "expires", time.Now().Format("2006-01-02"))
+		r := httptest.NewRequest(http.MethodPost, "/keys/add", payload)
+		r.AddCookie(cookie)
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
+		router.ServeHTTP(w, r)
 		should.BeEqual(t, w.Code, http.StatusBadRequest)
 		body, err := io.ReadAll(w.Body)
-		should.BeNil(t, err)
+		should.NotBeError(t, err)
 		should.ContainSubstring(t, string(body), "invalid chars")
 	})
 	t.Run("uppercase", func(t *testing.T) {
-		key := plexus.Key{
-			Name:    "Uppercase",
-			DispExp: time.Now().Format("2006-01-02"),
-		}
-		payload, err := json.Marshal(&key)
-		should.BeNil(t, err)
-		req, err := http.NewRequest(http.MethodPost, "/keys/add", bytes.NewBuffer(payload))
-		should.BeNil(t, err)
-		req.AddCookie(cookie)
-		req.Header.Set("Content-Type", "application/json")
+		payload := bodyParams("name", "Uppercase", "expires", time.Now().Format("2006-01-02"))
+		r := httptest.NewRequest(http.MethodPost, "/keys/add", payload)
+		r.AddCookie(cookie)
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
+		router.ServeHTTP(w, r)
 		should.BeEqual(t, w.Code, http.StatusBadRequest)
 		body, err := io.ReadAll(w.Body)
-		should.BeNil(t, err)
+		should.NotBeError(t, err)
 		should.ContainSubstring(t, string(body), "invalid chars")
 	})
 	t.Run("nameTooLong", func(t *testing.T) {
-		key := plexus.Key{
-			DispExp: time.Now().Format("2006-01-02"),
-		}
+		var tmp strings.Builder
 		for range 256 {
-			key.Name += "A"
+			tmp.WriteString("A")
 		}
-		payload, err := json.Marshal(&key)
-		should.BeNil(t, err)
-		req, err := http.NewRequest(http.MethodPost, "/keys/add", bytes.NewBuffer(payload))
-		should.BeNil(t, err)
-		req.AddCookie(cookie)
-		req.Header.Set("Content-Type", "application/json")
+		name := tmp.String()
+		payload := bodyParams("name", name, "expires", time.Now().Format("2006-01-02"))
+		r := httptest.NewRequest(http.MethodPost, "/keys/add", payload)
+		r.AddCookie(cookie)
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
+		router.ServeHTTP(w, r)
 		should.BeEqual(t, w.Code, http.StatusBadRequest)
 		body, err := io.ReadAll(w.Body)
-		should.BeNil(t, err)
+		should.NotBeError(t, err)
 		should.ContainSubstring(t, string(body), "too long")
 	})
 	t.Run("invalidDate", func(t *testing.T) {
-		key := plexus.Key{
-			Name:    "Uppercase",
-			DispExp: time.Now().Format("2006-01-02 03-04"),
-		}
-		payload, err := json.Marshal(&key)
-		should.BeNil(t, err)
-		req, err := http.NewRequest(http.MethodPost, "/keys/add", bytes.NewBuffer(payload))
-		should.BeNil(t, err)
-		req.AddCookie(cookie)
-		req.Header.Set("Content-Type", "application/json")
+		payload := bodyParams("name", "key", "expires", time.Now().Format("2006-01-02 03-04"))
+		r := httptest.NewRequest(http.MethodPost, "/keys/add", payload)
+		r.AddCookie(cookie)
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
+		router.ServeHTTP(w, r)
 		should.BeEqual(t, w.Code, http.StatusBadRequest)
 		body, err := io.ReadAll(w.Body)
-		should.BeNil(t, err)
+		should.NotBeError(t, err)
 		should.ContainSubstring(t, string(body), "parsing time")
 	})
 	t.Run("zeroDate", func(t *testing.T) {
-		key := plexus.Key{
-			Name:    "zerodate",
-			DispExp: time.Time{}.Format("2006-01-02"),
-		}
-		payload, err := json.Marshal(&key)
-		should.BeNil(t, err)
-		req, err := http.NewRequest(http.MethodPost, "/keys/add", bytes.NewBuffer(payload))
-		should.BeNil(t, err)
-		req.AddCookie(cookie)
-		req.Header.Set("Content-Type", "application/json")
+		payload := bodyParams("name", "key", "expires", time.Time{}.Format("2006-01-02"))
+		r := httptest.NewRequest(http.MethodPost, "/keys/add", payload)
+		r.AddCookie(cookie)
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
+		router.ServeHTTP(w, r)
 		should.BeEqual(t, w.Code, http.StatusOK)
 		body, err := io.ReadAll(w.Body)
-		should.BeNil(t, err)
+		should.NotBeError(t, err)
 		should.ContainSubstring(t, string(body), "<h1>Plexus Keys</h1>")
 		keys, err := boltdb.GetAll[plexus.Key](keyTable)
-		should.BeNil(t, err)
-		should.BeEqual(t, keys[0].Expires.Format("2006-01-02 03-04"), time.Now().Add(24*time.Hour).Format("2006-01-02 03-04"))
+		should.NotBeError(t, err)
+		should.BeEqual(
+			t,
+			keys[0].Expires.Format("2006-01-02 03-04"),
+			time.Now().Add(24*time.Hour).Format("2006-01-02 03-04"),
+		)
 	})
 	t.Run("valid", func(t *testing.T) {
-		key := plexus.Key{
-			Name:    "valid",
-			DispExp: time.Now().Format("2006-01-02"),
-		}
-		payload, err := json.Marshal(&key)
-		should.BeNil(t, err)
-		req, err := http.NewRequest(http.MethodPost, "/keys/add", bytes.NewBuffer(payload))
-		should.BeNil(t, err)
-		req.AddCookie(cookie)
-		req.Header.Set("Content-Type", "application/json")
+		payload := bodyParams("name", "valid", "expires",
+			time.Now().Format("2006-01-02"), "usage", "0")
+		r := httptest.NewRequest(http.MethodPost, "/keys/add", payload)
+		r.AddCookie(cookie)
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
+		router.ServeHTTP(w, r)
 		should.BeEqual(t, w.Code, http.StatusOK)
 		body, err := io.ReadAll(w.Body)
-		should.BeNil(t, err)
+		should.NotBeError(t, err)
 		should.ContainSubstring(t, string(body), "<h1>Plexus Keys</h1>")
 	})
 	t.Run("duplicate", func(t *testing.T) {
-		key := plexus.Key{
-			Name:    "valid",
-			DispExp: time.Now().Format("2006-01-02"),
-		}
-		payload, err := json.Marshal(&key)
-		should.BeNil(t, err)
-		req, err := http.NewRequest(http.MethodPost, "/keys/add", bytes.NewBuffer(payload))
-		should.BeNil(t, err)
-		req.AddCookie(cookie)
-		req.Header.Set("Content-Type", "application/json")
+		payload := bodyParams("name", "valid", "expires", time.Now().Format("2006-01-02"))
+		r := httptest.NewRequest(http.MethodPost, "/keys/add", payload)
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		r.AddCookie(cookie)
 		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
+		router.ServeHTTP(w, r)
 		should.BeEqual(t, w.Code, http.StatusBadRequest)
 		body, err := io.ReadAll(w.Body)
-		should.BeNil(t, err)
+		should.NotBeError(t, err)
 		should.ContainSubstring(t, string(body), "key exists")
 	})
-	err = deleteAllKeys()
-	should.BeNil(t, err)
+	deleteAllKeys(t)
 }
 
 func TestDeleteKeys(t *testing.T) {
-	t.Skip()
+	setup(t)
+	defer shutdown(t)
+
 	user := plexus.User{
 		Username: "hello",
 		Password: "world",
 	}
-	err := createTestUser(user)
-	should.BeNil(t, err)
-	cookie, err := testLogin(user)
-	should.BeNil(t, err)
+	createTestUser(t, user)
+	cookie := testLogin(t, user)
+
 	t.Run("nosuchkey", func(t *testing.T) {
-		req, err := http.NewRequest(http.MethodDelete, "/keys/network", nil)
-		should.BeNil(t, err)
-		req.AddCookie(cookie)
+		r := httptest.NewRequest(http.MethodDelete, "/keys/network", nil)
+		r.AddCookie(cookie)
 		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
+		router.ServeHTTP(w, r)
 		should.BeEqual(t, w.Code, http.StatusBadRequest)
 		body, err := io.ReadAll(w.Body)
-		should.BeNil(t, err)
+		should.NotBeError(t, err)
 		should.ContainSubstring(t, string(body), "key does not exist")
 	})
 	t.Run("existingKey", func(t *testing.T) {
-		key := plexus.Key{
-			Name:    "valid",
-			DispExp: time.Now().Format("2006-01-02"),
-		}
-		payload, err := json.Marshal(&key)
-		should.BeNil(t, err)
-		req, err := http.NewRequest(http.MethodPost, "/keys/add", bytes.NewBuffer(payload))
-		should.BeNil(t, err)
-		req.AddCookie(cookie)
-		req.Header.Set("Content-Type", "application/json")
+		// create key
+		payload := bodyParams("name", "valid", "expires",
+			time.Now().Format("2006-01-02"), "usage", "0")
+		r := httptest.NewRequest(http.MethodPost, "/keys/add", payload)
+		r.AddCookie(cookie)
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
+		router.ServeHTTP(w, r)
 		should.BeEqual(t, w.Code, http.StatusOK)
 		body, err := io.ReadAll(w.Body)
-		should.BeNil(t, err)
+		should.NotBeError(t, err)
 		should.ContainSubstring(t, string(body), "<h1>Plexus Keys</h1>")
-		req, err = http.NewRequest(http.MethodDelete, "/keys/valid", nil)
-		should.BeNil(t, err)
-		req.AddCookie(cookie)
-		router.ServeHTTP(w, req)
+		// delete key
+		r = httptest.NewRequest(http.MethodDelete, "/keys/valid", nil)
+		r.AddCookie(cookie)
+		router.ServeHTTP(w, r)
 		should.BeEqual(t, w.Code, http.StatusOK)
 		body, err = io.ReadAll(w.Body)
-		should.BeNil(t, err)
+		should.NotBeError(t, err)
 		should.ContainSubstring(t, string(body), "<h1>Plexus Keys</h1>")
 	})
-	err = deleteAllKeys()
-	should.BeNil(t, err)
+	deleteAllKeys(t)
 }
 
 func TestUpdateKey(t *testing.T) {
-	t.Skip()
+	setup(t)
+	defer shutdown(t)
 	value, err := newValue("one")
-	should.BeNil(t, err)
+	should.NotBeError(t, err)
 	key1 := plexus.Key{
 		Name:  "one",
 		Usage: 1,
@@ -279,9 +230,9 @@ func TestUpdateKey(t *testing.T) {
 		Usage: 10,
 	}
 	err = boltdb.Save(key1, key1.Name, keyTable)
-	should.BeNil(t, err)
+	should.NotBeError(t, err)
 	err = boltdb.Save(key2, key2.Name, keyTable)
-	should.BeNil(t, err)
+	should.NotBeError(t, err)
 	t.Run("keyDoesNotExist", func(t *testing.T) {
 		err := decrementKeyUsage("doesnotexist")
 		should.NotBeNil(t, err)
@@ -289,29 +240,32 @@ func TestUpdateKey(t *testing.T) {
 	})
 	t.Run("deleteKey", func(t *testing.T) {
 		err := decrementKeyUsage(key1.Name)
-		should.BeNil(t, err)
+		should.NotBeError(t, err)
 		newKey, err := boltdb.Get[plexus.Key](key1.Name, keyTable)
 		should.BeEqual(t, newKey, plexus.Key{})
 		should.BeTrue(t, errors.Is(err, boltdb.ErrNoResults))
 	})
 	t.Run("decrement usage", func(t *testing.T) {
 		err := decrementKeyUsage(key2.Name)
-		should.BeNil(t, err)
+		should.NotBeError(t, err)
 	})
-	err = deleteAllKeys()
-	should.BeNil(t, err)
+	deleteAllKeys(t)
 }
 
-func deleteAllKeys() error {
-	var errs error
+func TestExpireKeys(t *testing.T) {
+	setup(t)
+	defer shutdown(t)
+	key := plexus.Key{
+		Name:    "testkey",
+		Expires: time.Now().Add(-1 * time.Hour),
+	}
+	err := boltdb.Save(key, key.Name, keyTable)
+	should.NotBeError(t, err)
 	keys, err := boltdb.GetAll[plexus.Key](keyTable)
-	if err != nil {
-		return err
-	}
-	for _, key := range keys {
-		if err := boltdb.Delete[plexus.Key](key.Name, keyTable); err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
-	return errs
+	should.NotBeError(t, err)
+	should.BeEqual(t, len(keys), 1)
+	expireKeys()
+	keys, err = boltdb.GetAll[plexus.Key](keyTable)
+	should.NotBeError(t, err)
+	should.BeEqual(t, len(keys), 0)
 }

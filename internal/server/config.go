@@ -4,21 +4,21 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"io/fs"
 	"log/slog"
 	"net"
 	"net/mail"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/caddyserver/certmagic"
 	"github.com/devilcove/boltdb"
+	"github.com/devilcove/configuration"
 	"github.com/devilcove/plexus"
-	"github.com/spf13/viper"
 )
 
-type configuration struct {
+type Configuration struct {
 	AdminName string
 	AdminPass string
 	FQDN      string
@@ -26,9 +26,8 @@ type configuration struct {
 	Port      string
 	Email     string
 	Verbosity string
-	DBPath    string
+	DataHome  string
 	DBFile    string
-	Tables    []string
 }
 
 const (
@@ -40,13 +39,14 @@ const (
 )
 
 var (
-	config           configuration
-	ErrServerURL     = errors.New("invalid server URL")
-	ErrInvalidSubnet = errors.New("invalid subnet")
-	ErrSubnetInUse   = errors.New("subnet in use")
-	sessionAge       = 60 * 60 * 24
-	version          = "v0.2.3"
-	path             = "/var/lib/plexus/"
+	ErrServerURL       = errors.New("invalid server URL")
+	ErrInvalidSubnet   = errors.New("invalid subnet")
+	ErrSubnetInUse     = errors.New("subnet in use")
+	ErrDataDir         = errors.New("data dir not found")
+	ErrSecureBlankFQDN = errors.New("secure server requires FQDN")
+	ErrSecureWithIP    = errors.New("cannot use IP address with secure")
+	ErrInValidEmail    = errors.New("valid email address required")
+	version            = "v0.4.0"
 )
 
 const (
@@ -59,44 +59,61 @@ const (
 )
 
 func configureServer() (*tls.Config, error) {
+	plexus.SetLogging("INFO")
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+	config := Configuration{}
+	if err := configuration.Get(&config); err != nil {
+		return nil, err
+	}
+	// set defaults
+	if config.AdminName == "" {
+		config.AdminName = "admin"
+	}
+	if config.AdminPass == "" {
+		config.AdminPass = "password"
+	}
+	if config.Verbosity == "" {
+		config.Verbosity = "INFO"
+	}
+	if config.Port == "" {
+		config.Port = "8080"
+	}
+	if config.DBFile == "" {
+		config.DBFile = "plexus-server.db"
+	}
+	if config.DataHome == "" {
+		config.DataHome = home + "/.local/share/" + filepath.Base(os.Args[0]) + "/"
+	}
+	if _, err := os.Stat(config.DataHome); err != nil {
+		return nil, ErrDataDir
+	}
+
+	slog.Info("configure Server", "config", config)
 	var tlsConfig *tls.Config
-	viper.SetDefault("adminname", "admin")
-	viper.SetDefault("adminpass", "password")
-	viper.SetDefault("verbosity", "INFO")
-	viper.SetDefault("secure", true)
-	viper.SetDefault("port", "8080")
-	viper.SetDefault("email", "")
-	viper.SetDefault("dbfile", "plexus-server.db")
-	viper.SetDefault("tables", []string{userTable, keyTable, networkTable, peerTable, settingTable})
-	viper.SetDefault("dbpath", path)
-	viper.SetConfigFile("/etc/plexus/config")
-	viper.SetConfigType("yaml")
-	if err := viper.ReadInConfig(); err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, err
-	}
-	viper.SetEnvPrefix("PLEXUS")
-	viper.AutomaticEnv()
-	if err := viper.UnmarshalExact(&config); err != nil {
-		return nil, err
-	}
 	plexus.SetLogging(config.Verbosity)
 	if config.Secure {
 		if config.FQDN == "" {
-			return nil, errors.New("secure server requires FQDN")
+			return nil, ErrSecureBlankFQDN
 		}
 		if net.ParseIP(config.FQDN) != nil {
-			return nil, errors.New("cannot use IP address with secure")
+			return nil, ErrSecureWithIP
 		}
 		if !emailValid(config.Email) {
-			return nil, errors.New("valid email address required")
+			return nil, ErrInValidEmail
 		}
 	}
 	// initialize database.
-	if err := os.MkdirAll(config.DBPath, os.ModePerm); err != nil {
+	if err := os.MkdirAll(config.DataHome, os.ModePerm); err != nil {
 		return nil, err
 	}
-	slog.Info("init db", "path", config.DBFile, "file", config.DBFile, "tables", config.Tables)
-	if err := boltdb.Initialize(config.DBPath+config.DBFile, config.Tables); err != nil {
+	slog.Info("init db", "path", config.DataHome, "file", config.DBFile)
+	if err := boltdb.Initialize(
+		filepath.Join(config.DataHome, config.DBFile),
+		[]string{"users", "keys", "networks", "peers", "settings"},
+	); err != nil {
 		return nil, fmt.Errorf("init database %w", err)
 	}
 	// check default user exists.

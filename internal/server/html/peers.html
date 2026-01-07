@@ -1,7 +1,7 @@
 {{define "peers"}}
 <!-- [html-validate-disable no-dup-id]-->
 <!-- [html-validate-disable prefer-tbody]-->
-<div id="error" class="w3-red" hx-get="/peers/" hx-trigger="every 1m" hx-target="#content" hx-target-error="#error">
+<div hx-get="/peers/" hx-trigger="every 1m" hx-target="#content" hx-target-error="#error">
 </div>
 <h1>Peers</h1>
 <div class="grid5">
@@ -27,8 +27,7 @@
 {{end}}
 
 {{define "peerDetails"}}
-<div id="error" class="w3-red" hx-get="/peers/{{.WGPublicKey}}" hx-trigger="every 1m" hx-target="#content"
-    hx-target-error="#error"></div>
+<div hx-get="/peers/{{.WGPublicKey}}" hx-trigger="every 1m" hx-target="#content" hx-target-error="#error"></div>
 <h1>Peer: {{.Name}}</h1>
 <div class="grid2">
     <div class="w3-theme-l1">Wireguard Public Key</div>
@@ -49,7 +48,6 @@
 {{end}}
 
 {{define "displayNetworkPeer"}}
-<div id="error" class="w3-red"></div>
 <h1>Network Peer: {{.HostName}}</h1>
 <div class="grid2">
     <div class="w3-theme-l1">Wireguard Public Key</div>
@@ -73,14 +71,14 @@
     <div class="w3-theme-l1">Is Subnet Router</div>
     <div>{{.IsSubnetRouter}}</div>
     {{if eq .IsSubnetRouter true}}
-        <div class="w3-theme-l1">Subnet</div>
-        <div>{{.Subnet}}</div>
-        <div class="w3-theme-l1">Use Nat</div>
-        <div>{{.UseNat}}</div>
-        {{if eq .UseVirtSubnet true}}
-            <div class="w3-theme-l3">Virtual Subnet</div>
-            <div>{{.VirtSubnet}}</div>
-        {{end}}
+    <div class="w3-theme-l1">Subnet</div>
+    <div>{{.Subnet}}</div>
+    <div class="w3-theme-l1">Use Nat</div>
+    <div>{{.UseNat}}</div>
+    {{if eq .UseVirtSubnet true}}
+    <div class="w3-theme-l3">Virtual Subnet</div>
+    <div>{{.VirtSubnet}}</div>
+    {{end}}
     {{end}}
     {{if eq .IsSubnetRouter}}
 </div>

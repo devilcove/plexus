@@ -1,14 +1,16 @@
 {{define "server"}}
 <!-- [html-validate-disable no-inline-style]-->
-<div id="error" class="w3-red" hx-get="/server/" hx-trigger="every 10s" hx-target="#content" hx-target-error="#error">
+<div hx-get="/server/" hx-trigger="every 10s" hx-target="#content" hx-target-error="#error">
 </div>
 <h1>Server Logs</h1>
 <p>Current Log Level: {{.LogLevel}}</p>
 <select class="w3-select" style="width: 200px;" name="level">
     <option value="" disabled selected>Select new log level</option>
     <option value="error" hx-post="/server/logs/error" hx-target="#content" hx-target-error="#error">Error</option>
-    <option value="warn" hx-post="/server/logs/warn" hx-target="#content" hx-target-error="#error">Warn</option>
-    <option value="info" hx-post="/server/logs/info" hx-target="#content" hx-target-error="#error">Info</option>
+    <option value="warn" hx-post="/server/logs/warn" hx-target="#content" hx-target-error="#error">
+        Warn</option>
+    <option value="info" hx-post="/server/logs/info" hx-target="#content" hx-target-error="#error">
+        Info</option>
     <option value="debug" hx-post="/server/logs/debug" hx-target="#content" hx-target-error="#error">Debug</option>
 </select>
 {{range .Logs}}

@@ -15,16 +15,16 @@ func TestAddNAT(t *testing.T) {
 	table := &nftables.Table{}
 	chain := &nftables.Chain{}
 	user, err := user.Current()
-	should.BeNil(t, err)
+	should.NotBeError(t, err)
 	if user.Uid != "0" {
 		t.Log("this test must be run as root")
 		t.Skip()
 	}
 	c := nftables.Conn{}
 	err = addNat()
-	should.BeNil(t, err)
+	should.NotBeError(t, err)
 	tables, err := c.ListTables()
-	should.BeNil(t, err)
+	should.NotBeError(t, err)
 	tableFound := false
 	for _, t := range tables {
 		if t.Name == "plexus" {
@@ -34,7 +34,7 @@ func TestAddNAT(t *testing.T) {
 	}
 	should.BeTrue(t, tableFound)
 	chains, err := c.ListChains()
-	should.BeNil(t, err)
+	should.NotBeError(t, err)
 	chainFound := false
 	for _, c := range chains {
 		if c.Name == "plexus-nat" {
@@ -44,7 +44,7 @@ func TestAddNAT(t *testing.T) {
 	}
 	should.BeTrue(t, chainFound)
 	rules, err := c.GetRules(table, chain)
-	should.BeNil(t, err)
+	should.NotBeError(t, err)
 	should.BeEqual(t, len(rules), 1)
 	should.BeEqual(t, rules[0].Exprs[0], &expr.Masq{
 		Random:      false,
@@ -59,7 +59,7 @@ func TestAddNAT(t *testing.T) {
 
 func TestDelNat(t *testing.T) {
 	user, err := user.Current()
-	should.BeNil(t, err)
+	should.NotBeError(t, err)
 	if user.Uid != "0" {
 		t.Log("this test must be run as root")
 		t.Skip()
@@ -85,11 +85,11 @@ func TestDelNat(t *testing.T) {
 	}
 	c.AddRule(rule)
 	err = c.Flush()
-	should.BeNil(t, err)
+	should.NotBeError(t, err)
 	err = delNat()
-	should.BeNil(t, err)
+	should.NotBeError(t, err)
 	chains, err := c.ListChains()
-	should.BeNil(t, err)
+	should.NotBeError(t, err)
 	found := false
 	for _, chain := range chains {
 		if chain.Name == "plexus-nat" {
@@ -103,13 +103,13 @@ func TestDelNat(t *testing.T) {
 func TestCheckForNat(t *testing.T) {
 	plexus.SetLogging("debug")
 	user, err := user.Current()
-	should.BeNil(t, err)
+	should.NotBeError(t, err)
 	if user.Uid != "0" {
 		t.Log("this test must be run as root")
 		t.Skip()
 	}
 	_, public, err := generateKeys()
-	should.BeNil(t, err)
+	should.NotBeError(t, err)
 	self := Device{}
 	self.WGPublicKey = public.String()
 	peer := plexus.NetworkPeer{
@@ -125,19 +125,19 @@ func TestCheckForNat(t *testing.T) {
 	network.Peers = append(network.Peers, peer)
 	c := &nftables.Conn{}
 	tables, err := c.ListTables()
-	should.BeNil(t, err)
+	should.NotBeError(t, err)
 	for _, table := range tables {
 		if table.Name == "plexus" {
 			c.DelTable(table)
 			err = c.Flush()
-			should.BeNil(t, err)
+			should.NotBeError(t, err)
 		}
 	}
 	t.Run("noSubnetRouter", func(t *testing.T) {
 		err := checkForNat(self, network)
-		should.BeNil(t, err)
+		should.NotBeError(t, err)
 		tables, err := c.ListTables()
-		should.BeNil(t, err)
+		should.NotBeError(t, err)
 		for _, table := range tables {
 			if table.Name == "plexus" {
 				t.FailNow()
@@ -152,9 +152,9 @@ func TestCheckForNat(t *testing.T) {
 		}
 		network.Peers = []plexus.NetworkPeer{peer}
 		err = checkForNat(self, network)
-		should.BeNil(t, err)
+		should.NotBeError(t, err)
 		tables, err := c.ListTables()
-		should.BeNil(t, err)
+		should.NotBeError(t, err)
 		for _, table := range tables {
 			if table.Name == "plexus" {
 				t.FailNow()
@@ -167,9 +167,9 @@ func TestCheckForNat(t *testing.T) {
 		peer.UseNat = true
 		network.Peers = []plexus.NetworkPeer{peer}
 		err = checkForNat(self, network)
-		should.BeNil(t, err)
+		should.NotBeError(t, err)
 		tables, err := c.ListTables()
-		should.BeNil(t, err)
+		should.NotBeError(t, err)
 		tableFound := false
 		for _, t := range tables {
 			if t.Name == "plexus" {
@@ -179,7 +179,7 @@ func TestCheckForNat(t *testing.T) {
 		}
 		should.BeTrue(t, tableFound)
 		chains, err := c.ListChains()
-		should.BeNil(t, err)
+		should.NotBeError(t, err)
 		chainFound := false
 		for _, c := range chains {
 			if c.Name == "plexus-nat" {
@@ -189,7 +189,7 @@ func TestCheckForNat(t *testing.T) {
 		}
 		should.BeTrue(t, chainFound)
 		rules, err := c.GetRules(table, chain)
-		should.BeNil(t, err)
+		should.NotBeError(t, err)
 		should.BeEqual(t, len(rules), 1)
 		should.BeEqual(t, rules[0].Exprs[0], &expr.Masq{
 			Random:      false,
@@ -212,9 +212,9 @@ func TestCheckForNat(t *testing.T) {
 		network.Peers = []plexus.NetworkPeer{peer}
 		t.Log(self, network)
 		err = checkForNat(self, network)
-		should.BeNil(t, err)
+		should.NotBeError(t, err)
 		tables, err := c.ListTables()
-		should.BeNil(t, err)
+		should.NotBeError(t, err)
 		tableFound := false
 		for _, t := range tables {
 			if t.Name == "plexus" {
@@ -224,7 +224,7 @@ func TestCheckForNat(t *testing.T) {
 		}
 		should.BeTrue(t, tableFound)
 		chains, err := c.ListChains()
-		should.BeNil(t, err)
+		should.NotBeError(t, err)
 		chainFound := false
 		for _, c := range chains {
 			if c.Name == "plexus-subnet" {
@@ -234,20 +234,21 @@ func TestCheckForNat(t *testing.T) {
 		}
 		should.BeTrue(t, chainFound)
 		rules, err := c.GetRules(table, chain)
-		should.BeNil(t, err)
+		should.NotBeError(t, err)
 		should.BeEqual(t, len(rules), 254)
 	})
 	cleanNat(t, c)
 }
 
 func cleanNat(t *testing.T, c *nftables.Conn) {
+	t.Helper()
 	tables, err := c.ListTables()
-	should.BeNil(t, err)
+	should.NotBeError(t, err)
 	for _, table := range tables {
 		if table.Name == "plexus" {
 			c.DelTable(table)
 			err := c.Flush()
-			should.BeNil(t, err)
+			should.NotBeError(t, err)
 			break
 		}
 	}

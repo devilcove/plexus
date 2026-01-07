@@ -13,29 +13,35 @@ import (
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
 	"github.com/devilcove/plexus/internal/publish"
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-gonic/gin"
 )
 
-func displayAddNetwork(c *gin.Context) {
-	session := sessions.Default(c)
-	page := getPage(session.Get("user"))
+func displayAddNetwork(w http.ResponseWriter, r *http.Request) {
+	session := GetSession(w, r)
+	if session == nil {
+		displayLogin(w, r)
+		return
+	}
+	page := getPage(session.UserName)
 	page.Page = "addNetwork"
-	_ = session.Save()
-	c.HTML(http.StatusOK, "addNetwork", page)
+
+	if err := session.Session.Save(r, w); err != nil {
+		slog.Error("session save", "error", err)
+	}
+	if err := templates.ExecuteTemplate(w, "addNetwork", page); err != nil {
+		slog.Error("template", "name", "addnetwork", "error", err)
+	}
 }
 
-func addNetwork(c *gin.Context) {
+func addNetwork(w http.ResponseWriter, r *http.Request) {
 	var errs error
-	network := plexus.Network{}
-	if err := c.Bind(&network); err != nil {
-		processError(c, http.StatusBadRequest, "invalid network data")
-		return
+	network := plexus.Network{
+		Name:          r.FormValue("name"),
+		AddressString: r.FormValue("addressstring"),
 	}
 	_, cidr, err := net.ParseCIDR(network.AddressString)
 	if err != nil {
 		log.Println("net.ParseCIDR", network.AddressString)
-		processError(c, http.StatusBadRequest, "invalid address for network")
+		processError(w, http.StatusBadRequest, "invalid address for network")
 		return
 	}
 	network.Net = *cidr
@@ -47,54 +53,62 @@ func addNetwork(c *gin.Context) {
 		errs = errors.Join(errs, errors.New("network address is not private"))
 	}
 	if errs != nil {
-		processError(c, http.StatusBadRequest, errs.Error())
+		processError(w, http.StatusBadRequest, errs.Error())
 		return
 	}
 	networks, err := boltdb.GetAll[plexus.Network](networkTable)
 	if err != nil {
-		processError(c, http.StatusInternalServerError, "database error "+err.Error())
+		processError(w, http.StatusInternalServerError, "database error "+err.Error())
 		return
 	}
 	for _, net := range networks {
 		if net.Name == network.Name {
-			processError(c, http.StatusBadRequest, "network name exists")
+			processError(w, http.StatusBadRequest, "network name exists")
 			return
 		}
 		if net.Net.IP.Equal(network.Net.IP) {
-			processError(c, http.StatusBadRequest, "network CIDR in use by "+net.Name)
+			processError(w, http.StatusBadRequest, "network CIDR in use by "+net.Name)
 			return
 		}
 	}
-	slog.Info("network validation complete ... saving", "network", network)
+	slog.Debug("network validation complete ... saving", "network", network)
 	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
-		processError(c, http.StatusInternalServerError, "unable to save network "+err.Error())
+		processError(w, http.StatusInternalServerError, "unable to save network "+err.Error())
 		return
 	}
-	displayNetworks(c)
+	displayNetworks(w, r)
 }
 
-func displayNetworks(c *gin.Context) {
-	session := sessions.Default(c)
-	user := session.Get("user")
-	page := getPage(user)
+func displayNetworks(w http.ResponseWriter, r *http.Request) {
+	session := GetSession(w, r)
+	if session == nil {
+		displayLogin(w, r)
+		return
+	}
+	page := getPage(session.UserName)
 	networks, err := boltdb.GetAll[plexus.Network](networkTable)
 	if err != nil {
-		processError(c, http.StatusInternalServerError, err.Error())
+		processError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	page.Data = networks
-	_ = session.Save()
-	c.Header("HX-Trigger", "networkChange")
-	c.HTML(http.StatusOK, "networks", page)
+
+	session.Save(w, r)
+	w.Header().Add("Hx-Trigger", "networkChange")
+	if err := templates.ExecuteTemplate(w, "networks", page); err != nil {
+		slog.Error("template", "name", "networks", "page", page, "error", err)
+	}
 }
 
-func networksSideBar(c *gin.Context) {
+func networksSideBar(w http.ResponseWriter, _ *http.Request) {
 	networks, err := boltdb.GetAll[plexus.Network](networkTable)
 	if err != nil {
-		processError(c, http.StatusInternalServerError, err.Error())
+		processError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	c.HTML(http.StatusOK, "sidebarNetworks", networks)
+	if err := templates.ExecuteTemplate(w, "sidebarNetworks", networks); err != nil {
+		slog.Error("sidebar", "networks", networks, "error", err)
+	}
 }
 
 func getAvailablePeers(network plexus.Network) []plexus.Peer {
@@ -117,71 +131,97 @@ func getAvailablePeers(network plexus.Network) []plexus.Peer {
 	return peers
 }
 
-func networkAddPeer(c *gin.Context) {
-	network := c.Param("id")
-	peerID := c.Param("peer")
+func networkAddPeer(w http.ResponseWriter, r *http.Request) {
+	network := r.PathValue("id")
+	peerID := r.PathValue("peer")
 	slog.Debug("adding peer to network", "peer", peerID, "network", network)
 	priv, pub, err := getListenPorts(peerID, network)
 	if err != nil {
-		processError(c, http.StatusInternalServerError, err.Error())
+		processError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if _, err := addPeerToNetwork(peerID, network, priv, pub); err != nil {
-		processError(c, http.StatusInternalServerError, err.Error())
+		processError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	networkDetails(c)
+	networkDetails(w, r)
 }
 
-func networkDetails(c *gin.Context) {
-	session := sessions.Default(c)
+func networkDetails(w http.ResponseWriter, r *http.Request) {
+	session := GetSession(w, r)
+	if session == nil {
+		displayLogin(w, r)
+		return
+	}
 	details := struct {
 		Name           string
 		Peers          []plexus.NetworkPeer
 		AvailablePeers []plexus.Peer
 	}{}
-	networkName := c.Param("id")
+	networkName := r.PathValue("id")
 	network, err := boltdb.Get[plexus.Network](networkName, networkTable)
 	if err != nil {
-		processError(c, http.StatusBadRequest, err.Error())
+		processError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	for _, peer := range network.Peers {
 		p, err := boltdb.Get[plexus.Peer](peer.WGPublicKey, peerTable)
 		if err != nil {
-			slog.Error("could not obtains peer for network details", "peer", peer.WGPublicKey, "network", network, "error", err)
+			slog.Error(
+				"could not obtains peer for network details",
+				"peer", peer.WGPublicKey,
+				"network", network,
+				"error", err,
+			)
 			continue
 		}
 		slog.Debug("network details", "peer", peer.HostName, "connected",
 			time.Since(p.Updated) < time.Second*10, "connectivity", peer.Connectivity)
 		details.Peers = append(details.Peers, peer)
-		slog.Debug("connectivity", "network", network.Name, "peer", peer.HostName, "connectivity", peer.Connectivity)
+		slog.Debug(
+			"connectivity",
+			"network", network.Name,
+			"peer", peer.HostName,
+			"connectivity", peer.Connectivity,
+		)
 	}
 	details.Name = networkName
 	details.AvailablePeers = getAvailablePeers(network)
-	_ = session.Save()
-	c.HTML(http.StatusOK, "networkDetails", details)
+	if err := session.Session.Save(r, w); err != nil {
+		slog.Error("session save", "error", err)
+	}
+	if err := templates.ExecuteTemplate(w, "networkDetails", details); err != nil {
+		slog.Error("template", "template", "networkDetails", "details", details, "error", err)
+	}
 }
 
-func deleteNetwork(c *gin.Context) {
-	network := c.Param("id")
+func deleteNetwork(w http.ResponseWriter, r *http.Request) {
+	network := r.PathValue("id")
 	if err := boltdb.Delete[plexus.Network](network, networkTable); err != nil {
 		if errors.Is(err, boltdb.ErrNoResults) {
-			processError(c, http.StatusBadRequest, "network does not exist")
+			processError(w, http.StatusBadRequest, "network does not exist")
 			return
 		}
-		processError(c, http.StatusInternalServerError, "delete network "+err.Error())
+		processError(w, http.StatusInternalServerError, "delete network "+err.Error())
 		return
 	}
 	log.Println("deleting network", network)
 	if natsConn == nil {
 		slog.Error("not connected to nats")
-		processError(c, http.StatusInternalServerError, "nats failure:  network update not published")
+		processError(
+			w,
+			http.StatusInternalServerError,
+			"nats failure:  network update not published",
+		)
 		return
 	}
 	slog.Debug("publish network update", "network", network, "reason", "delete network")
-	publish.Message(natsConn, plexus.Networks+network, plexus.NetworkUpdate{Action: plexus.DeleteNetwork})
-	displayNetworks(c)
+	publish.Message(
+		natsConn,
+		plexus.Networks+network,
+		plexus.NetworkUpdate{Action: plexus.DeleteNetwork},
+	)
+	displayNetworks(w, r)
 }
 
 func validateNetworkName(name string) bool {
@@ -196,12 +236,12 @@ func validateNetworkAddress(address net.IPNet) bool {
 	return address.IP.IsPrivate()
 }
 
-func removePeerFromNetwork(c *gin.Context) {
-	netName := c.Param("id")
-	peerid := c.Param("peer")
+func removePeerFromNetwork(w http.ResponseWriter, r *http.Request) {
+	netName := r.PathValue("id")
+	peerid := r.PathValue("peer")
 	network, err := boltdb.Get[plexus.Network](netName, networkTable)
 	if err != nil {
-		processError(c, http.StatusBadRequest, "invalid network"+err.Error())
+		processError(w, http.StatusBadRequest, "invalid network"+err.Error())
 		return
 	}
 	found := false
@@ -212,7 +252,7 @@ func removePeerFromNetwork(c *gin.Context) {
 			network.Peers = slices.Delete(network.Peers, i, i+1)
 			if err := boltdb.Save(network, network.Name, networkTable); err != nil {
 				slog.Error("save network after peer deletion", "error", err)
-				processError(c, http.StatusInternalServerError, err.Error())
+				processError(w, http.StatusInternalServerError, err.Error())
 				return
 			}
 			update := plexus.NetworkUpdate{
@@ -225,10 +265,10 @@ func removePeerFromNetwork(c *gin.Context) {
 		}
 	}
 	if !found {
-		processError(c, http.StatusBadRequest, "invalid peer")
+		processError(w, http.StatusBadRequest, "invalid peer")
 		return
 	}
-	networkDetails(c)
+	networkDetails(w, r)
 }
 
 func getNetworksForPeer(id string) ([]plexus.Network, error) {
@@ -247,126 +287,27 @@ func getNetworksForPeer(id string) ([]plexus.Network, error) {
 	return response, nil
 }
 
-func displayAddRelay(c *gin.Context) {
-	data := struct {
-		Network        string
-		Relay          plexus.NetworkPeer
-		AvailablePeers []plexus.NetworkPeer
-	}{}
-	data.Network = c.Param("id")
-	relay := c.Param("peer")
-	slog.Debug("add relay", "network", data.Network, "relay", relay)
-	network, err := boltdb.Get[plexus.Network](data.Network, networkTable)
-	if err != nil {
-		processError(c, http.StatusBadGateway, err.Error())
-		return
-	}
-	for _, peer := range network.Peers {
-		if peer.WGPublicKey == relay {
-			data.Relay = peer
-			continue
-		}
-		if peer.IsRelay || peer.IsRelayed || peer.IsSubnetRouter {
-			continue
-		}
-		data.AvailablePeers = append(data.AvailablePeers, peer)
-	}
-	c.HTML(http.StatusOK, "addRelayToNetwork", data)
-}
-
-func addRelay(c *gin.Context) {
-	netID := c.Param("id")
-	relayID := c.Param("peer")
-	relayedIDs := c.PostFormArray("relayed")
-	network, err := boltdb.Get[plexus.Network](netID, networkTable)
-	if err != nil {
-		processError(c, http.StatusBadRequest, err.Error())
-		return
-	}
-	update := plexus.NetworkUpdate{
-		Action: plexus.AddRelay,
-	}
-	peers := []plexus.NetworkPeer{}
-	for _, peer := range network.Peers {
-		if peer.WGPublicKey == relayID {
-			peer.IsRelay = true
-			peer.RelayedPeers = relayedIDs
-			update.Peer = peer
-		}
-		if slices.Contains(relayedIDs, peer.WGPublicKey) {
-			peer.IsRelayed = true
-		}
-		peers = append(peers, peer)
-	}
-	network.Peers = peers
-	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
-		processError(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	slog.Debug("publish network update - add relay", "network", network.Name, "relay", relayID)
-	publish.Message(natsConn, "networks."+network.Name, update)
-	networkDetails(c)
-}
-
-func deleteRelay(c *gin.Context) {
-	netName := c.Param("id")
-	peerID := c.Param("peer")
-	slog.Info("delete relay", "network", netName, "relay", peerID)
+func networkPeerDetails(w http.ResponseWriter, r *http.Request) {
+	netName := r.PathValue("id")
+	peerID := r.PathValue("peer")
 	network, err := boltdb.Get[plexus.Network](netName, networkTable)
 	if err != nil {
-		processError(c, http.StatusBadRequest, err.Error())
-		return
-	}
-	update := plexus.NetworkUpdate{
-		Action: plexus.DeleteRelay,
-	}
-	peersToUnrelay := []string{}
-	updatedPeers := []plexus.NetworkPeer{}
-	for _, peer := range network.Peers {
-		if peer.WGPublicKey == peerID {
-			// send the original peer to agents which will include the list of peers to unrelay
-			update.Peer = peer
-			peer.IsRelay = false
-			peersToUnrelay = peer.RelayedPeers
-			peer.RelayedPeers = []string{}
-			updatedPeers = append(updatedPeers, peer)
-			break
-		}
-	}
-	for _, peer := range network.Peers {
-		if peer.WGPublicKey == peerID {
-			// already added above.
-			continue
-		}
-		if slices.Contains(peersToUnrelay, peer.WGPublicKey) {
-			peer.IsRelayed = false
-		}
-		updatedPeers = append(updatedPeers, peer)
-	}
-	network.Peers = updatedPeers
-	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
-		processError(c, http.StatusBadRequest, "failed to save update network peers "+err.Error())
-		return
-	}
-	slog.Debug("publish network update", "network", network.Name, "peer", update.Peer.HostName, "reason", "delete relay")
-	publish.Message(natsConn, plexus.Networks+network.Name, update)
-	networkDetails(c)
-}
-
-func networkPeerDetails(c *gin.Context) {
-	netName := c.Param("id")
-	peerID := c.Param("peer")
-	network, err := boltdb.Get[plexus.Network](netName, networkTable)
-	if err != nil {
-		processError(c, http.StatusBadRequest, err.Error())
+		processError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	for _, peer := range network.Peers {
 		if peer.WGPublicKey == peerID {
 			peer.Connectivity *= 100
-			c.HTML(http.StatusOK, "displayNetworkPeer", peer)
+			if err := templates.ExecuteTemplate(w, "displayNetworkPeer", peer); err != nil {
+				slog.Error(
+					"template execute",
+					"template", "displayNetworkPeer",
+					"peer", peer,
+					"error", err,
+				)
+			}
 			return
 		}
 	}
-	processError(c, http.StatusBadRequest, "peer not found")
+	processError(w, http.StatusBadRequest, "peer not found")
 }
