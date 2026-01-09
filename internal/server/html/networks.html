@@ -53,7 +53,7 @@
 {{end}}
 
 {{define "networkDetails"}}
-<div hx-get="/networks/{{.Name}}" hx-trigger="every 1m" hx-target="#content" hx-target-error="#error"></div>
+<div hx-get="/networks/details/{{.Name}}" hx-trigger="every 1m" hx-target="#content" hx-target-error="#error"></div>
 <div class="w3-container w3-theme-dark w3-padding">
     <!-- Network Details Nav Bar-->
     <div class="w3-bar w3-theme-d5 w3-center">
