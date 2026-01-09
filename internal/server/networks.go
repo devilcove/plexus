@@ -20,9 +20,7 @@ func displayAddNetwork(w http.ResponseWriter, r *http.Request) {
 	page := getPage(session.Username)
 	page.Page = "addNetwork"
 
-	if err := templates.ExecuteTemplate(w, "addNetwork", page); err != nil {
-		slog.Error("template", "name", "addnetwork", "error", err)
-	}
+	render(w, "addNetwork", page)
 }
 
 func addNetwork(w http.ResponseWriter, r *http.Request) {
@@ -83,9 +81,7 @@ func displayNetworks(w http.ResponseWriter, r *http.Request) {
 	page.Data = networks
 
 	w.Header().Add("Hx-Trigger", "networkChange")
-	if err := templates.ExecuteTemplate(w, "networks", page); err != nil {
-		slog.Error("template", "name", "networks", "page", page, "error", err)
-	}
+	render(w, "networks", page)
 }
 
 func networksSideBar(w http.ResponseWriter, _ *http.Request) {
@@ -94,9 +90,7 @@ func networksSideBar(w http.ResponseWriter, _ *http.Request) {
 		processError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if err := templates.ExecuteTemplate(w, "sidebarNetworks", networks); err != nil {
-		slog.Error("sidebar", "networks", networks, "error", err)
-	}
+	render(w, "sidebarNetworks", networks)
 }
 
 func getAvailablePeers(network plexus.Network) []plexus.Peer {
@@ -170,9 +164,7 @@ func networkDetails(w http.ResponseWriter, r *http.Request) {
 	}
 	details.Name = networkName
 	details.AvailablePeers = getAvailablePeers(network)
-	if err := templates.ExecuteTemplate(w, "networkDetails", details); err != nil {
-		slog.Error("template", "template", "networkDetails", "details", details, "error", err)
-	}
+	render(w, "networkDetails", details)
 }
 
 func deleteNetwork(w http.ResponseWriter, r *http.Request) {
@@ -278,14 +270,7 @@ func networkPeerDetails(w http.ResponseWriter, r *http.Request) {
 	for _, peer := range network.Peers {
 		if peer.WGPublicKey == peerID {
 			peer.Connectivity *= 100
-			if err := templates.ExecuteTemplate(w, "displayNetworkPeer", peer); err != nil {
-				slog.Error(
-					"template execute",
-					"template", "displayNetworkPeer",
-					"peer", peer,
-					"error", err,
-				)
-			}
+			render(w, "displayNetworkPeer", peer)
 			return
 		}
 	}

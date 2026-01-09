@@ -100,35 +100,3 @@ func auth(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
-
-// func auth(c *gin.Context) {
-// 	session := sessions.Default(c)
-// 	loggedIn := session.Get("loggedin")
-// 	if loggedIn == nil {
-// 		slog.Info("not logged in display login page")
-// 		page := getPage(nil)
-// 		page.NeedsLogin = true
-// 		if err := templates.ExecuteTemplate(w, "login", page)
-// 		c.Abort()
-// 		return
-// 	}
-// }
-
-// func weblogger() gin.HandlerFunc {
-// 	return func(w http.ResponseWriter, r *http.Request) {
-// 		start := time.Now()
-// 		c.Next()
-// 		status := c.Writer.Status()
-// 		switch {
-// 		case status >= 500:
-// 			slog.Error("request", "Code", c.Writer.Status(), "method", c.Request.Method,
-// 				"route", c.Request.URL.Path, "latency", time.Since(start), "client", c.ClientIP())
-// 		case status >= 400:
-// 			slog.Warn("request", "Code", c.Writer.Status(), "method", c.Request.Method,
-// 				"route", c.Request.URL.Path, "latency", time.Since(start), "client", c.ClientIP())
-// 		default:
-// 			slog.Debug("request", "Code", c.Writer.Status(), "method", c.Request.Method,
-// 				"route", c.Request.URL.Path, "latency", time.Since(start), "client", c.ClientIP())
-// 		}
-// 	}
-// }

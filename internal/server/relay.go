@@ -34,9 +34,7 @@ func displayAddRelay(w http.ResponseWriter, r *http.Request) {
 		}
 		data.AvailablePeers = append(data.AvailablePeers, peer)
 	}
-	if err := templates.ExecuteTemplate(w, "addRelayToNetwork", data); err != nil {
-		slog.Error("execute template", "template", "addRelayToNetwork", "data", data, "error", err)
-	}
+	render(w, "addRelayToNetwork", data)
 }
 
 func addRelay(w http.ResponseWriter, r *http.Request) {

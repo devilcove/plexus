@@ -22,9 +22,7 @@ func displayCreateKey(w http.ResponseWriter, r *http.Request) {
 	session := GetSessionData(r)
 	page := getPage(session.Username)
 	page.Page = "addKey"
-	if err := templates.ExecuteTemplate(w, "addKey", page); err != nil {
-		slog.Error("execute template", "template", "addKey", "page", page, "error", err)
-	}
+	render(w, "addKey", page)
 }
 
 func addKey(w http.ResponseWriter, r *http.Request) {
@@ -83,9 +81,7 @@ func displayKeys(w http.ResponseWriter, _ *http.Request) {
 		processError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if err := templates.ExecuteTemplate(w, keyTable, keys); err != nil {
-		slog.Error("execute template", "template", keyTable, "keys", keys, "error", err)
-	}
+	render(w, keyTable, keys)
 }
 
 func deleteKey(w http.ResponseWriter, r *http.Request) {

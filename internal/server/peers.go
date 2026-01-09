@@ -27,9 +27,7 @@ func displayPeers(w http.ResponseWriter, _ *http.Request) {
 		}
 		displayPeers = append(displayPeers, peer)
 	}
-	if err := templates.ExecuteTemplate(w, peerTable, displayPeers); err != nil {
-		slog.Error("template execute", "template", peerTable, "data", displayPeers, "error", err)
-	}
+	render(w, peerTable, displayPeers)
 }
 
 func peerDetails(w http.ResponseWriter, r *http.Request) {
@@ -39,9 +37,7 @@ func peerDetails(w http.ResponseWriter, r *http.Request) {
 		processError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if err := templates.ExecuteTemplate(w, "peerDetails", peer); err != nil {
-		slog.Error("template execute", "template", "peerDetails", "data", peer, "error", err)
-	}
+	render(w, "peerDetails", peer)
 }
 
 func deletePeer(w http.ResponseWriter, r *http.Request) {

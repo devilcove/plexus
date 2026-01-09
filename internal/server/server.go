@@ -158,9 +158,7 @@ func getServer(w http.ResponseWriter, _ *http.Request) {
 	}
 	logs := string(out)
 	server.Logs = strings.Split(logs, "\n")
-	if err := templates.ExecuteTemplate(w, "server", server); err != nil {
-		slog.Error("execute template", "template", "server", "data", server, "error", err)
-	}
+	render(w, "server", server)
 }
 
 func setLogLevel(w http.ResponseWriter, r *http.Request) {

@@ -86,9 +86,7 @@ func getUsers(w http.ResponseWriter, r *http.Request) {
 		user.Password = ""
 		returnedUsers = append(returnedUsers, user)
 	}
-	if err := templates.ExecuteTemplate(w, "users", returnedUsers); err != nil {
-		slog.Error("template execute", "template", "users", "data", returnedUsers, "error", err)
-	}
+	render(w, "users", returnedUsers)
 }
 
 func getUser(w http.ResponseWriter, r *http.Request) {
@@ -113,9 +111,7 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user.Password = ""
-	if err := templates.ExecuteTemplate(w, "editUser", user); err != nil {
-		slog.Error("template execute", "template", "editUser", "data", user, "error", err)
-	}
+	render(w, "editUser", user)
 }
 
 func getCurrentUser(w http.ResponseWriter, r *http.Request) {
@@ -126,9 +122,7 @@ func getCurrentUser(w http.ResponseWriter, r *http.Request) {
 		processError(w, http.StatusBadRequest, "no such user "+err.Error())
 		return
 	}
-	if err := templates.ExecuteTemplate(w, "editUser", user); err != nil {
-		slog.Error("template execute", "template", "editUser", "data", user, "error", err)
-	}
+	render(w, "editUser", user)
 }
 
 func deleteUser(w http.ResponseWriter, r *http.Request) {
@@ -151,9 +145,7 @@ func displayAddUser(w http.ResponseWriter, r *http.Request) {
 		processError(w, http.StatusUnauthorized, "admin rights required")
 		return
 	}
-	if err := templates.ExecuteTemplate(w, "newUser", nil); err != nil {
-		slog.Error("template execute", "template", "newUser", "data", "nil", "error", err)
-	}
+	render(w, "newUser", nil)
 }
 
 func addUser(w http.ResponseWriter, r *http.Request) {

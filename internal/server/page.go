@@ -1,8 +1,12 @@
 package server
 
 import (
+	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
+	"path/filepath"
+	"runtime"
 	"time"
 
 	"github.com/devilcove/boltdb"
@@ -43,9 +47,7 @@ func displayMain(w http.ResponseWriter, r *http.Request) {
 	page.NeedsLogin = session.IsNew
 	slog.Info("display main page", "session", session, "page", page)
 
-	if err := templates.ExecuteTemplate(w, "layout", page); err != nil {
-		slog.Error("display main", "template", "layout", "page", page, "error", err)
-	}
+	render(w, "layout", page)
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
@@ -64,9 +66,8 @@ func login(w http.ResponseWriter, r *http.Request) {
 	page := getPage(user.Username)
 	page.NeedsLogin = false
 	page.Page = "networks"
-	if err := templates.ExecuteTemplate(w, "layout", page); err != nil {
-		slog.Error("execute template", "template", "layout", "page", page, "error", err)
-	}
+	saveSession(w, r, user)
+	render(w, "layout", page)
 }
 
 func validateUser(visitor *plexus.User) bool {
@@ -137,8 +138,18 @@ func getPage(user any) Page {
 	return pages[user.(string)]
 }
 
-func displayLogin(w http.ResponseWriter, _ *http.Request) {
-	if err := templates.ExecuteTemplate(w, "layout", Page{NeedsLogin: true}); err != nil {
-		slog.Error("display login", "error", err)
+func render(w io.Writer, template string, data any) {
+	if err := templates.ExecuteTemplate(w, template, data); err != nil {
+		slog.Error("render template", "caller", caller(2),
+			"name", template, "data", data, "error", err)
 	}
+}
+
+func caller(depth int) string {
+	pc, file, no, ok := runtime.Caller(depth)
+	details := runtime.FuncForPC(pc)
+	if ok && details != nil {
+		return fmt.Sprintf("%s %s:%d", details.Name(), filepath.Base(file), no)
+	}
+	return "unknown caller"
 }

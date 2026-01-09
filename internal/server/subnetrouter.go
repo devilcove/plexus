@@ -20,9 +20,7 @@ func displayAddRouter(w http.ResponseWriter, r *http.Request) {
 		Router:  r.PathValue("peer"),
 	}
 	slog.Debug("add router")
-	if err := templates.ExecuteTemplate(w, "addRouterToNetwork", data); err != nil {
-		slog.Error("execute template", "template", "addRouterToNetwork", "data", data, "error", err)
-	}
+	render(w, "addRouterToNetwork", data)
 }
 
 func addRouter(w http.ResponseWriter, r *http.Request) {
