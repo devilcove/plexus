@@ -18,6 +18,7 @@ linters:
     - noctx
     - noinlineerr
     - paralleltest
+    - prealloc
     - testpackage
     - wrapcheck
     - wsl
@@ -77,5 +78,8 @@ formatters:
   enable:
     - gofumpt
     - golines
+  settings:
+    golines:
+      max-len: 120
   exclusions:
     generated: lax

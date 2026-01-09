@@ -160,7 +160,8 @@ func processLeave(request *plexus.LeaveRequest) plexus.MessageResponse {
 	}
 	serverConn := serverConn.Load()
 	if serverConn != nil {
-		if err := Request(serverConn, self.WGPublicKey+plexus.LeaveNetwork, request, &response, NatsTimeout); err != nil {
+		if err := Request(serverConn, self.WGPublicKey+plexus.LeaveNetwork,
+			request, &response, NatsTimeout); err != nil {
 			slog.Debug(err.Error())
 			return plexus.MessageResponse{Message: "error: " + err.Error()}
 		}
