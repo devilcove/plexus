@@ -19,12 +19,8 @@ import (
 )
 
 func displayCreateKey(w http.ResponseWriter, r *http.Request) {
-	session := GetSession(w, r)
-	if session == nil {
-		displayLogin(w, r)
-		return
-	}
-	page := getPage(session.UserName)
+	session := GetSessionData(r)
+	page := getPage(session.Username)
 	page.Page = "addKey"
 	if err := templates.ExecuteTemplate(w, "addKey", page); err != nil {
 		slog.Error("execute template", "template", "addKey", "page", page, "error", err)

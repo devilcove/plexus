@@ -92,17 +92,10 @@ func processError(w http.ResponseWriter, status int, message string) {
 
 func auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session := GetSession(w, r)
-		if session == nil {
-			displayLogin(w, r)
+		session := GetSession(r)
+		if session.IsNew {
+			http.Redirect(w, r, "/login/", http.StatusUnauthorized)
 			return
-		}
-		if !session.LoggedIn {
-			displayLogin(w, r)
-			return
-		}
-		if err := session.Session.Save(r, w); err != nil {
-			slog.Error("save session", "error", err)
 		}
 		next.ServeHTTP(w, r)
 	})

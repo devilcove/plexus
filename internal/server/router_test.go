@@ -44,8 +44,8 @@ func TestAuthFail(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/server/", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
-	should.BeEqual(t, w.Code, http.StatusOK)
+	should.BeEqual(t, w.Code, http.StatusUnauthorized)
 	body, err := io.ReadAll(w.Body)
 	should.NotBeError(t, err)
-	should.ContainSubstring(t, string(body), "<h1>Login</h1")
+	should.ContainSubstring(t, string(body), "Unauthorized")
 }

@@ -66,16 +66,12 @@ func hashPassword(password string) (string, error) {
 }
 
 func getUsers(w http.ResponseWriter, r *http.Request) {
-	session := GetSession(w, r)
-	if session == nil {
-		displayLogin(w, r)
-		return
-	}
-	if !session.Admin {
+	session := GetSessionData(r)
+	if !session.IsAdmin {
 		getCurrentUser(w, r)
 		return
 	}
-	slog.Debug("getting users", "admin", session.Admin)
+	slog.Debug("getting users", "admin", session.IsAdmin)
 	users, err := boltdb.GetAll[plexus.User](userTable)
 	if err != nil {
 		processError(w, http.StatusBadRequest, err.Error())
@@ -90,31 +86,24 @@ func getUsers(w http.ResponseWriter, r *http.Request) {
 		user.Password = ""
 		returnedUsers = append(returnedUsers, user)
 	}
-	if err := session.Session.Save(r, w); err != nil {
-		slog.Error("save session", "error", err)
-	}
 	if err := templates.ExecuteTemplate(w, "users", returnedUsers); err != nil {
 		slog.Error("template execute", "template", "users", "data", returnedUsers, "error", err)
 	}
 }
 
 func getUser(w http.ResponseWriter, r *http.Request) {
-	session := GetSession(w, r)
-	if session == nil {
-		displayLogin(w, r)
-		return
-	}
+	session := GetSessionData(r)
 	userToEdit := r.PathValue("name")
 	slog.Debug(
 		"getUser",
 		"admin",
-		session.Admin,
+		session.IsAdmin,
 		"visitor",
-		session.UserName,
+		session.Username,
 		"to edit",
 		userToEdit,
 	)
-	if !session.Admin && session.UserName != userToEdit {
+	if !session.IsAdmin && session.Username != userToEdit {
 		processError(w, http.StatusUnauthorized, "you need to be an admin to edit other users")
 		return
 	}
@@ -124,9 +113,6 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user.Password = ""
-	if err := session.Session.Save(r, w); err != nil {
-		slog.Error("session save", "error", err)
-	}
 	if err := templates.ExecuteTemplate(w, "editUser", user); err != nil {
 		slog.Error("template execute", "template", "editUser", "data", user, "error", err)
 	}
@@ -134,19 +120,11 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 
 func getCurrentUser(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("get current user")
-	session := GetSession(w, r)
-	if session == nil {
-		displayLogin(w, r)
-		return
-	}
-	slog.Error("session", "session", session)
-	user, err := boltdb.Get[plexus.User](session.UserName, userTable)
+	data := GetSessionData(r)
+	user, err := boltdb.Get[plexus.User](data.Username, userTable)
 	if err != nil {
 		processError(w, http.StatusBadRequest, "no such user "+err.Error())
 		return
-	}
-	if err := session.Session.Save(r, w); err != nil {
-		slog.Error("session save", "error", err)
 	}
 	if err := templates.ExecuteTemplate(w, "editUser", user); err != nil {
 		slog.Error("template execute", "template", "editUser", "data", user, "error", err)
@@ -154,12 +132,8 @@ func getCurrentUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteUser(w http.ResponseWriter, r *http.Request) {
-	session := GetSession(w, r)
-	if session == nil {
-		displayLogin(w, r)
-		return
-	}
-	if !session.Admin {
+	session := GetSessionData(r)
+	if !session.IsAdmin {
 		processError(w, http.StatusUnauthorized, "admin rights required")
 		return
 	}
@@ -172,8 +146,8 @@ func deleteUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func displayAddUser(w http.ResponseWriter, r *http.Request) {
-	session := GetSession(w, r)
-	if !session.Admin {
+	session := GetSessionData(r)
+	if !session.IsAdmin {
 		processError(w, http.StatusUnauthorized, "admin rights required")
 		return
 	}
@@ -183,12 +157,8 @@ func displayAddUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func addUser(w http.ResponseWriter, r *http.Request) {
-	session := GetSession(w, r)
-	if session == nil {
-		displayLogin(w, r)
-		return
-	}
-	if !session.Admin {
+	session := GetSessionData(r)
+	if !session.IsAdmin {
 		processError(w, http.StatusUnauthorized, "admin rights required")
 		return
 	}
@@ -222,13 +192,9 @@ func editUser(w http.ResponseWriter, r *http.Request) {
 		processError(w, http.StatusBadRequest, "blank password")
 		return
 	}
-	session := GetSession(w, r)
-	if session == nil {
-		displayLogin(w, r)
-		return
-	}
+	data := GetSessionData(r)
 	userToEdit := r.PathValue("name")
-	if !session.Admin && session.UserName != userToEdit {
+	if !data.IsAdmin && data.Username != userToEdit {
 		processError(w, http.StatusUnauthorized, "admin rights required to update other users")
 		return
 	}

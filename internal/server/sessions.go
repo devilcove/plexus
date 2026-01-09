@@ -1,10 +1,9 @@
 package server
 
 import (
-	"bytes"
 	"crypto/rand"
-	"fmt"
-	"log"
+	"encoding/gob"
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -13,13 +12,14 @@ import (
 )
 
 const (
-	cookieAge   = 300
-	sessionName = "plexus"
+	cookieName = "plexus"
+	dataName   = "data"
 )
 
 var (
 	store              *sessions.CookieStore
 	sessionInitialized bool
+	ErrNotInitialized  = errors.New("session is not initialized")
 )
 
 // Session represents a user session.
@@ -37,7 +37,6 @@ func InitializeSession() {
 		return
 	}
 	store = sessions.NewCookieStore(keypairs())
-	store.MaxAge(cookieAge)
 	store.Options.HttpOnly = true
 	store.Options.SameSite = http.SameSiteStrictMode
 }
@@ -50,76 +49,39 @@ func keypairs() ([]byte, []byte) {
 	return buf1, buf2
 }
 
-func GetSession(_ http.ResponseWriter, r *http.Request) *Session {
-	sess := &Session{}
-	session, err := store.Get(r, sessionName)
-	if err != nil {
-		slog.Error("session err", "error", err)
-		return nil
+func GetSessionData(r *http.Request) plexus.User {
+	s := GetSession(r)
+	data, ok := s.Values[dataName].(plexus.User)
+	if !ok {
+		data = plexus.User{}
 	}
-	user := session.Values["username"]
-	slog.Debug("GetSession", "userName", session.Values)
-	if u, ok := user.(string); ok {
-		sess.UserName = u
-	}
-	loggedIn := session.Values["loggedIn"]
-	if l, ok := loggedIn.(bool); ok {
-		sess.LoggedIn = l
-	}
-	admin := session.Values["admin"]
-	if a, ok := admin.(bool); ok {
-		sess.Admin = a
-	}
+	return data
+}
 
-	page := session.Values["page"]
-	if p, ok := page.(string); ok {
-		sess.Page = p
+func GetSession(r *http.Request) *sessions.Session {
+	s, err := store.Get(r, cookieName)
+	if err != nil {
+		s = sessions.NewSession(store, cookieName)
 	}
-	slog.Debug("getSession", "session", sess, "values", session.Values)
-	sess.Session = session
-	return sess
+	return s
 }
 
 func ClearSession(w http.ResponseWriter, r *http.Request) {
-	session := GetSession(w, r)
-	if session == nil {
-		s := sessions.NewSession(store, sessionName)
-		s.Options.MaxAge = -1
-		if err := s.Save(r, w); err != nil {
-			slog.Error("save session", "error", err)
-		}
-		return
-	}
-	session.Session.Options.MaxAge = -1
-	if err := session.Session.Save(r, w); err != nil {
+	s := sessions.NewSession(store, cookieName)
+	s.Options = store.Options
+	s.Options.MaxAge = -1
+	if err := s.Save(r, w); err != nil {
 		slog.Error("save session", "error", err)
 	}
 }
 
-func NewSession(
-	w http.ResponseWriter,
-	r *http.Request,
-	user plexus.User,
-	loggedIn bool,
-	page string,
-) {
-	session := sessions.NewSession(store, sessionName)
-	session.Values["username"] = user.Username
-	session.Values["admin"] = user.IsAdmin
-	session.Values["loggedIn"] = loggedIn
-	session.Values["page"] = page
-	session.Options = store.Options
-	if err := session.Save(r, w); err != nil {
+func saveSession(w http.ResponseWriter, r *http.Request, data any) {
+	s := sessions.NewSession(store, cookieName)
+	s.Options = store.Options
+	s.Options.MaxAge = 0 // session cookie
+	gob.Register(data)
+	s.Values[dataName] = data
+	if err := s.Save(r, w); err != nil {
 		slog.Error("save session", "error", err)
-	}
-	slog.Debug("NewSession", "session", session.Values)
-}
-
-func (s *Session) Save(w http.ResponseWriter, r *http.Request) {
-	if err := s.Session.Save(r, w); err != nil {
-		buf := bytes.Buffer{}
-		l := log.New(&buf, "", log.Lshortfile)
-		_ = l.Output(2, fmt.Sprintf("%s %s %s", "session save", "error", err))
-		slog.Error(buf.String())
 	}
 }

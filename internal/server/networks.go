@@ -16,17 +16,10 @@ import (
 )
 
 func displayAddNetwork(w http.ResponseWriter, r *http.Request) {
-	session := GetSession(w, r)
-	if session == nil {
-		displayLogin(w, r)
-		return
-	}
-	page := getPage(session.UserName)
+	session := GetSessionData(r)
+	page := getPage(session.Username)
 	page.Page = "addNetwork"
 
-	if err := session.Session.Save(r, w); err != nil {
-		slog.Error("session save", "error", err)
-	}
 	if err := templates.ExecuteTemplate(w, "addNetwork", page); err != nil {
 		slog.Error("template", "name", "addnetwork", "error", err)
 	}
@@ -80,12 +73,8 @@ func addNetwork(w http.ResponseWriter, r *http.Request) {
 }
 
 func displayNetworks(w http.ResponseWriter, r *http.Request) {
-	session := GetSession(w, r)
-	if session == nil {
-		displayLogin(w, r)
-		return
-	}
-	page := getPage(session.UserName)
+	session := GetSessionData(r)
+	page := getPage(session.Username)
 	networks, err := boltdb.GetAll[plexus.Network](networkTable)
 	if err != nil {
 		processError(w, http.StatusInternalServerError, err.Error())
@@ -93,7 +82,6 @@ func displayNetworks(w http.ResponseWriter, r *http.Request) {
 	}
 	page.Data = networks
 
-	session.Save(w, r)
 	w.Header().Add("Hx-Trigger", "networkChange")
 	if err := templates.ExecuteTemplate(w, "networks", page); err != nil {
 		slog.Error("template", "name", "networks", "page", page, "error", err)
@@ -148,11 +136,6 @@ func networkAddPeer(w http.ResponseWriter, r *http.Request) {
 }
 
 func networkDetails(w http.ResponseWriter, r *http.Request) {
-	session := GetSession(w, r)
-	if session == nil {
-		displayLogin(w, r)
-		return
-	}
 	details := struct {
 		Name           string
 		Peers          []plexus.NetworkPeer
@@ -187,9 +170,6 @@ func networkDetails(w http.ResponseWriter, r *http.Request) {
 	}
 	details.Name = networkName
 	details.AvailablePeers = getAvailablePeers(network)
-	if err := session.Session.Save(r, w); err != nil {
-		slog.Error("session save", "error", err)
-	}
 	if err := templates.ExecuteTemplate(w, "networkDetails", details); err != nil {
 		slog.Error("template", "template", "networkDetails", "details", details, "error", err)
 	}

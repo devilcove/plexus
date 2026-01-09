@@ -34,15 +34,13 @@ func init() {
 func displayMain(w http.ResponseWriter, r *http.Request) {
 	page := initialize()
 	page.NeedsLogin = true
-	session := GetSession(w, r)
-	if session != nil {
-		networks, err := boltdb.GetAll[plexus.Network](networkTable)
-		if err != nil {
-			slog.Error("get networks for main display", "error", err)
-		}
-		page.Data = networks
-		page.NeedsLogin = !session.LoggedIn
+	session := GetSession(r)
+	networks, err := boltdb.GetAll[plexus.Network](networkTable)
+	if err != nil {
+		slog.Error("get networks for main display", "error", err)
 	}
+	page.Data = networks
+	page.NeedsLogin = session.IsNew
 	slog.Info("display main page", "session", session, "page", page)
 
 	if err := templates.ExecuteTemplate(w, "layout", page); err != nil {
@@ -59,7 +57,8 @@ func login(w http.ResponseWriter, r *http.Request) {
 		processError(w, http.StatusBadRequest, "invalid user")
 		return
 	}
-	NewSession(w, r, user, true, "networks")
+	user.Password = "" // clear password.
+	saveSession(w, r, user)
 
 	slog.Debug("login", "user", user.Username)
 	page := getPage(user.Username)
@@ -94,8 +93,6 @@ func checkPassword(plain, hash *plexus.User) bool {
 func logout(w http.ResponseWriter, r *http.Request) {
 	ClearSession(w, r)
 	slog.Debug("logout")
-	// page := initialize()
-	// page.NeedsLogin = true
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
