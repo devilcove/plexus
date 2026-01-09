@@ -12,6 +12,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
+	deleteAllWireguardInterfaces(t)
 	user, err := user.Current()
 	should.NotBeError(t, err)
 	if user.Uid != "0" {
@@ -181,4 +182,16 @@ func TestGet(t *testing.T) {
 		should.BeNil(t, wg)
 		should.BeError(t, err)
 	})
+}
+
+func deleteAllWireguardInterfaces(t *testing.T) {
+	t.Helper()
+	links, err := netlink.LinkList()
+	should.NotBeError(t, err)
+	for _, link := range links {
+		if link.Type() == "wireguard" {
+			err := netlink.LinkDel(link)
+			should.NotBeError(t, err)
+		}
+	}
 }
