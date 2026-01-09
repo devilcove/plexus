@@ -285,7 +285,7 @@ func sendVersion(msg *nats.Msg, agentConn *nats.Conn) {
 	} else {
 		slog.Debug("not connected to server")
 	}
-	response.Agent = version + ": "
+	response.Agent = Version + ": "
 	info, _ := debug.ReadBuildInfo()
 	for _, setting := range info.Settings {
 		if strings.Contains(setting.Key, "vcs") {

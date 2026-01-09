@@ -26,8 +26,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const version = "v0.4.0"
-
 // versionCmd represents the version command.
 var versionCmd = &cobra.Command{
 	Use:   "version",
@@ -54,7 +52,7 @@ var versionCmd = &cobra.Command{
 			fmt.Printf("Agent:  %s\n", response.Agent)
 			fmt.Printf("Binary: ")
 		}
-		fmt.Printf("%s: ", version)
+		fmt.Printf("%s: ", agent.Version)
 		info, _ := debug.ReadBuildInfo()
 		for _, setting := range info.Settings {
 			if strings.Contains(setting.Key, "vcs") {
