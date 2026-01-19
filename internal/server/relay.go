@@ -38,10 +38,14 @@ func displayAddRelay(w http.ResponseWriter, r *http.Request) {
 }
 
 func addRelay(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		processError(w, http.StatusBadRequest, err.Error())
+	}
 	netID := r.PathValue("id")
 	relayID := r.PathValue("peer")
 	relayedIDs := r.PostForm["relayed"]
 	network, err := boltdb.Get[plexus.Network](netID, networkTable)
+	slog.Debug("add relay", "network", netID, "relay", relayID, "relayed", relayedIDs)
 	if err != nil {
 		processError(w, http.StatusBadRequest, err.Error())
 		return
