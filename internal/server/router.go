@@ -18,10 +18,10 @@ var content embed.FS
 
 var templates *template.Template
 
-func setupRouter(l *slog.Logger) *mux.Router {
+func setupRouter() *mux.Router {
 	InitializeSession()
 
-	router := mux.NewRouter(l, mux.Logger)
+	router := mux.NewRouter(mux.Logger)
 	dir, _ := os.Getwd()
 	slog.Info("here", "pwd", dir)
 	templates = template.Must(template.ParseFS(content, "html/*.html"))

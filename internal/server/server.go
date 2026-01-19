@@ -91,9 +91,8 @@ func web(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 		webfail <- 1
 		return
 	}
-	router := setupRouter(
-		logging.TextLogger(logging.TruncateSource(), logging.TimeFormat(time.DateTime)).Logger,
-	)
+	slog.SetDefault(logging.TextLogger(logging.TruncateSource(), logging.TimeFormat(time.DateTime)).Logger)
+	router := setupRouter()
 	server := http.Server{
 		Addr:    ":" + config.Port,
 		Handler: router,

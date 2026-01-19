@@ -3,7 +3,6 @@ package server
 import (
 	"io"
 	"log"
-	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -42,7 +41,7 @@ func TestMain(m *testing.M) {
 		os.Exit(2)
 	}
 	plexus.SetLogging("debug")
-	router = setupRouter(slog.Default())
+	router = setupRouter()
 	code := m.Run()
 	// 	cancel()
 	// 	wg.Wait()
