@@ -17,7 +17,7 @@ require (
 	github.com/mattkasun/tools v0.2.3
 	github.com/nats-io/nats-server/v2 v2.12.3
 	github.com/nats-io/nats.go v1.48.0
-	github.com/nats-io/nkeys v0.4.12
+	github.com/nats-io/nkeys v0.4.14
 	github.com/pion/stun v0.6.1
 	github.com/spf13/cobra v1.10.2
 	github.com/vishvananda/netlink v1.3.1
