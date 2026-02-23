@@ -5,9 +5,9 @@ go 1.24.6
 require (
 	github.com/Kairum-Labs/should v0.2.2
 	github.com/c-robinson/iplib v1.0.8
-	github.com/caddyserver/certmagic v0.25.1
-	github.com/devilcove/boltdb v0.1.7
-	github.com/devilcove/configuration v0.1.0
+	github.com/caddyserver/certmagic v0.25.2
+	github.com/devilcove/boltdb v0.1.8
+	github.com/devilcove/configuration v0.1.1
 	github.com/devilcove/mux v0.2.2
 	github.com/fatih/color v1.18.0
 	github.com/google/nftables v0.3.0
@@ -16,7 +16,7 @@ require (
 	github.com/lmittmann/tint v1.1.3
 	github.com/mattkasun/tools v0.3.0
 	github.com/nats-io/nats-server/v2 v2.12.4
-	github.com/nats-io/nats.go v1.48.0
+	github.com/nats-io/nats.go v1.49.0
 	github.com/nats-io/nkeys v0.4.15
 	github.com/pion/stun v0.6.1
 	github.com/spf13/cobra v1.10.2
@@ -28,7 +28,7 @@ require (
 
 require (
 	github.com/antithesishq/antithesis-sdk-go v0.5.0-default-no-op // indirect
-	github.com/caddyserver/zerossl v0.1.4 // indirect
+	github.com/caddyserver/zerossl v0.1.5 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-tpm v0.9.8 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
@@ -42,8 +42,8 @@ require (
 	github.com/mdlayher/genetlink v1.3.2 // indirect
 	github.com/mdlayher/netlink v1.7.3-0.20250113171957-fbb4dce95f42 // indirect
 	github.com/mdlayher/socket v0.5.1 // indirect
-	github.com/mholt/acmez/v3 v3.1.4 // indirect
-	github.com/miekg/dns v1.1.69 // indirect
+	github.com/mholt/acmez/v3 v3.1.6 // indirect
+	github.com/miekg/dns v1.1.72 // indirect
 	github.com/minio/highwayhash v1.0.4-0.20251030100505-070ab1a87a76 // indirect
 	github.com/nats-io/jwt/v2 v2.8.0 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
@@ -59,12 +59,12 @@ require (
 	go.uber.org/zap v1.27.1 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.4 // indirect
-	golang.org/x/mod v0.32.0 // indirect
-	golang.org/x/net v0.49.0 // indirect
+	golang.org/x/mod v0.33.0 // indirect
+	golang.org/x/net v0.50.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
-	golang.org/x/tools v0.41.0 // indirect
+	golang.org/x/tools v0.42.0 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173 // indirect
 )
