@@ -16,8 +16,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/devilcove/boltdb v0.1.8 h1:pJvwY2wXqQTyfeKmL4dsZvjg7VTSIwRM28TZFdRTFnY=
 github.com/devilcove/boltdb v0.1.8/go.mod h1:5hSK6DPNv8zafHpU1JuVGVxX/BXVQu9UHU4MKrPWvro=
-github.com/devilcove/configuration v0.1.1 h1:I7RuVN+EKQGAUAUNZiWjfLVCTEdHC4ZYqm5D23GZtoo=
-github.com/devilcove/configuration v0.1.1/go.mod h1:T0EvOgFp4QGf5zVcV2kY78ghkRQnFiF/HPXzV5wMcSQ=
+github.com/devilcove/configuration v0.1.2 h1:oiz9B1GubWtqQC9laaX99DAoXdkPfvpEnMQvSUj2FVI=
+github.com/devilcove/configuration v0.1.2/go.mod h1:4HZx1jjh666+DV0mQt/n8mLEaIHz5Ee2VExmts4NE3M=
 github.com/devilcove/mux v0.2.2 h1:d5Uf8DIaIw6mgqclVM5+mUQHkxr7xtCtnOMlZ+4OqH0=
 github.com/devilcove/mux v0.2.2/go.mod h1:Q4ysJcjpLwW7rLNTOYSlYVst5OmwFh1uZxJSCPQ34U4=
 github.com/fatih/color v1.18.0 h1:S8gINlzdQ840/4pfAwic/ZE0djQEH3wM94VfqLTZcOM=
