@@ -17,12 +17,9 @@ package cmd
 
 import (
 	"fmt"
-	"runtime/debug"
-	"strings"
 
 	"github.com/devilcove/plexus"
 	"github.com/devilcove/plexus/internal/agent"
-	"github.com/kr/pretty"
 	"github.com/spf13/cobra"
 )
 
@@ -50,17 +47,8 @@ var versionCmd = &cobra.Command{
 			}
 			fmt.Printf("Server: %s\n", response.Server)
 			fmt.Printf("Agent:  %s\n", response.Agent)
-			fmt.Printf("Binary: ")
 		}
-		fmt.Printf("%s: ", agent.Version)
-		info, _ := debug.ReadBuildInfo()
-		for _, setting := range info.Settings {
-			if strings.Contains(setting.Key, "vcs") {
-				fmt.Printf("%s ", setting.Value)
-			}
-		}
-		fmt.Print("\n")
-		pretty.Println(info.Main.Version)
+		fmt.Printf("Binary: %s\n ", agent.Version())
 	},
 }
 

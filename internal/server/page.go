@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"time"
 
 	"github.com/devilcove/boltdb"
@@ -106,8 +107,9 @@ func initialize() Page {
 	for _, network := range allNetworks {
 		networks = append(networks, network.Name)
 	}
+	info, _ := debug.ReadBuildInfo()
 	return Page{
-		Version:     version,
+		Version:     info.Main.Version,
 		Theme:       "black",
 		Font:        "PT Sans",
 		Refresh:     5,

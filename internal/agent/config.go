@@ -18,10 +18,9 @@ const (
 	serverCheckTime       = time.Minute * 3
 	connectivityTimeout   = time.Minute * 3
 	endpointServerTimeout = time.Second * 30
-	networkNotMapped      = "network not mapped to server"
-	Version               = "v0.4.1"
-	networkTable          = "networks"
-	deviceTable           = "devices"
+	// networkNotMapped      = "network not mapped to server".
+	networkTable = "networks"
+	deviceTable  = "devices"
 )
 
 var (

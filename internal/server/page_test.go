@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"runtime/debug"
 	"testing"
 
 	"github.com/Kairum-Labs/should"
@@ -23,7 +24,8 @@ func TestDisplayMainPage(t *testing.T) {
 func TestGetPage(t *testing.T) {
 	// no user
 	page := getPage("someone")
-	should.BeEqual(t, page.Version, version)
+	info, _ := debug.ReadBuildInfo()
+	should.BeEqual(t, page.Version, info.Main.Version)
 }
 
 func TestLogin(t *testing.T) {

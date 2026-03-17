@@ -73,9 +73,10 @@ func handleRegistration(request *plexus.RegisterRequest) plexus.MessageResponse 
 
 func newDevice() (Device, error) {
 	device, err := boltdb.Get[Device]("self", deviceTable)
+	version := Version()
 	if err == nil {
-		if device.Version != Version {
-			device.Version = Version
+		if device.Version != version {
+			device.Version = version
 			if err := boltdb.Save(device, "self", deviceTable); err != nil {
 				slog.Error("update self version", "error", err)
 			}
@@ -135,7 +136,7 @@ func createPeer() (*plexus.Peer, *wgtypes.Key, string, error) {
 		WGPublicKey: pubKey.String(),
 		PubNkey:     nkey,
 		Name:        name,
-		Version:     Version,
+		Version:     Version(),
 		Endpoint:    stunAddr.IP,
 		OS:          runtime.GOOS,
 		Updated:     time.Now(),

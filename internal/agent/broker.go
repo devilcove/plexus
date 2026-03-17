@@ -285,13 +285,8 @@ func sendVersion(msg *nats.Msg, agentConn *nats.Conn) {
 	} else {
 		slog.Debug("not connected to server")
 	}
-	response.Agent = Version + ": "
 	info, _ := debug.ReadBuildInfo()
-	for _, setting := range info.Settings {
-		if strings.Contains(setting.Key, "vcs") {
-			response.Agent = response.Agent + setting.Value + " "
-		}
-	}
+	response.Agent += info.Main.Version
 	bytes, err := json.Marshal(response)
 	if err != nil {
 		slog.Error("invalid version response", "error", err, "data", response)

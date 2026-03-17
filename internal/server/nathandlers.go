@@ -7,7 +7,6 @@ import (
 	"net"
 	"runtime/debug"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/c-robinson/iplib"
@@ -319,14 +318,8 @@ func publishNetworkPeerUpdate(peer plexus.Peer, why string) error {
 }
 
 func serverVersion() plexus.VersionResponse {
-	serverVersion := version + ": "
 	info, _ := debug.ReadBuildInfo()
-	for _, setting := range info.Settings {
-		if strings.Contains(setting.Key, "vcs") {
-			serverVersion = serverVersion + setting.Value + " "
-		}
-	}
-	return plexus.VersionResponse{Server: serverVersion}
+	return plexus.VersionResponse{Server: info.Main.Version}
 }
 
 func processJoin(id string, request *plexus.JoinRequest) plexus.JoinResponse {
