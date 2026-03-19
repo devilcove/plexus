@@ -92,13 +92,13 @@
         </div>
         <div>
             {{if eq .Connectivity 1.0 }}
-            <i class="fas fa-traffic-light w3-green w3-large w3-margin-top"></i>{{.Connectivity}}
+            <i class="fas fa-traffic-light w3-green w3-large w3-margin-top"></i>{{printf "%.2f" .Connectivity}}
             {{else if ge .Connectivity .7}}
-            <i class="fas fa-traffic-light w3-yellow w3-large w3-margin-top"></i>{{.Connectivity}}
+            <i class="fas fa-traffic-light w3-yellow w3-large w3-margin-top"></i>{{printf "%.2f" .Connectivity}}
             {{else if ge .Connectivity .5}}
-            <i class="fas fa-traffic-light w3-orange w3-large w3-margin-top"></i>{{.Connectivity}}
+            <i class="fas fa-traffic-light w3-orange w3-large w3-margin-top"></i>{{printf "%.2f" .Connectivity}}
             {{else}}
-            <i class="fas fa-traffic-light w3-red w3-large w3-margin-top"></i>{{.Connectivity}}
+            <i class="fas fa-traffic-light w3-red w3-large w3-margin-top"></i>{{printf "%.2f" .Connectivity}}
             {{end}}
         </div>
         <div class="w3-margin-top">{{.Address.IP}}:{{.PublicListenPort}}</div>
