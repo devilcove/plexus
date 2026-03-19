@@ -16,7 +16,6 @@ limitations under the License.
 package cmd
 
 import (
-	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime/debug"
@@ -66,7 +65,6 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	plexus.SetLogging("INFO")
 	home, err := os.UserHomeDir()
 	if err != nil {
 		panic(err)
@@ -74,6 +72,5 @@ func initConfig() {
 	agent.Config.DataDir = home + "/.local/share/" + filepath.Base(os.Args[0]) + "/"
 
 	// set defaults
-	slog.Debug("using configuration", "config", agent.Config)
 	debug.SetTraceback("single")
 }
