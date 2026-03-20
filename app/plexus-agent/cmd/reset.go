@@ -17,6 +17,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/devilcove/plexus"
 	"github.com/devilcove/plexus/internal/agent"
@@ -42,6 +43,10 @@ var resetCmd = &cobra.Command{
 			agent.Request(ec, agent.Agent+plexus.Reset, request, &resp, agent.NatsTimeout),
 		)
 		fmt.Println(resp.Message)
+		if resp.IncludesError {
+			fmt.Println("error:", resp.Error)
+			os.Exit(1)
+		}
 	},
 }
 

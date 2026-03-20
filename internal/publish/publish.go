@@ -9,10 +9,12 @@ import (
 )
 
 // ErrorMessage publish error message.
-func ErrorMessage(conn *nats.Conn, subj string, msg string, err error) {
-	response, err := json.Marshal(plexus.ErrorResponse{
-		Message: msg,
-		Error:   err,
+func ErrorMessage(conn *nats.Conn, subj string, msg string, e error) {
+	slog.Debug("pubErrorMessage", "message", msg, "error", e)
+	response, err := json.Marshal(plexus.MessageResponse{
+		IncludesError: true,
+		Message:       msg,
+		Error:         e.Error(),
 	})
 	if err != nil {
 		slog.Error("invalid message response", "error", err)
@@ -31,4 +33,5 @@ func Message(conn *nats.Conn, subj string, data any) {
 	if err := conn.Publish(subj, bytes); err != nil {
 		slog.Error("publish msg", "connection", conn.Opts.Name, "subject", subj, "data", data)
 	}
+	slog.Debug("publish", "subj", subj, "data", string(bytes))
 }

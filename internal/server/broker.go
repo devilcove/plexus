@@ -373,7 +373,7 @@ func subscribeLeaveServer(msg *nats.Msg) {
 		publish.ErrorMessage(natsConn, msg.Reply, "could not process request", err)
 		return
 	}
-	publish.Message(natsConn, msg.Reply, "goodbye")
+	publish.Message(natsConn, msg.Reply, plexus.MessageResponse{Message: "goodbye"})
 }
 
 func subscribeReload(msg *nats.Msg) {

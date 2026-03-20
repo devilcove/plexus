@@ -255,7 +255,7 @@ func setPrivateEndpoint(msg *nats.Msg, agentConn *nats.Conn) {
 	restartEndpointServer <- struct{}{}
 	// wait to ensure endpoint server is started.
 	time.Sleep(time.Millisecond * 10)
-	publish.Message(agentConn, msg.Reply, "private endpoint added")
+	publish.Message(agentConn, msg.Reply, plexus.MessageResponse{Message: "private endpoint added"})
 }
 
 func sendVersion(msg *nats.Msg, agentConn *nats.Conn) {
@@ -312,16 +312,21 @@ func sendReset(msg *nats.Msg, agentConn *nats.Conn) {
 	}
 	network, err := boltdb.Get[Network](request.Network, networkTable)
 	if err != nil {
+		slog.Error("get network", "network", request.Network, "error", err)
 		publish.ErrorMessage(agentConn, msg.Reply, "get network", err)
 		return
 	}
 	if err := deleteInterface(network.Interface); err != nil {
 		slog.Error("delete interface", "iface", network.Interface, "error", err)
+		publish.ErrorMessage(agentConn, msg.Reply, "delete interface "+network.Interface, err)
+		return
 	}
 	if err := startInterface(self, network); err != nil {
 		slog.Error("start interface", "iface", network.Interface, "error", err)
+		publish.ErrorMessage(agentConn, msg.Reply, "start interface "+network.Interface, err)
+		return
 	}
-	publish.Message(agentConn, msg.Reply, "interfaces reset")
+	publish.Message(agentConn, msg.Reply, plexus.MessageResponse{Message: "interfaces reset"})
 }
 
 func sendRelaad(msg *nats.Msg, agentConn *nats.Conn) {

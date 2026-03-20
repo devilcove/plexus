@@ -17,6 +17,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/devilcove/plexus"
 	"github.com/devilcove/plexus/internal/agent"
@@ -35,11 +36,16 @@ var registerCmd = &cobra.Command{
 		}
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
+		defer ec.Close()
 		resp := plexus.MessageResponse{}
 		cobra.CheckErr(
 			agent.Request(ec, agent.Agent+plexus.Register, request, &resp, agent.NatsTimeout),
 		)
 		fmt.Println(resp.Message)
+		if resp.IncludesError {
+			fmt.Println("error:", resp.Error)
+			os.Exit(1)
+		}
 	},
 }
 

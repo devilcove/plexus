@@ -37,13 +37,10 @@ const (
 	Networks           = "networks."
 )
 
-type ErrorResponse struct {
-	Message string
-	Error   error
-}
-
 type MessageResponse struct {
-	Message string
+	IncludesError bool
+	Message       string
+	Error         string
 }
 
 type User struct {

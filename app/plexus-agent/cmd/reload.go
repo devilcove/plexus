@@ -32,9 +32,10 @@ var reloadCmd = &cobra.Command{
 		fmt.Println("reloading data from server")
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
-		resp := plexus.MessageResponse{}
+		defer ec.Close()
+		resp := plexus.NetworkResponse{}
 		cobra.CheckErr(agent.Request(ec, agent.Agent+plexus.Reload, nil, &resp, agent.NatsTimeout))
-		fmt.Println(resp.Message)
+		fmt.Println(resp)
 	},
 }
 

@@ -17,6 +17,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/devilcove/plexus"
 	"github.com/devilcove/plexus/internal/agent"
@@ -36,11 +37,15 @@ var dropCmd = &cobra.Command{
 		var response plexus.MessageResponse
 		ec, err := agent.ConnectToAgentBroker()
 		cobra.CheckErr(err)
+		defer ec.Close()
 		cobra.CheckErr(agent.Request(ec, agent.Agent+plexus.LeaveServer, agent.LeaveServerRequest{
 			Force: force,
 		}, &response, agent.NatsTimeout))
 		fmt.Println(response.Message)
-		ec.Close()
+		if response.IncludesError {
+			fmt.Println("error:", response.Error)
+			os.Exit(1)
+		}
 	},
 }
 
