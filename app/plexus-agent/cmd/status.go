@@ -71,6 +71,7 @@ var statusCmd = &cobra.Command{
 				slog.Error("get wg device", "interface", network.Interface, "error", err)
 				continue
 			}
+			self := getSelf(wg, network.Peers)
 			link, err := netlink.LinkByName(network.Interface)
 			if err != nil {
 				slog.Error("get interface", "interface", network.Interface, "error", err)
@@ -89,7 +90,7 @@ var statusCmd = &cobra.Command{
 			}
 			wgPeer := wgtypes.Peer{}
 			for _, peer := range network.Peers {
-				if peer.IsRelayed {
+				if peer.IsRelayed && !self.IsRelay {
 					continue
 				}
 				if peer.WGPublicKey == wg.PrivateKey.PublicKey().String() {
@@ -102,7 +103,12 @@ var statusCmd = &cobra.Command{
 						break
 					}
 				}
-				color.Yellow("peer: %s %s %s", peer.WGPublicKey, peer.HostName, peer.Address.IP)
+
+				var relayed string
+				if slices.Contains(self.RelayedPeers, peer.WGPublicKey) {
+					relayed = "(relayed)"
+				}
+				color.Yellow("peer: %s %s %s %s", peer.WGPublicKey, peer.HostName, peer.Address.IP, relayed)
 				if peer.IsRelay {
 					fmt.Println("\trelay: true")
 					showRelayedPeers(peer.RelayedPeers, network)
@@ -120,6 +126,9 @@ var statusCmd = &cobra.Command{
 					fmt.Print(" " + ip.IP.String() + "/" + strconv.Itoa(ones))
 				}
 				fmt.Println()
+				if self.IsRelayed && !slices.Contains(peer.RelayedPeers, self.WGPublicKey) {
+					continue
+				}
 				printHandshake(wgPeer.LastHandshakeTime)
 				fmt.Println("\ttransfer:", prettyByteSize(wgPeer.TransmitBytes),
 					"sent", prettyByteSize(wgPeer.ReceiveBytes), "received")
@@ -211,4 +220,15 @@ func prettyByteSize(b int64) string {
 		bf /= 1024.0
 	}
 	return ""
+}
+
+func getSelf(wg *wgtypes.Device, peers []plexus.NetworkPeer) *plexus.NetworkPeer {
+	for _, peer := range peers {
+		if peer.WGPublicKey == wg.PrivateKey.PublicKey().String() {
+			return &peer
+		}
+	}
+	// should not happen
+	slog.Error("cannot find me", "interface", wg.Name, "peers", peers)
+	return nil
 }

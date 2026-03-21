@@ -82,6 +82,7 @@ func processStatus() []byte {
 	} else {
 		response.Connected = ec.IsConnected()
 	}
+
 	bytes, err := json.Marshal(response)
 	if err != nil {
 		slog.Error("encode status response", "error", err)

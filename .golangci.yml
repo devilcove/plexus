@@ -41,19 +41,17 @@ linters:
         - net/http.Handler
         - nkeys.KeyPair
     varnamelen:
-      max-distance: 15
+      min-name-length: 2 
       ignore-names:
+        - c
+        - ec
         - i
-        - wg
+        - p
+        - v
+        - w
+        - x
       ignore-decls:
-        - c *nftables.Conn
-        - c nftables.Conn
-        - ec *nats.Conn
-        - f embed.FS
-        - id string
-        - ns *server.Server
         - r *http.Request
-        - w http.ResponseWriter
   exclusions:
     warn-unused: true
     generated: lax
