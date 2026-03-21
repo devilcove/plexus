@@ -13,7 +13,6 @@ require (
 	github.com/google/nftables v0.3.0
 	github.com/gorilla/sessions v1.4.0
 	github.com/kr/pretty v0.3.1
-	github.com/lmittmann/tint v1.1.3
 	github.com/mattkasun/tools v0.3.0
 	github.com/nats-io/nats-server/v2 v2.12.5
 	github.com/nats-io/nats.go v1.49.0
