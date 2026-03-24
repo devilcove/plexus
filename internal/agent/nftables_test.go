@@ -101,7 +101,7 @@ func TestDelNat(t *testing.T) {
 }
 
 func TestCheckForNat(t *testing.T) {
-	plexus.SetLogging("debug")
+	// plexus.SetLogging("debug")
 	user, err := user.Current()
 	should.NotBeError(t, err)
 	if user.Uid != "0" {

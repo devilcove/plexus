@@ -58,7 +58,9 @@ const (
 )
 
 func configureServer() (*tls.Config, error) {
-	plexus.SetLogging("INFO")
+	var tlsConfig *tls.Config
+	plexus.SetUpLogging("INFO")
+
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
@@ -90,9 +92,18 @@ func configureServer() (*tls.Config, error) {
 		return nil, ErrDataDir
 	}
 
+	if err := configuration.Save(&config); err != nil {
+		return nil, err
+	}
+	if config.Verbosity != "INFO" {
+		plexus.SetLogging(config.Verbosity)
+	}
 	slog.Info("configure Server", "config", config)
-	var tlsConfig *tls.Config
-	plexus.SetLogging(config.Verbosity)
+
+	if err := initializeDatabase(config); err != nil {
+		return nil, err
+	}
+
 	if config.Secure {
 		if config.FQDN == "" {
 			return nil, ErrSecureBlankFQDN
@@ -104,21 +115,7 @@ func configureServer() (*tls.Config, error) {
 			return nil, ErrInValidEmail
 		}
 	}
-	// initialize database.
-	if err := os.MkdirAll(config.DataHome, os.ModePerm); err != nil {
-		return nil, err
-	}
-	slog.Info("init db", "path", config.DataHome, "file", config.DBFile)
-	if err := boltdb.Initialize(
-		filepath.Join(config.DataHome, config.DBFile),
-		[]string{"users", "keys", "networks", "peers", "settings"},
-	); err != nil {
-		return nil, fmt.Errorf("init database %w", err)
-	}
-	// check default user exists.
-	if err := checkDefaultUser(config.AdminName, config.AdminPass); err != nil {
-		return nil, err
-	}
+
 	// get TLS.
 	if config.Secure {
 		var err error
@@ -142,4 +139,23 @@ func emailValid(email string) bool {
 		return false
 	}
 	return true
+}
+
+func initializeDatabase(config Configuration) error {
+	// initialize database.
+	if err := os.MkdirAll(config.DataHome, os.ModePerm); err != nil {
+		return err
+	}
+	slog.Info("init db", "path", config.DataHome, "file", config.DBFile)
+	if err := boltdb.Initialize(
+		filepath.Join(config.DataHome, config.DBFile),
+		[]string{"users", "keys", "networks", "peers", "settings"},
+	); err != nil {
+		return fmt.Errorf("init database %w", err)
+	}
+	// check default user exists.
+	if err := checkDefaultUser(config.AdminName, config.AdminPass); err != nil {
+		return err
+	}
+	return nil
 }

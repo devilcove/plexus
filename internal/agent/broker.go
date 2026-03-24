@@ -3,7 +3,6 @@ package agent
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"log/slog"
 	"net"
 	"runtime/debug"
@@ -19,7 +18,7 @@ import (
 )
 
 func startBroker() (*server.Server, *nats.Conn) {
-	defer log.Println("Agent server halting")
+	defer slog.Info("Agent server halting")
 	ns, err := server.NewServer(
 		&server.Options{Host: "localhost", Port: Config.NatsPort, NoSigs: true},
 	)

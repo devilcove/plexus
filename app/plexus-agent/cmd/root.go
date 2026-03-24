@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 	"runtime/debug"
 
-	"github.com/devilcove/plexus"
 	"github.com/devilcove/plexus/internal/agent"
 	"github.com/spf13/cobra"
 )
@@ -55,9 +54,7 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	agent.Config.Verbosity = *rootCmd.PersistentFlags().StringP("verbosity", "v", "INFO", "logging verbosity")
 	agent.Config.NatsPort = *rootCmd.PersistentFlags().IntP("natsport", "p", 4223, "nats port for cli <-> agent comms")
-	plexus.SetLogging(agent.Config.Verbosity)
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")

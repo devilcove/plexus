@@ -24,7 +24,7 @@ func TestMain(m *testing.M) {
 		log.Println("init db", err)
 		os.Exit(2)
 	}
-	plexus.SetLogging("debug")
+	plexus.SetUpLogging("debug")
 	code := m.Run()
 	// 	cancel()
 	// 	wg.Wait()

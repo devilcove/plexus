@@ -1,23 +1,45 @@
 package plexus
 
 import (
-	"log"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
+var LoggingLevel = new(slog.LevelVar)
+
+func SetUpLogging(v string) {
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		AddSource: true,
+		Level:     LoggingLevel,
+		ReplaceAttr: func(_ []string, attr slog.Attr) slog.Attr {
+			if attr.Key == slog.TimeKey {
+				return slog.Attr{}
+			}
+			if attr.Key == slog.SourceKey {
+				if s, _ := attr.Value.Any().(*slog.Source); s != nil {
+					s.File = filepath.Base(s.File)
+				}
+			}
+			return attr
+		},
+	})))
+	SetLogging(v)
+}
+
 func SetLogging(v string) {
-	log.SetFlags(log.Lshortfile) // journald adds timestamp
 	switch strings.ToUpper(v) {
 	case "DEBUG":
-		slog.SetLogLoggerLevel(slog.LevelDebug)
+		LoggingLevel.Set(slog.LevelDebug)
 	case "INFO":
-		slog.SetLogLoggerLevel(slog.LevelInfo)
+		LoggingLevel.Set(slog.LevelInfo)
 	case "WARN":
-		slog.SetLogLoggerLevel(slog.LevelWarn)
+		LoggingLevel.Set(slog.LevelWarn)
 	case "ERROR":
-		slog.SetLogLoggerLevel(slog.LevelError)
+		LoggingLevel.Set(slog.LevelError)
 	default:
-		slog.SetLogLoggerLevel(slog.LevelInfo)
+		LoggingLevel.Set(slog.LevelInfo)
 	}
+	slog.Info("set log level", "level", LoggingLevel)
 }

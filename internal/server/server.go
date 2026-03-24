@@ -12,12 +12,10 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/devilcove/boltdb"
 	"github.com/devilcove/configuration"
 	"github.com/devilcove/plexus"
-	"github.com/mattkasun/tools/logging"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 )
@@ -91,7 +89,6 @@ func web(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 		webfail <- 1
 		return
 	}
-	slog.SetDefault(logging.TextLogger(logging.TruncateSource(), logging.TimeFormat(time.DateTime)).Logger)
 	router := setupRouter()
 	server := http.Server{
 		Addr:    ":" + config.Port,
@@ -130,18 +127,13 @@ func web(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 }
 
 func getServer(w http.ResponseWriter, _ *http.Request) {
-	config := Configuration{}
-	if err := configuration.Get(&config); err != nil {
-		slog.Error("configuration", "error", err)
-		processError(w, http.StatusInternalServerError, "unable to read configuration")
-		return
-	}
 	server := struct {
 		LogLevel string
 		Logs     []string
 	}{
-		LogLevel: config.Verbosity,
+		LogLevel: plexus.LoggingLevel.String(),
 	}
+	slog.Info("display server logs", "level", server.LogLevel)
 	cmd := exec.Command(
 		"/usr/bin/journalctl",
 		"-eu",
@@ -161,13 +153,6 @@ func getServer(w http.ResponseWriter, _ *http.Request) {
 }
 
 func setLogLevel(w http.ResponseWriter, r *http.Request) {
-	config := Configuration{}
-	if err := configuration.Get(&config); err != nil {
-		slog.Error("configuration", "error", err)
-		processError(w, http.StatusInternalServerError, "unable to read configuration")
-		return
-	}
-	config.Verbosity = r.PathValue("level")
-	plexus.SetLogging(config.Verbosity)
+	plexus.SetLogging(r.PathValue("level"))
 	getServer(w, r)
 }

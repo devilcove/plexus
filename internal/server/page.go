@@ -46,7 +46,7 @@ func displayMain(w http.ResponseWriter, r *http.Request) {
 	}
 	page.Data = networks
 	page.NeedsLogin = session.IsNew
-	slog.Info("display main page", "session", session, "page", page)
+	slog.Debug("display main page", "session", session, "page", page)
 
 	render(w, "layout", page)
 }

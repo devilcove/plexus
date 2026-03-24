@@ -33,7 +33,6 @@ var (
 )
 
 type Configuration struct {
-	NatsPort  int
-	Verbosity string
-	DataDir   string
+	NatsPort int
+	DataDir  string
 }
