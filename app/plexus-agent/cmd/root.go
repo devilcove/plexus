@@ -28,8 +28,8 @@ import (
 
 // rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
-	Use:   "plexus-agent",
-	Short: "plexus agent",
+	Use:   "plexus",
+	Short: "plexus",
 	Long: `plexus agent to setup and manage plexus wireguard
 networks.  Communicates with plexus server for network updates.
 CLI to join/leave networks.`,

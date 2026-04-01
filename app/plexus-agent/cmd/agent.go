@@ -23,10 +23,10 @@ import (
 )
 
 // runCmd represents the run command.
-var runCmd = &cobra.Command{
-	Use:   "run",
-	Short: "plexus-agent deamon",
-	Long: `plexus-agent run maintains a connection to 
+var agentCmd = &cobra.Command{
+	Use:   "agent",
+	Short: "plexus agent deamon",
+	Long: `plexus agent maintains a connection to 
 plexus server(s) for network updates.`,
 
 	Run: func(cmd *cobra.Command, args []string) {
@@ -36,5 +36,5 @@ plexus server(s) for network updates.`,
 }
 
 func init() {
-	rootCmd.AddCommand(runCmd)
+	rootCmd.AddCommand(agentCmd)
 }
