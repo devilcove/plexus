@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/Kairum-Labs/should v0.2.2
 	github.com/c-robinson/iplib v1.0.8
-	github.com/caddyserver/certmagic v0.25.2
+	github.com/caddyserver/certmagic v0.25.3
 	github.com/devilcove/boltdb v0.1.8
 	github.com/devilcove/configuration v0.1.2
 	github.com/devilcove/mux v0.2.2
@@ -13,7 +13,7 @@ require (
 	github.com/google/nftables v0.3.0
 	github.com/gorilla/sessions v1.4.0
 	github.com/kr/pretty v0.3.1
-	github.com/nats-io/nats-server/v2 v2.12.7
+	github.com/nats-io/nats-server/v2 v2.12.8
 	github.com/nats-io/nats.go v1.51.0
 	github.com/nats-io/nkeys v0.4.15
 	github.com/pion/stun/v3 v3.1.2
@@ -57,12 +57,12 @@ require (
 	go.uber.org/zap v1.27.1 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.4 // indirect
-	golang.org/x/mod v0.34.0 // indirect
-	golang.org/x/net v0.52.0 // indirect
+	golang.org/x/mod v0.35.0 // indirect
+	golang.org/x/net v0.53.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect
 	golang.org/x/text v0.36.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
-	golang.org/x/tools v0.43.0 // indirect
+	golang.org/x/tools v0.44.0 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173 // indirect
 )
