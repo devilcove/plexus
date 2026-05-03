@@ -91,6 +91,7 @@ func checkin() {
 		return
 	}
 	checkinData.ID = self.WGPublicKey
+	checkinData.Name = self.Name
 	checkinData.Version = self.Version
 	checkinData.Endpoint = self.Endpoint
 	networks, err := boltdb.GetAll[Network](networkTable)

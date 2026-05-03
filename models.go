@@ -172,6 +172,7 @@ type NetworkResponse struct {
 
 type CheckinData struct {
 	ID               string
+	Name             string
 	Version          string
 	ListenPort       int
 	PublicListenPort int

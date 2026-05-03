@@ -150,7 +150,7 @@ func getNextIP(network plexus.Network) (net.IP, error) {
 func processCheckin(data *plexus.CheckinData) plexus.MessageResponse {
 	publishUpdate := false
 	response := plexus.MessageResponse{}
-	slog.Info("received checkin", "device", data.ID)
+	slog.Info("received checkin", "host", data.Name, "device", data.ID)
 	peer, err := boltdb.Get[plexus.Peer](data.ID, peerTable)
 	if err != nil {
 		slog.Error("peer checkin", "error", err)
