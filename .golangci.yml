@@ -10,7 +10,9 @@ linters:
     - forbidigo
     - gochecknoglobals
     - gochecknoinits
+    - goconst
     - godoclint
+    - gomodguard
     - gosec
     - mnd
     - musttag
