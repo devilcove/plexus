@@ -13,14 +13,14 @@ require (
 	github.com/google/nftables v0.3.0
 	github.com/gorilla/sessions v1.4.0
 	github.com/kr/pretty v0.3.1
-	github.com/nats-io/nats-server/v2 v2.14.0
+	github.com/nats-io/nats-server/v2 v2.14.2
 	github.com/nats-io/nats.go v1.52.0
-	github.com/nats-io/nkeys v0.4.15
-	github.com/pion/stun/v3 v3.1.2
+	github.com/nats-io/nkeys v0.4.16
+	github.com/pion/stun/v3 v3.1.4
 	github.com/spf13/cobra v1.10.2
 	github.com/vishvananda/netlink v1.3.1
 	go.etcd.io/bbolt v1.4.3
-	golang.org/x/crypto v0.51.0
+	golang.org/x/crypto v0.52.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20241231184526-a9ab2273dd10
 )
 
@@ -43,11 +43,11 @@ require (
 	github.com/mholt/acmez/v3 v3.1.6 // indirect
 	github.com/miekg/dns v1.1.72 // indirect
 	github.com/minio/highwayhash v1.0.4 // indirect
-	github.com/nats-io/jwt/v2 v2.8.1 // indirect
+	github.com/nats-io/jwt/v2 v2.8.2 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
-	github.com/pion/dtls/v3 v3.1.2 // indirect
+	github.com/pion/dtls/v3 v3.1.3 // indirect
 	github.com/pion/logging v0.2.4 // indirect
-	github.com/pion/transport/v4 v4.0.1 // indirect
+	github.com/pion/transport/v4 v4.0.2 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/vishvananda/netns v0.0.5 // indirect
@@ -60,7 +60,7 @@ require (
 	golang.org/x/mod v0.36.0 // indirect
 	golang.org/x/net v0.54.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.44.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.45.0 // indirect
