@@ -28,6 +28,8 @@ github.com/devilcove/boltdb v0.2.0 h1:z2P22EjPh8Up+bAOewYlTuuVEU0Anpxt69G+uxhhRw
 github.com/devilcove/boltdb v0.2.0/go.mod h1:wfd63eF2nZn1Eu7a5+zkZWlz1js6PgokP5IQSyo7IAE=
 github.com/devilcove/configuration v0.1.2 h1:oiz9B1GubWtqQC9laaX99DAoXdkPfvpEnMQvSUj2FVI=
 github.com/devilcove/configuration v0.1.2/go.mod h1:4HZx1jjh666+DV0mQt/n8mLEaIHz5Ee2VExmts4NE3M=
+github.com/devilcove/cookie v0.1.3 h1:ZwmhMr3hOX1CoEPjxnuGU1/HVkAtC9PUKFAGIkosEig=
+github.com/devilcove/cookie v0.1.3/go.mod h1:GtbvmXaz81Oo/LeYLGFNOG1UkDYu7Gxl475Oq72IYi8=
 github.com/devilcove/mux v0.2.2 h1:d5Uf8DIaIw6mgqclVM5+mUQHkxr7xtCtnOMlZ+4OqH0=
 github.com/devilcove/mux v0.2.2/go.mod h1:Q4ysJcjpLwW7rLNTOYSlYVst5OmwFh1uZxJSCPQ34U4=
 github.com/fatih/color v1.19.0 h1:Zp3PiM21/9Ld6FzSKyL5c/BULoe/ONr9KlbYVOfG8+w=

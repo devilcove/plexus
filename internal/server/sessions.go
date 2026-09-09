@@ -1,87 +1,48 @@
 package server
 
 import (
-	"crypto/rand"
-	"encoding/gob"
-	"errors"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 
+	"github.com/devilcove/cookie"
 	"github.com/devilcove/plexus"
-	"github.com/gorilla/sessions"
 )
 
 const (
 	cookieName = "plexus"
-	dataName   = "data"
+	cookieAge  = 86400 // one day
 )
 
-var (
-	store              *sessions.CookieStore
-	sessionInitialized bool
-	ErrNotInitialized  = errors.New("session is not initialized")
-)
-
-// Session represents a user session.
-type Session struct {
-	UserName string
-	LoggedIn bool
-	Admin    bool
-	Page     string
-	Session  *sessions.Session
-}
-
-func InitializeSession() {
-	if sessionInitialized {
-		slog.Error("session already initialized")
-		return
-	}
-	store = sessions.NewCookieStore(keypairs())
-	store.Options.HttpOnly = true
-	store.Options.SameSite = http.SameSiteStrictMode
-}
-
-func keypairs() ([]byte, []byte) {
-	buf1 := make([]byte, 32)
-	buf2 := make([]byte, 32)
-	rand.Read(buf1)
-	rand.Read(buf2)
-	return buf1, buf2
+func InitializeSession() error {
+	return cookie.New(cookieName, cookieAge)
 }
 
 func GetSessionData(r *http.Request) plexus.User {
-	s := GetSession(r)
-	data, ok := s.Values[dataName].(plexus.User)
-	if !ok {
-		data = plexus.User{}
-	}
-	return data
-}
-
-func GetSession(r *http.Request) *sessions.Session {
-	s, err := store.Get(r, cookieName)
+	var user plexus.User
+	bytes, err := cookie.Get(r, cookieName)
 	if err != nil {
-		s = sessions.NewSession(store, cookieName)
+		slog.Error("get cookie", "error", err)
+		return user
 	}
-	return s
+	if err := json.Unmarshal(bytes, &user); err != nil {
+		slog.Error("decode user", "error", err)
+	}
+	return user
 }
 
-func ClearSession(w http.ResponseWriter, r *http.Request) {
-	s := sessions.NewSession(store, cookieName)
-	s.Options = store.Options
-	s.Options.MaxAge = -1
-	if err := s.Save(r, w); err != nil {
+func ClearSession(w http.ResponseWriter) {
+	if err := cookie.Clear(w, cookieName, false); err != nil {
 		slog.Error("save session", "error", err)
 	}
 }
 
-func saveSession(w http.ResponseWriter, r *http.Request, data any) {
-	s := sessions.NewSession(store, cookieName)
-	s.Options = store.Options
-	s.Options.MaxAge = 0 // session cookie
-	gob.Register(data)
-	s.Values[dataName] = data
-	if err := s.Save(r, w); err != nil {
-		slog.Error("save session", "error", err)
+func saveSession(w http.ResponseWriter, data any) {
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		slog.Error("encode cookie data", "error", err)
+	}
+	if err := cookie.Save(w, cookieName, bytes); err != nil {
+		slog.Error("save cookie", "error", err)
 	}
 }

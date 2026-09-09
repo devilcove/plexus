@@ -6,7 +6,7 @@ require (
 	github.com/Kairum-Labs/should v0.3.0
 	github.com/c-robinson/iplib v1.0.8
 	github.com/caddyserver/certmagic v0.25.4
-	github.com/devilcove/boltdb v0.1.9
+	github.com/devilcove/boltdb v0.1.8
 	github.com/devilcove/configuration v0.1.2
 	github.com/devilcove/mux v0.2.2
 	github.com/fatih/color v1.19.0
@@ -27,6 +27,7 @@ require (
 require (
 	github.com/antithesishq/antithesis-sdk-go v0.7.2-default-no-op // indirect
 	github.com/caddyserver/zerossl v0.1.5 // indirect
+	github.com/devilcove/cookie v0.1.3 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-tpm v0.9.8 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect

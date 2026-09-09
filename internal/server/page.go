@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/devilcove/boltdb"
+	"github.com/devilcove/cookie"
 	"github.com/devilcove/plexus"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -39,14 +40,14 @@ func init() {
 func displayMain(w http.ResponseWriter, r *http.Request) {
 	page := initialize()
 	page.NeedsLogin = true
-	session := GetSession(r)
+	if _, err := cookie.Get(r, cookieName); err != nil {
+		page.NeedsLogin = true
+	}
 	networks, err := boltdb.GetAll[plexus.Network](networkTable)
 	if err != nil {
 		slog.Error("get networks for main display", "error", err)
 	}
 	page.Data = networks
-	page.NeedsLogin = session.IsNew
-	slog.Debug("display main page", "session", session, "page", page)
 
 	render(w, "layout", page)
 }
@@ -61,13 +62,13 @@ func login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user.Password = "" // clear password.
-	saveSession(w, r, user)
+	saveSession(w, user)
 
 	slog.Debug("login", "user", user.Username)
 	page := getPage(user.Username)
 	page.NeedsLogin = false
 	page.Page = "networks"
-	saveSession(w, r, user)
+	saveSession(w, user)
 	render(w, "layout", page)
 }
 
@@ -93,7 +94,7 @@ func checkPassword(plain, hash *plexus.User) bool {
 }
 
 func logout(w http.ResponseWriter, r *http.Request) {
-	ClearSession(w, r)
+	ClearSession(w)
 	slog.Debug("logout")
 	http.Redirect(w, r, "/", http.StatusFound)
 }

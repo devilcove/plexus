@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/devilcove/cookie"
 	"github.com/devilcove/mux"
 )
 
@@ -19,7 +20,10 @@ var content embed.FS
 var templates *template.Template
 
 func setupRouter() *mux.Router {
-	InitializeSession()
+	if err := InitializeSession(); err != nil {
+		slog.Error("cookie", "error", err)
+		webfail <- 1
+	}
 
 	router := mux.NewRouter(mux.Logger)
 	dir, _ := os.Getwd()
@@ -92,8 +96,7 @@ func processError(w http.ResponseWriter, status int, message string) {
 
 func auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session := GetSession(r)
-		if session.IsNew {
+		if _, err := cookie.Get(r, cookieName); err != nil {
 			http.Redirect(w, r, "/login/", http.StatusUnauthorized)
 			return
 		}
