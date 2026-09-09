@@ -91,7 +91,7 @@ func TestSubnetRouter(t *testing.T) {
 			Name: "overlapping",
 			Net:  *cidr,
 		}
-		err = boltdb.Save(network, network.Name, networkTable)
+		err = store.Save(network, network.Name, networkBucket)
 		should.NotBeError(t, err)
 		payload := bodyParams("cidr", "192.168.0.0/24", "nat", "virt", "vcidr", "10.100.0.0/24")
 		r := httptest.NewRequest(http.MethodPost, "/networks/router/valid/"+peer, payload)
@@ -169,7 +169,7 @@ func TestSubnetRouter(t *testing.T) {
 func TestSubnetInUse(t *testing.T) {
 	public, err := generateKeys()
 	should.NotBeError(t, err)
-	err = boltdb.Delete[plexus.Network]("plexus", networkTable)
+	err = store.Delete("plexus", networkBucket)
 	should.BeTrue(t, err == nil || errors.Is(err, boltdb.ErrNoResults))
 	peer := plexus.NetworkPeer{
 		WGPublicKey: public.String(),
@@ -183,7 +183,7 @@ func TestSubnetInUse(t *testing.T) {
 		},
 	}
 	network.Peers = append(network.Peers, peer)
-	err = boltdb.Save(network, network.Name, networkTable)
+	err = store.Save(network, network.Name, networkBucket)
 	should.NotBeError(t, err)
 	t.Run("overlap network", func(t *testing.T) {
 		subnet := &net.IPNet{
@@ -212,7 +212,7 @@ func TestSubnetInUse(t *testing.T) {
 		}
 		peer.IsSubnetRouter = true
 		network.Peers = []plexus.NetworkPeer{peer}
-		err = boltdb.Save(network, network.Name, networkTable)
+		err = store.Save(network, network.Name, networkBucket)
 		should.NotBeError(t, err)
 		subnet := &net.IPNet{
 			IP:   net.ParseIP("10.10.100.0"),
@@ -241,7 +241,7 @@ func TestSubnetInUse(t *testing.T) {
 			Mask: net.CIDRMask(20, 32),
 		}
 		network.Peers = []plexus.NetworkPeer{peer}
-		err = boltdb.Save(network, network.Name, networkTable)
+		err = store.Save(network, network.Name, networkBucket)
 		should.NotBeError(t, err)
 		subnet := &net.IPNet{
 			IP:   net.ParseIP("172.16.1.0"),

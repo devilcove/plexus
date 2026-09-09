@@ -22,12 +22,12 @@ func checkDefaultUser(user, pass string) error {
 		slog.Error("hash error", "error", err)
 		return err
 	}
-	if err = boltdb.Save(&plexus.User{
+	if err = store.Save(&plexus.User{
 		Username: user,
 		Password: password,
 		IsAdmin:  true,
 		Updated:  time.Now(),
-	}, user, userTable); err != nil {
+	}, user, userBucket); err != nil {
 		slog.Error("create default user", "error", err)
 		return err
 	}
@@ -38,9 +38,9 @@ func checkDefaultUser(user, pass string) error {
 func adminExist() bool {
 	var user plexus.User
 	var found bool
-	db := boltdb.Connection()
+	db := store.Connection()
 	if err := db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(userTable))
+		b := tx.Bucket([]byte("users"))
 		if b == nil {
 			return boltdb.ErrNoResults
 		}
@@ -72,7 +72,7 @@ func getUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	slog.Debug("getting users", "admin", session.IsAdmin)
-	users, err := boltdb.GetAll[plexus.User](userTable)
+	users, err := store.GetAll[plexus.User](userBucket)
 	if err != nil {
 		processError(w, http.StatusBadRequest, err.Error())
 		return
@@ -105,7 +105,7 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 		processError(w, http.StatusUnauthorized, "you need to be an admin to edit other users")
 		return
 	}
-	user, err := boltdb.Get[plexus.User](userToEdit, userTable)
+	user, err := store.Get[plexus.User](userToEdit, userBucket)
 	if err != nil {
 		processError(w, http.StatusBadRequest, err.Error())
 		return
@@ -117,7 +117,7 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 func getCurrentUser(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("get current user")
 	data := GetSessionData(r)
-	user, err := boltdb.Get[plexus.User](data.Username, userTable)
+	user, err := store.Get[plexus.User](data.Username, userBucket)
 	if err != nil {
 		processError(w, http.StatusBadRequest, "no such user "+err.Error())
 		return
@@ -132,7 +132,7 @@ func deleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := r.PathValue("name")
-	if err := boltdb.Delete[plexus.User](user, userTable); err != nil {
+	if err := store.Delete(user, userBucket); err != nil {
 		processError(w, http.StatusNotFound, err.Error())
 		return
 	}
@@ -166,12 +166,12 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 	if r.FormValue("admin") == "on" {
 		user.IsAdmin = true
 	}
-	if _, err := boltdb.Get[plexus.User](user.Username, userTable); err == nil {
+	if _, err := store.Get[plexus.User](user.Username, userBucket); err == nil {
 		processError(w, http.StatusBadRequest, "user exists")
 		return
 	}
 	slog.Info("saving new user", "user", user)
-	if err := boltdb.Save(user, user.Username, userTable); err != nil {
+	if err := store.Save(user, user.Username, userBucket); err != nil {
 		processError(w, http.StatusInternalServerError, "unable to save user "+err.Error())
 		return
 	}
@@ -190,7 +190,7 @@ func editUser(w http.ResponseWriter, r *http.Request) {
 		processError(w, http.StatusUnauthorized, "admin rights required to update other users")
 		return
 	}
-	user, err := boltdb.Get[plexus.User](userToEdit, userTable)
+	user, err := store.Get[plexus.User](userToEdit, userBucket)
 	if err != nil {
 		processError(w, http.StatusBadRequest, err.Error())
 		return
@@ -201,7 +201,7 @@ func editUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user.Password = password
-	if err := boltdb.Save(user, user.Username, userTable); err != nil {
+	if err := store.Save(user, user.Username, userBucket); err != nil {
 		processError(w, http.StatusInternalServerError, err.Error())
 		return
 	}

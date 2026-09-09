@@ -5,7 +5,6 @@ import (
 	"log"
 	"log/slog"
 
-	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
 )
 
@@ -85,7 +84,7 @@ func checkin() {
 	slog.Debug("checkin")
 	checkinData := plexus.CheckinData{}
 	serverResponse := plexus.MessageResponse{}
-	self, err := boltdb.Get[Device]("self", deviceTable)
+	self, err := store.Get[Device]("self", deviceTable)
 	if err != nil {
 		slog.Error("get device", "error", err)
 		return
@@ -94,7 +93,7 @@ func checkin() {
 	checkinData.Name = self.Name
 	checkinData.Version = self.Version
 	checkinData.Endpoint = self.Endpoint
-	networks, err := boltdb.GetAll[Network](networkTable)
+	networks, err := store.GetAll[Network](networkTable)
 	if err != nil {
 		slog.Error("get networks", "error", err)
 		return

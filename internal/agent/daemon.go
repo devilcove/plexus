@@ -18,11 +18,16 @@ import (
 	"github.com/nats-io/nkeys"
 )
 
-var restartEndpointServer chan struct{}
+var (
+	restartEndpointServer chan struct{}
+	store                 *boltdb.Store
+)
 
 func Run() {
 	plexus.SetUpLogging("info")
-	if err := boltdb.Initialize(Config.DataDir+"plexus-agent.db", []string{deviceTable, networkTable}); err != nil {
+	var err error
+	store, err = boltdb.Initialize(Config.DataDir+"plexus-agent.db", buckets)
+	if err != nil {
 		slog.Error("failed to initialize database", "error", err)
 		return
 	}
@@ -145,11 +150,11 @@ func closeServerConnections() {
 func privateEndpointServer(ctx context.Context, wg *sync.WaitGroup) {
 	slog.Debug("private endpoint server")
 	defer wg.Done()
-	networks, err := boltdb.GetAll[Network](networkTable)
+	networks, err := store.GetAll[Network](networkTable)
 	if err != nil {
 		return
 	}
-	self, err := boltdb.Get[Device]("self", deviceTable)
+	self, err := store.Get[Device]("self", deviceTable)
 	if err != nil {
 		return
 	}

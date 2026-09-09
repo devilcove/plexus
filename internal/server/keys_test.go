@@ -133,7 +133,7 @@ func TestAddKey(t *testing.T) {
 		body, err := io.ReadAll(w.Body)
 		should.NotBeError(t, err)
 		should.ContainSubstring(t, string(body), "<h1>Plexus Keys</h1>")
-		keys, err := boltdb.GetAll[plexus.Key](keyTable)
+		keys, err := store.GetAll[plexus.Key](keyBucket)
 		should.NotBeError(t, err)
 		should.BeEqual(
 			t,
@@ -229,9 +229,9 @@ func TestUpdateKey(t *testing.T) {
 		Name:  "two",
 		Usage: 10,
 	}
-	err = boltdb.Save(key1, key1.Name, keyTable)
+	err = store.Save(key1, key1.Name, keyBucket)
 	should.NotBeError(t, err)
-	err = boltdb.Save(key2, key2.Name, keyTable)
+	err = store.Save(key2, key2.Name, keyBucket)
 	should.NotBeError(t, err)
 	t.Run("keyDoesNotExist", func(t *testing.T) {
 		err := decrementKeyUsage("doesnotexist")
@@ -241,7 +241,7 @@ func TestUpdateKey(t *testing.T) {
 	t.Run("deleteKey", func(t *testing.T) {
 		err := decrementKeyUsage(key1.Name)
 		should.NotBeError(t, err)
-		newKey, err := boltdb.Get[plexus.Key](key1.Name, keyTable)
+		newKey, err := store.Get[plexus.Key](key1.Name, keyBucket)
 		should.BeEqual(t, newKey, plexus.Key{})
 		should.BeTrue(t, errors.Is(err, boltdb.ErrNoResults))
 	})
@@ -259,13 +259,13 @@ func TestExpireKeys(t *testing.T) {
 		Name:    "testkey",
 		Expires: time.Now().Add(-1 * time.Hour),
 	}
-	err := boltdb.Save(key, key.Name, keyTable)
+	err := store.Save(key, key.Name, keyBucket)
 	should.NotBeError(t, err)
-	keys, err := boltdb.GetAll[plexus.Key](keyTable)
+	keys, err := store.GetAll[plexus.Key](keyBucket)
 	should.NotBeError(t, err)
 	should.BeEqual(t, len(keys), 1)
 	expireKeys()
-	keys, err = boltdb.GetAll[plexus.Key](keyTable)
+	keys, err = store.GetAll[plexus.Key](keyBucket)
 	should.NotBeError(t, err)
 	should.BeEqual(t, len(keys), 0)
 }

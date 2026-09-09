@@ -26,7 +26,7 @@ func networkUpdates(msg *nats.Msg) {
 		"action", update.Action,
 		"peer", update.Peer,
 	)
-	network, err := boltdb.Get[Network](networkName, networkTable)
+	network, err := store.Get[Network](networkName, networkTable)
 	if err != nil {
 		if errors.Is(err, boltdb.ErrNoResults) {
 			slog.Info("received update for invalid network ... ignoring", "network", networkName)
@@ -35,7 +35,7 @@ func networkUpdates(msg *nats.Msg) {
 		slog.Error("unable to read networks", "error", err)
 		return
 	}
-	self, err := boltdb.Get[Device]("self", deviceTable)
+	self, err := store.Get[Device]("self", deviceTable)
 	if err != nil {
 		slog.Error("unable to read devices", "error", err)
 		return
@@ -65,12 +65,12 @@ func networkUpdates(msg *nats.Msg) {
 }
 
 func processStatus() []byte {
-	networks, err := boltdb.GetAll[Network](networkTable)
+	networks, err := store.GetAll[Network](networkTable)
 	if err != nil {
 		slog.Error("get networks", "error", err)
 	}
 	response := StatusResponse{Networks: networks}
-	self, err := boltdb.Get[Device]("self", deviceTable)
+	self, err := store.Get[Device]("self", deviceTable)
 	if err != nil {
 		slog.Error("get device", "error", err)
 	}
@@ -107,12 +107,12 @@ func serviceJoin(in []byte) []byte {
 func processJoin(request *plexus.JoinRequest) plexus.JoinResponse {
 	slog.Debug("join", "network", request.Network)
 	response := plexus.JoinResponse{}
-	_, err := boltdb.Get[Network](request.Network, networkTable)
+	_, err := store.Get[Network](request.Network, networkTable)
 	if err == nil {
 		slog.Warn("already connected to network")
 		return plexus.JoinResponse{Message: "error: already connected to network"}
 	}
-	self, err := boltdb.Get[Device]("self", deviceTable)
+	self, err := store.Get[Device]("self", deviceTable)
 	if err != nil {
 		slog.Debug(err.Error())
 		return plexus.JoinResponse{Message: "error:" + err.Error()}
@@ -154,7 +154,7 @@ func handleLeave(in []byte) []byte {
 func processLeave(request *plexus.LeaveRequest) plexus.MessageResponse {
 	response := plexus.MessageResponse{}
 	slog.Debug("leave", "network", request.Network)
-	self, err := boltdb.Get[Device]("self", deviceTable)
+	self, err := store.Get[Device]("self", deviceTable)
 	if err != nil {
 		slog.Debug(err.Error())
 		return plexus.MessageResponse{Message: "error: " + err.Error()}
@@ -179,7 +179,7 @@ func handleLeaveServer() ([]byte, error) {
 }
 
 func processLeaveServer() plexus.MessageResponse {
-	self, err := boltdb.Get[Device]("self", deviceTable)
+	self, err := store.Get[Device]("self", deviceTable)
 	if err != nil {
 		slog.Debug(err.Error())
 		return plexus.MessageResponse{Message: "error: " + err.Error()}
@@ -195,7 +195,7 @@ func processLeaveServer() plexus.MessageResponse {
 	}
 	serverConn.Store(nil)
 	self.Server = ""
-	if err := boltdb.Save(self, "self", deviceTable); err != nil {
+	if err := store.Save(self, "self", deviceTable); err != nil {
 		slog.Error("save device", "error", err)
 	}
 	return plexus.MessageResponse{Message: "left server " + self.Server}
@@ -203,7 +203,7 @@ func processLeaveServer() plexus.MessageResponse {
 
 func processReload() (plexus.NetworkResponse, error) {
 	response := plexus.NetworkResponse{}
-	self, err := boltdb.Get[Device]("self", deviceTable)
+	self, err := store.Get[Device]("self", deviceTable)
 	if err != nil {
 		slog.Error("get device", "error", err)
 		return response, err
@@ -237,7 +237,7 @@ func processAddPeer(network Network, update *plexus.NetworkUpdate, wg *plexus.Wi
 		}
 	}
 	network.Peers = append(network.Peers, update.Peer)
-	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+	if err := store.Save(network, network.Name, networkTable); err != nil {
 		slog.Error("update network -- add peer", "error", err)
 	}
 	wgPeer, err := convertPeerToWG(update.Peer, network.Peers)
@@ -261,7 +261,7 @@ func processDeletePeer(
 	slog.Debug("delete peer")
 	if update.Peer.WGPublicKey == self.WGPublicKey {
 		slog.Info("self delete --> delete network", "network", network.Name)
-		if err := boltdb.Delete[Network](network.Name, networkTable); err != nil {
+		if err := store.Delete(network.Name, networkTable); err != nil {
 			slog.Error("delete network", "error", err)
 		}
 		slog.Info("delete interface", "network", network.Name, "interface", network.Interface)
@@ -285,7 +285,7 @@ func processDeletePeer(
 			"id", update.Peer.WGPublicKey)
 		return
 	}
-	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+	if err := store.Save(network, network.Name, networkTable); err != nil {
 		slog.Error("update network -- delete peer", "error", err)
 	}
 	if err := wg.Apply(); err != nil {
@@ -319,7 +319,7 @@ func processUpdatePeer(network Network, update *plexus.NetworkUpdate, wg *plexus
 		return
 	}
 	wg.ReplacePeer(wgPeer)
-	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+	if err := store.Save(network, network.Name, networkTable); err != nil {
 		slog.Error("update network -- update peer", "error", err)
 	}
 	if err := wg.Apply(); err != nil {
@@ -341,7 +341,7 @@ func processAddRelay(network Network, update *plexus.NetworkUpdate, self Device)
 		newPeers = append(newPeers, existing)
 	}
 	network.Peers = newPeers
-	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+	if err := store.Save(network, network.Name, networkTable); err != nil {
 		slog.Error("update network with relayed peers", "error", err)
 	}
 	if err := resetPeersOnNetworkInterface(self, network); err != nil {
@@ -364,7 +364,7 @@ func processDeleteRelay(network Network, update *plexus.NetworkUpdate, self Devi
 		newPeers = append(newPeers, existing)
 	}
 	network.Peers = newPeers
-	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+	if err := store.Save(network, network.Name, networkTable); err != nil {
 		slog.Error("remove relay: save network", "network", network.Name, "error", err)
 	}
 	if err := resetPeersOnNetworkInterface(self, network); err != nil {
@@ -375,7 +375,7 @@ func processDeleteRelay(network Network, update *plexus.NetworkUpdate, self Devi
 func processDeleteNetwork(network Network) {
 	slog.Debug("delete network")
 	slog.Info("delete network")
-	if err := boltdb.Delete[Network](network.Name, networkTable); err != nil {
+	if err := store.Delete(network.Name, networkTable); err != nil {
 		slog.Error("delete network", "error", err)
 	}
 	if err := deleteInterface(network.Interface); err != nil {

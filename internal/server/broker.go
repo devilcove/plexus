@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/devilcove/boltdb"
 	"github.com/devilcove/configuration"
 	"github.com/devilcove/plexus"
 	"github.com/devilcove/plexus/internal/publish"
@@ -106,7 +105,7 @@ func startBroker(ctx context.Context) {
 
 func getTokenUsers() []*server.NkeyUser {
 	users := []*server.NkeyUser{}
-	keys, err := boltdb.GetAll[plexus.Key](keyTable)
+	keys, err := store.GetAll[plexus.Key](keyBucket)
 	if err != nil {
 		slog.Error("unable to retrieve keys", "error", err)
 	}

@@ -59,7 +59,7 @@ func addKey(w http.ResponseWriter, r *http.Request) {
 	if key.Expires.IsZero() {
 		key.Expires = time.Now().Add(keyExpiry)
 	}
-	existing, err := boltdb.Get[plexus.Key](key.Name, keyTable)
+	existing, err := store.Get[plexus.Key](key.Name, keyBucket)
 	if err != nil && !errors.Is(err, boltdb.ErrNoResults) {
 		processError(w, http.StatusInternalServerError, "retrieve key"+err.Error())
 		return
@@ -68,7 +68,7 @@ func addKey(w http.ResponseWriter, r *http.Request) {
 		processError(w, http.StatusBadRequest, "key exists with name:"+existing.Name)
 		return
 	}
-	if err := boltdb.Save(key, key.Name, keyTable); err != nil {
+	if err := store.Save(key, key.Name, keyBucket); err != nil {
 		processError(w, http.StatusInternalServerError, "saving key "+err.Error())
 		return
 	}
@@ -76,17 +76,17 @@ func addKey(w http.ResponseWriter, r *http.Request) {
 }
 
 func displayKeys(w http.ResponseWriter, _ *http.Request) {
-	keys, err := boltdb.GetAll[plexus.Key](keyTable)
+	keys, err := store.GetAll[plexus.Key](keyBucket)
 	if err != nil {
 		processError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	render(w, keyTable, keys)
+	render(w, "keys", keys)
 }
 
 func deleteKey(w http.ResponseWriter, r *http.Request) {
 	keyid := r.PathValue("id")
-	key, err := boltdb.Get[plexus.Key](keyid, keyTable)
+	key, err := store.Get[plexus.Key](keyid, keyBucket)
 	if err != nil {
 		processError(w, http.StatusBadRequest, "key does not exist")
 		return
@@ -135,7 +135,7 @@ func newValue(name string) (string, error) {
 }
 
 func decrementKeyUsage(name string) error {
-	key, err := boltdb.Get[plexus.Key](name, keyTable)
+	key, err := store.Get[plexus.Key](name, keyBucket)
 	if err != nil {
 		return err
 	}
@@ -143,7 +143,7 @@ func decrementKeyUsage(name string) error {
 		return removeKey(key)
 	}
 	key.Usage--
-	if err := boltdb.Save(key, key.Name, keyTable); err != nil {
+	if err := store.Save(key, key.Name, keyBucket); err != nil {
 		return err
 	}
 	return nil
@@ -151,7 +151,7 @@ func decrementKeyUsage(name string) error {
 
 func expireKeys() {
 	slog.Debug("checking for expired keys")
-	keys, err := boltdb.GetAll[plexus.Key](keyTable)
+	keys, err := store.GetAll[plexus.Key](keyBucket)
 	if err != nil {
 		slog.Error("get keys", "error", err)
 	}
@@ -171,7 +171,7 @@ func expireKeys() {
 
 func removeKey(key plexus.Key) error {
 	var errs error
-	if err := boltdb.Delete[plexus.Key](key.Name, keyTable); err != nil {
+	if err := store.Delete(key.Name, keyBucket); err != nil {
 		slog.Error("delete key from db", "error", err)
 		errs = errors.Join(errs, err)
 	}

@@ -51,7 +51,7 @@ func TestNewDevice(t *testing.T) {
 	// err := boltdb.Initialize("./test.db", []string{deviceTable})
 	// should.NotBeError(t, err)
 	device := Device{}
-	err := boltdb.Delete[Device]("self", deviceTable)
+	err := store.Delete("self", deviceTable)
 	if err != nil && !errors.Is(err, boltdb.ErrNoResults) {
 		t.Fail()
 	}

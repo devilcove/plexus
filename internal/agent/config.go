@@ -5,6 +5,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/devilcove/boltdb"
 	"github.com/nats-io/nats.go"
 )
 
@@ -19,14 +20,15 @@ const (
 	connectivityTimeout   = time.Minute * 3
 	endpointServerTimeout = time.Second * 30
 	// networkNotMapped      = "network not mapped to server".
-	networkTable = "networks"
-	deviceTable  = "devices"
 )
 
 var (
 	Config        Configuration
 	serverConn    atomic.Pointer[nats.Conn]
 	subscriptions []*nats.Subscription
+	buckets       = []boltdb.Path{deviceTable, networkTable}
+	deviceTable   = boltdb.Path{"devices"}
+	networkTable  = boltdb.Path{"networks"}
 	// errors.
 	ErrNetNotMapped = errors.New("network not mapped to server")
 	ErrNotConnected = errors.New("not connected to server")

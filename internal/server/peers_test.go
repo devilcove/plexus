@@ -47,7 +47,7 @@ func TestDisplayPeers(t *testing.T) {
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, r)
 		should.BeEqual(t, w.Result().StatusCode, http.StatusOK)
-		_, err := boltdb.Get[plexus.Peer](peerID, peerTable)
+		_, err := store.Get[plexus.Peer](peerID, peerBucket)
 		should.BeErrorIs(t, err, boltdb.ErrNoResults)
 	})
 }

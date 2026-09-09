@@ -18,9 +18,11 @@ func TestMain(m *testing.M) {
 			os.Exit(1)
 		}
 	}
-	if err := boltdb.Initialize("./test.db",
-		[]string{deviceTable, networkTable},
-	); err != nil {
+	store, err := boltdb.Initialize(
+		"./test.db",
+		[]boltdb.Path{deviceTable, networkTable},
+	)
+	if err != nil {
 		log.Println("init db", err)
 		os.Exit(2)
 	}
@@ -28,7 +30,7 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 	// 	cancel()
 	// 	wg.Wait()
-	boltdb.Close()
+	store.Close()
 	os.Exit(code)
 }
 

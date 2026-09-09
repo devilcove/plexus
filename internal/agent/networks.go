@@ -7,17 +7,17 @@ import (
 	"slices"
 	"strconv"
 
-	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
 )
 
 func deleteAllNetworks() {
-	networks, err := boltdb.GetAll[Network](networkTable)
+	networks, err := store.GetAll[Network](networkTable)
 	if err != nil {
 		slog.Error("get networks", "error", err)
 	}
+
 	for _, network := range networks {
-		if err := boltdb.Delete[Network](network.Name, networkTable); err != nil {
+		if err := store.Delete(network.Name, networkTable); err != nil {
 			slog.Error("delete network", "name", network.Name, "error", err)
 		}
 	}
@@ -57,7 +57,7 @@ func saveServerNetworks(self Device, networks []plexus.Network) error {
 			return errors.New("no networks available")
 		}
 		slog.Debug("saving network", "network", network.Name)
-		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+		if err := store.Save(network, network.Name, networkTable); err != nil {
 			return err
 		}
 	}
@@ -65,7 +65,7 @@ func saveServerNetworks(self Device, networks []plexus.Network) error {
 }
 
 func saveServerNetwork(serverNet plexus.Network) (Network, error) {
-	existingNetworks, err := boltdb.GetAll[Network](networkTable)
+	existingNetworks, err := store.GetAll[Network](networkTable)
 	if err != nil {
 		return Network{}, err
 	}
@@ -87,6 +87,6 @@ func saveServerNetwork(serverNet plexus.Network) (Network, error) {
 		}
 	}
 	slog.Debug("saving network", "network", network.Name)
-	err = boltdb.Save(network, network.Name, networkTable)
+	err = store.Save(network, network.Name, networkTable)
 	return network, err
 }

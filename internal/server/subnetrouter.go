@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
 	"github.com/devilcove/plexus/internal/publish"
 )
@@ -55,7 +54,7 @@ func addRouter(w http.ResponseWriter, r *http.Request) {
 		processError(w, http.StatusBadRequest, message)
 		return
 	}
-	network, err := boltdb.Get[plexus.Network](netID, networkTable)
+	network, err := store.Get[plexus.Network](netID, networkBucket)
 	if err != nil {
 		processError(w, http.StatusBadRequest, err.Error())
 		return
@@ -79,7 +78,7 @@ func addRouter(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
-	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+	if err := store.Save(network, network.Name, networkBucket); err != nil {
 		processError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -92,7 +91,7 @@ func deleteRouter(w http.ResponseWriter, r *http.Request) {
 	netID := r.PathValue("id")
 	router := r.PathValue("peer")
 	slog.Info("delete subnet router", "network", netID, "router", router)
-	network, err := boltdb.Get[plexus.Network](netID, networkTable)
+	network, err := store.Get[plexus.Network](netID, networkBucket)
 	if err != nil {
 		processError(w, http.StatusBadRequest, err.Error())
 		return
@@ -110,7 +109,7 @@ func deleteRouter(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
-	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+	if err := store.Save(network, network.Name, networkBucket); err != nil {
 		processError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -129,7 +128,7 @@ func deleteRouter(w http.ResponseWriter, r *http.Request) {
 }
 
 func subnetInUse(subnet *net.IPNet) (string, string, error) {
-	networks, err := boltdb.GetAll[plexus.Network](networkTable)
+	networks, err := store.GetAll[plexus.Network](networkBucket)
 	if err != nil {
 		slog.Debug("get networks", "error", err)
 		return "", "", err

@@ -10,7 +10,6 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/devilcove/boltdb"
 	"github.com/devilcove/cookie"
 	"github.com/devilcove/plexus"
 	"golang.org/x/crypto/bcrypt"
@@ -43,7 +42,7 @@ func displayMain(w http.ResponseWriter, r *http.Request) {
 	if _, err := cookie.Get(r, cookieName); err != nil {
 		page.NeedsLogin = true
 	}
-	networks, err := boltdb.GetAll[plexus.Network](networkTable)
+	networks, err := store.GetAll[plexus.Network](networkBucket)
 	if err != nil {
 		slog.Error("get networks for main display", "error", err)
 	}
@@ -73,7 +72,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 }
 
 func validateUser(visitor *plexus.User) bool {
-	user, err := boltdb.Get[plexus.User](visitor.Username, userTable)
+	user, err := store.Get[plexus.User](visitor.Username, userBucket)
 	if err != nil {
 		slog.Error("no such user", "user", visitor.Username, "error", err)
 		return false
@@ -101,7 +100,7 @@ func logout(w http.ResponseWriter, r *http.Request) {
 
 func initialize() Page {
 	networks := []string{}
-	allNetworks, err := boltdb.GetAll[plexus.Network](networkTable)
+	allNetworks, err := store.GetAll[plexus.Network](networkBucket)
 	if err != nil {
 		slog.Error("get networks during page init", "error", err)
 	}
@@ -127,7 +126,7 @@ func getPage(user any) Page {
 	}
 	if page, ok := pages[user.(string)]; ok {
 		page.DefaultDate = time.Now().Local().Format("2006-01-02")
-		networks, err := boltdb.GetAll[plexus.Network](networkTable)
+		networks, err := store.GetAll[plexus.Network](networkBucket)
 		if err != nil {
 			slog.Error("get networks", "error", err)
 		}

@@ -7,7 +7,6 @@ import (
 	"slices"
 	"time"
 
-	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
 	"github.com/devilcove/plexus/internal/publish"
 	"github.com/nats-io/nats-server/v2/server"
@@ -15,7 +14,7 @@ import (
 
 func displayPeers(w http.ResponseWriter, _ *http.Request) {
 	displayPeers := []plexus.Peer{}
-	peers, err := boltdb.GetAll[plexus.Peer](peerTable)
+	peers, err := store.GetAll[plexus.Peer](peerBucket)
 	if err != nil {
 		processError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -27,12 +26,12 @@ func displayPeers(w http.ResponseWriter, _ *http.Request) {
 		}
 		displayPeers = append(displayPeers, peer)
 	}
-	render(w, peerTable, displayPeers)
+	render(w, "peers", displayPeers)
 }
 
 func peerDetails(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	peer, err := boltdb.Get[plexus.Peer](id, peerTable)
+	peer, err := store.Get[plexus.Peer](id, peerBucket)
 	if err != nil {
 		processError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -52,11 +51,11 @@ func deletePeer(w http.ResponseWriter, r *http.Request) {
 }
 
 func discardPeer(id string) (plexus.Peer, error) {
-	peer, err := boltdb.Get[plexus.Peer](id, peerTable)
+	peer, err := store.Get[plexus.Peer](id, peerBucket)
 	if err != nil {
 		return peer, err
 	}
-	networks, err := boltdb.GetAll[plexus.Network](networkTable)
+	networks, err := store.GetAll[plexus.Network](networkBucket)
 	if err != nil {
 		return peer, err
 	}
@@ -79,12 +78,12 @@ func discardPeer(id string) (plexus.Peer, error) {
 			}
 		}
 		if found {
-			if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+			if err := store.Save(network, network.Name, networkBucket); err != nil {
 				slog.Error("save network during peer deletion", "error", err)
 			}
 		}
 	}
-	if err := boltdb.Delete[plexus.Peer](peer.WGPublicKey, peerTable); err != nil {
+	if err := store.Delete(peer.WGPublicKey, peerBucket); err != nil {
 		return peer, err
 	}
 	request := &plexus.DeviceUpdate{
@@ -96,7 +95,7 @@ func discardPeer(id string) (plexus.Peer, error) {
 
 func getDeviceUsers() []*server.NkeyUser {
 	devices := []*server.NkeyUser{}
-	peers, err := boltdb.GetAll[plexus.Peer](peerTable)
+	peers, err := store.GetAll[plexus.Peer](peerBucket)
 	if err != nil {
 		slog.Error("retrieve peers", "error", err)
 		return devices
@@ -124,7 +123,7 @@ func deletePeerFromBroker(key string) {
 }
 
 func pingPeers() {
-	peers, err := boltdb.GetAll[plexus.Peer](peerTable)
+	peers, err := store.GetAll[plexus.Peer](peerBucket)
 	if err != nil {
 		slog.Error("get peers")
 		return
@@ -157,10 +156,10 @@ func pingPeers() {
 
 func savePeer(peer plexus.Peer) {
 	slog.Debug("saving peer", "peer", peer.Name, "key", peer.WGPublicKey)
-	if err := boltdb.Save(peer, peer.WGPublicKey, peerTable); err != nil {
+	if err := store.Save(peer, peer.WGPublicKey, peerBucket); err != nil {
 		slog.Error("save peer", "peer", peer.Name, "error", err)
 	}
-	networks, err := boltdb.GetAll[plexus.Network](networkTable)
+	networks, err := store.GetAll[plexus.Network](networkBucket)
 	if err != nil {
 		slog.Error("get networks", "error", err)
 	}
@@ -174,7 +173,7 @@ func savePeer(peer plexus.Peer) {
 					"peer", netPeer.HostName,
 					"key", netPeer.WGPublicKey,
 				)
-				if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+				if err := store.Save(network, network.Name, networkBucket); err != nil {
 					slog.Error("save network", "network", network.Name, "error", err)
 				}
 			}

@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/Kairum-Labs/should"
-	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
 )
 
@@ -16,7 +15,7 @@ func TestDefaultUser(t *testing.T) {
 		deleteAllUsers(t)
 		err := checkDefaultUser("admin", "pass")
 		should.NotBeError(t, err)
-		user, err := boltdb.Get[plexus.User]("admin", userTable)
+		user, err := store.Get[plexus.User]("admin", userBucket)
 		should.NotBeError(t, err)
 		should.BeEqual(t, user.Username, "admin")
 		should.BeTrue(t, user.IsAdmin)
@@ -25,7 +24,7 @@ func TestDefaultUser(t *testing.T) {
 		deleteAllUsers(t)
 		err := checkDefaultUser("Administrator", "password")
 		should.NotBeError(t, err)
-		user, err := boltdb.Get[plexus.User]("Administrator", userTable)
+		user, err := store.Get[plexus.User]("Administrator", userBucket)
 		should.NotBeError(t, err)
 		should.BeEqual(t, user.Username, "Administrator")
 		should.BeTrue(t, user.IsAdmin)
@@ -33,7 +32,7 @@ func TestDefaultUser(t *testing.T) {
 	t.Run("adminexists", func(t *testing.T) {
 		err := checkDefaultUser("Administator", "password")
 		should.NotBeError(t, err)
-		user, err := boltdb.Get[plexus.User]("Administrator", userTable)
+		user, err := store.Get[plexus.User]("Administrator", userBucket)
 		should.NotBeError(t, err)
 		should.BeEqual(t, user.Username, "Administrator")
 		should.BeTrue(t, user.IsAdmin)

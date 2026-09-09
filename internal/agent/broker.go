@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
 	"github.com/devilcove/plexus/internal/publish"
 	"github.com/nats-io/nats-server/v2/server"
@@ -219,19 +218,19 @@ func setPrivateEndpoint(msg *nats.Msg, agentConn *nats.Conn) {
 	slog.Debug("set private endpoint", "endpoint", request.IP, "network", request.Network)
 	var err error
 	var networks []Network
-	self, err := boltdb.Get[Device]("self", deviceTable)
+	self, err := store.Get[Device]("self", deviceTable)
 	if err != nil {
 		publish.ErrorMessage(agentConn, msg.Reply, "get device", err)
 		return
 	}
 	if request.Network == "" {
-		networks, err = boltdb.GetAll[Network](networkTable)
+		networks, err = store.GetAll[Network](networkTable)
 		if err != nil {
 			publish.ErrorMessage(agentConn, msg.Reply, "get network", err)
 			return
 		}
 	} else {
-		network, err := boltdb.Get[Network](request.Network, networkTable)
+		network, err := store.Get[Network](request.Network, networkTable)
 		if err != nil {
 			publish.ErrorMessage(agentConn, msg.Reply, "get network", err)
 		}
@@ -247,7 +246,7 @@ func setPrivateEndpoint(msg *nats.Msg, agentConn *nats.Conn) {
 				}
 			}
 		}
-		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+		if err := store.Save(network, network.Name, networkTable); err != nil {
 			publish.ErrorMessage(agentConn, msg.Reply, "internal error", err)
 		}
 	}
@@ -260,7 +259,7 @@ func setPrivateEndpoint(msg *nats.Msg, agentConn *nats.Conn) {
 func sendVersion(msg *nats.Msg, agentConn *nats.Conn) {
 	slog.Debug("version request")
 	response := plexus.VersionResponse{}
-	self, err := boltdb.Get[Device]("self", deviceTable)
+	self, err := store.Get[Device]("self", deviceTable)
 	if err != nil {
 		publish.ErrorMessage(agentConn, msg.Reply, "get self", err)
 		slog.Error("get device", "error", err)
@@ -297,7 +296,7 @@ func sendVersion(msg *nats.Msg, agentConn *nats.Conn) {
 
 func sendReset(msg *nats.Msg, agentConn *nats.Conn) {
 	slog.Debug("reset request")
-	self, err := boltdb.Get[Device]("self", deviceTable)
+	self, err := store.Get[Device]("self", deviceTable)
 	if err != nil {
 		slog.Error(err.Error())
 		publish.ErrorMessage(agentConn, msg.Reply, "get device", err)
@@ -309,7 +308,7 @@ func sendReset(msg *nats.Msg, agentConn *nats.Conn) {
 		publish.ErrorMessage(agentConn, msg.Reply, "invalid request", err)
 		return
 	}
-	network, err := boltdb.Get[Network](request.Network, networkTable)
+	network, err := store.Get[Network](request.Network, networkTable)
 	if err != nil {
 		slog.Error("get network", "network", request.Network, "error", err)
 		publish.ErrorMessage(agentConn, msg.Reply, "get network", err)
@@ -335,7 +334,7 @@ func sendRelaad(msg *nats.Msg, agentConn *nats.Conn) {
 		publish.ErrorMessage(agentConn, msg.Reply, "process reload", err)
 		return
 	}
-	self, err := boltdb.Get[Device]("self", deviceTable)
+	self, err := store.Get[Device]("self", deviceTable)
 	if err != nil {
 		slog.Error("get device", "error", err)
 		publish.ErrorMessage(agentConn, msg.Reply, "get device", err)

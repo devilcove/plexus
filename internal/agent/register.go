@@ -60,7 +60,7 @@ func handleRegistration(request *plexus.RegisterRequest) plexus.MessageResponse 
 		return plexus.MessageResponse{Message: "error: " + err.Error()}
 	}
 	self.Server = conn.ConnectedUrl()
-	if err := boltdb.Save(self, "self", deviceTable); err != nil {
+	if err := store.Save(self, "self", deviceTable); err != nil {
 		slog.Error("save device", "error", err)
 		return plexus.MessageResponse{Message: "error saving device " + err.Error()}
 	}
@@ -72,12 +72,12 @@ func handleRegistration(request *plexus.RegisterRequest) plexus.MessageResponse 
 }
 
 func newDevice() (Device, error) {
-	device, err := boltdb.Get[Device]("self", deviceTable)
+	device, err := store.Get[Device]("self", deviceTable)
 	version := Version()
 	if err == nil {
 		if device.Version != version {
 			device.Version = version
-			if err := boltdb.Save(device, "self", deviceTable); err != nil {
+			if err := store.Save(device, "self", deviceTable); err != nil {
 				slog.Error("update self version", "error", err)
 			}
 		}
@@ -98,7 +98,7 @@ func newDevice() (Device, error) {
 	if err := os.WriteFile(Config.DataDir+"agent.seed", []byte(seed), os.ModePerm); err != nil {
 		slog.Error("save seed", "error", err)
 	}
-	err = boltdb.Save(device, "self", deviceTable)
+	err = store.Save(device, "self", deviceTable)
 	return device, err
 }
 

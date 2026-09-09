@@ -13,7 +13,6 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/devilcove/boltdb"
 	"github.com/devilcove/configuration"
 	"github.com/devilcove/plexus"
 	"github.com/nats-io/nats-server/v2/server"
@@ -36,7 +35,7 @@ func Run() {
 		slog.Error("unable to configure server", "error", err)
 		os.Exit(1)
 	}
-	// defer boltdb.Close()
+	// defer store.Close()
 	wg := sync.WaitGroup{}
 	quit := make(chan os.Signal, 1)
 	reset := make(chan os.Signal, 1)
@@ -63,13 +62,13 @@ func Run() {
 			slog.Error("error running broker .... shutting down")
 			cancel()
 			wg.Wait()
-			boltdb.Close()
+			store.Close()
 			os.Exit(1)
 		case <-webfail:
 			slog.Error("error running web .... shutting down")
 			cancel()
 			wg.Wait()
-			boltdb.Close()
+			store.Close()
 			os.Exit(2)
 		}
 	}

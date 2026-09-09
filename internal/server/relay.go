@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"slices"
 
-	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
 	"github.com/devilcove/plexus/internal/publish"
 )
@@ -19,7 +18,7 @@ func displayAddRelay(w http.ResponseWriter, r *http.Request) {
 	data.Network = r.PathValue("id")
 	relay := r.PathValue("peer")
 	slog.Debug("add relay", "network", data.Network, "relay", relay)
-	network, err := boltdb.Get[plexus.Network](data.Network, networkTable)
+	network, err := store.Get[plexus.Network](data.Network, networkBucket)
 	if err != nil {
 		processError(w, http.StatusBadGateway, err.Error())
 		return
@@ -44,7 +43,7 @@ func addRelay(w http.ResponseWriter, r *http.Request) {
 	netID := r.PathValue("id")
 	relayID := r.PathValue("peer")
 	relayedIDs := r.PostForm["relayed"]
-	network, err := boltdb.Get[plexus.Network](netID, networkTable)
+	network, err := store.Get[plexus.Network](netID, networkBucket)
 	slog.Debug("add relay", "network", netID, "relay", relayID, "relayed", relayedIDs)
 	if err != nil {
 		processError(w, http.StatusBadRequest, err.Error())
@@ -66,7 +65,7 @@ func addRelay(w http.ResponseWriter, r *http.Request) {
 		peers = append(peers, peer)
 	}
 	network.Peers = peers
-	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+	if err := store.Save(network, network.Name, networkBucket); err != nil {
 		processError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -79,7 +78,7 @@ func deleteRelay(w http.ResponseWriter, r *http.Request) {
 	netName := r.PathValue("id")
 	peerID := r.PathValue("peer")
 	slog.Info("delete relay", "network", netName, "relay", peerID)
-	network, err := boltdb.Get[plexus.Network](netName, networkTable)
+	network, err := store.Get[plexus.Network](netName, networkBucket)
 	if err != nil {
 		processError(w, http.StatusBadRequest, err.Error())
 		return
@@ -111,7 +110,7 @@ func deleteRelay(w http.ResponseWriter, r *http.Request) {
 		updatedPeers = append(updatedPeers, peer)
 	}
 	network.Peers = updatedPeers
-	if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+	if err := store.Save(network, network.Name, networkBucket); err != nil {
 		processError(w, http.StatusBadRequest, "failed to save update network peers "+err.Error())
 		return
 	}

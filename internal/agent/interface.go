@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
 	"github.com/vishvananda/netlink"
 	"golang.zx2c4.com/wireguard/wgctrl"
@@ -54,7 +53,7 @@ func deleteAllInterfaces() {
 }
 
 func startAllInterfaces(self Device) {
-	networks, err := boltdb.GetAll[Network](networkTable)
+	networks, err := store.GetAll[Network](networkTable)
 	if err != nil {
 		slog.Error("get networks", "error", err)
 		return
@@ -123,7 +122,7 @@ func startInterface(self Device, network Network) error {
 			"public address changed ... saving and publishing update",
 			"address", self.Endpoint,
 		)
-		if err := boltdb.Save(self, "self", deviceTable); err != nil {
+		if err := store.Save(self, "self", deviceTable); err != nil {
 			return err
 		}
 		go publishDeviceUpdate(&self)
@@ -131,7 +130,7 @@ func startInterface(self Device, network Network) error {
 	if portChanged {
 		slog.Debug("listenport changed .. saving and publishing update", "port",
 			network.ListenPort, "public port", network.PublicListenPort)
-		if err := boltdb.Save(network, network.Name, networkTable); err != nil {
+		if err := store.Save(network, network.Name, networkTable); err != nil {
 			return err
 		}
 		go publishListenPortUpdate(&self, &network)
@@ -189,7 +188,7 @@ func getFreePort(start int) (int, error) {
 
 func getConnectivity() []plexus.ConnectivityData {
 	results := []plexus.ConnectivityData{}
-	networks, err := boltdb.GetAll[Network](networkTable)
+	networks, err := store.GetAll[Network](networkTable)
 	if err != nil {
 		slog.Error("get networks", "error", err)
 		return results
@@ -375,7 +374,7 @@ func getNewListenPorts(name string) (plexus.NetworkPeer, error) {
 	if err != nil {
 		return plexus.NetworkPeer{}, err
 	}
-	self, err := boltdb.Get[Device]("self", deviceTable)
+	self, err := store.Get[Device]("self", deviceTable)
 	if err != nil {
 		return plexus.NetworkPeer{}, err
 	}
@@ -386,7 +385,7 @@ func getNewListenPorts(name string) (plexus.NetworkPeer, error) {
 	if endpointChanged {
 		go func() {
 			publishDeviceUpdate(&self)
-			if err := boltdb.Save(self, "self", deviceTable); err != nil {
+			if err := store.Save(self, "self", deviceTable); err != nil {
 				slog.Error("save device", "error", err)
 			}
 		}()

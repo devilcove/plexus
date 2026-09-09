@@ -41,11 +41,11 @@ func Test_emailValid(t *testing.T) {
 func TestConfigureServer(t *testing.T) {
 	setup(t)
 	defer shutdown(t)
-	err := boltdb.Close()
+	err := store.Close()
 	should.NotBeError(t, err)
 	defer func() {
-		err := boltdb.Initialize("./test.db",
-			[]string{userTable, keyTable, networkTable, peerTable, settingTable})
+		store, err = boltdb.Initialize("./test.db",
+			[]boltdb.Path{userBucket, keyBucket, networkBucket, peerBucket, settingBucket})
 		should.NotBeError(t, err)
 	}()
 
@@ -76,6 +76,6 @@ func TestConfigureServer(t *testing.T) {
 		should.NotBeError(t, err)
 		should.BeNil(t, config)
 		t.Log(err, config)
-		should.BeNil(t, boltdb.Close())
+		should.BeNil(t, store.Close())
 	})
 }

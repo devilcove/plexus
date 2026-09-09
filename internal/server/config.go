@@ -30,12 +30,13 @@ type Configuration struct {
 	DBFile    string
 }
 
-const (
-	userTable    = "users"
-	keyTable     = "keys"
-	networkTable = "networks"
-	peerTable    = "peers"
-	settingTable = "settings"
+var (
+	userBucket    = boltdb.Path{"users"}
+	keyBucket     = boltdb.Path{"keys"}
+	networkBucket = boltdb.Path{"networks"}
+	peerBucket    = boltdb.Path{"peers"}
+	settingBucket = boltdb.Path{"settings"}
+	store         *boltdb.Store
 )
 
 var (
@@ -143,14 +144,16 @@ func emailValid(email string) bool {
 
 func initializeDatabase(config Configuration) error {
 	// initialize database.
+	var err error
 	if err := os.MkdirAll(config.DataHome, os.ModePerm); err != nil {
 		return err
 	}
 	slog.Info("init db", "path", config.DataHome, "file", config.DBFile)
-	if err := boltdb.Initialize(
+	store, err = boltdb.Initialize(
 		filepath.Join(config.DataHome, config.DBFile),
-		[]string{"users", "keys", "networks", "peers", "settings"},
-	); err != nil {
+		[]boltdb.Path{{"users"}, {"keys"}, {"networks"}, {"peers"}, {"settings"}},
+	)
+	if err != nil {
 		return fmt.Errorf("init database %w", err)
 	}
 	// check default user exists.

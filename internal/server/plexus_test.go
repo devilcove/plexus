@@ -28,15 +28,18 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	var err error
 	if _, err := os.Stat("./test.db"); err == nil {
 		if err := os.Remove("./test.db"); err != nil {
 			log.Println("remove db", err)
 			os.Exit(1)
 		}
 	}
-	if err := boltdb.Initialize("./test.db",
-		[]string{userTable, keyTable, networkTable, peerTable, settingTable, "keypairs"},
-	); err != nil {
+	store, err = boltdb.Initialize(
+		"./test.db",
+		[]boltdb.Path{userBucket, keyBucket, networkBucket, peerBucket, settingBucket, {"keypairs"}},
+	)
+	if err != nil {
 		log.Println("init db", err)
 		os.Exit(2)
 	}
@@ -45,7 +48,7 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 	// 	cancel()
 	// 	wg.Wait()
-	boltdb.Close()
+	store.Close()
 	os.Exit(code)
 }
 
@@ -79,10 +82,10 @@ func setup(t *testing.T) {
 
 func deleteAllUsers(t *testing.T) {
 	t.Helper()
-	users, err := boltdb.GetAll[plexus.User](userTable)
+	users, err := store.GetAll[plexus.User](userBucket)
 	should.NotBeError(t, err)
 	for _, user := range users {
-		err := boltdb.Delete[plexus.User](user.Username, userTable)
+		err := store.Delete(user.Username, userBucket)
 		should.NotBeError(t, err)
 	}
 }
@@ -109,16 +112,16 @@ func testLogin(t *testing.T, data plexus.User) *http.Cookie {
 func createTestUser(t *testing.T, user plexus.User) {
 	t.Helper()
 	user.Password, _ = hashPassword(user.Password)
-	err := boltdb.Save(&user, user.Username, userTable)
+	err := store.Save(&user, user.Username, userBucket)
 	should.NotBeError(t, err)
 }
 
 func deleteAllPeers(t *testing.T) {
 	t.Helper()
-	peers, err := boltdb.GetAll[plexus.Peer](peerTable)
+	peers, err := store.GetAll[plexus.Peer](peerBucket)
 	should.NotBeError(t, err)
 	for _, peer := range peers {
-		err := boltdb.Delete[plexus.Peer](peer.WGPublicKey, peerTable)
+		err := store.Delete(peer.WGPublicKey, peerBucket)
 		should.NotBeError(t, err)
 	}
 }
@@ -146,10 +149,10 @@ func createTestNetworkPeer(t *testing.T) string {
 
 func deleteAllNetworks(t *testing.T) {
 	t.Helper()
-	nets, err := boltdb.GetAll[plexus.Network](networkTable)
+	nets, err := store.GetAll[plexus.Network](networkBucket)
 	should.NotBeError(t, err)
 	for _, net := range nets {
-		err := boltdb.Delete[plexus.Network](net.Name, networkTable)
+		err := store.Delete(net.Name, networkBucket)
 		should.NotBeError(t, err)
 	}
 }
@@ -162,16 +165,16 @@ func createTestNetwork(t *testing.T) {
 		Name: "valid",
 		Net:  *cidr,
 	}
-	err = boltdb.Save(network, network.Name, networkTable)
+	err = store.Save(network, network.Name, networkBucket)
 	should.NotBeError(t, err)
 }
 
 func deleteAllKeys(t *testing.T) {
 	t.Helper()
-	keys, err := boltdb.GetAll[plexus.Key](keyTable)
+	keys, err := store.GetAll[plexus.Key](keyBucket)
 	should.NotBeError(t, err)
 	for _, key := range keys {
-		err := boltdb.Delete[plexus.Key](key.Name, keyTable)
+		err := store.Delete(key.Name, keyBucket)
 		should.NotBeError(t, err)
 	}
 }
