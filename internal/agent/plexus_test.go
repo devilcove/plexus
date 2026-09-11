@@ -12,13 +12,14 @@ import (
 )
 
 func TestMain(m *testing.M) {
+	var err error
 	if _, err := os.Stat("./test.db"); err == nil {
 		if err := os.Remove("./test.db"); err != nil {
 			log.Println("remove db", err)
 			os.Exit(1)
 		}
 	}
-	store, err := boltdb.Initialize(
+	store, err = boltdb.Initialize(
 		"./test.db",
 		[]boltdb.Path{deviceTable, networkTable},
 	)

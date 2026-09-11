@@ -1,7 +1,6 @@
 package server
 
 import (
-	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -10,12 +9,12 @@ import (
 	"testing"
 
 	"github.com/Kairum-Labs/should"
-	"github.com/devilcove/boltdb"
 	"github.com/devilcove/plexus"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
 func TestSubnetRouter(t *testing.T) {
+	setup(t)
 	deleteAllPeers(t)
 	deleteAllNetworks(t)
 	deleteAllUsers(t)
@@ -123,8 +122,6 @@ func TestSubnetRouter(t *testing.T) {
 	})
 
 	t.Run("goodVirt", func(t *testing.T) {
-		setup(t)
-		defer shutdown(t)
 		payload := bodyParams("cidr", "192.168.0.0/24", "nat", "virt", "vcidr", "10.10.10.0/24")
 		r := httptest.NewRequest(http.MethodPost, "/networks/router/valid/"+peer, payload)
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -138,8 +135,6 @@ func TestSubnetRouter(t *testing.T) {
 	})
 
 	t.Run("goodNat", func(t *testing.T) {
-		setup(t)
-		defer shutdown(t)
 		payload := bodyParams("cidr", "192.168.0.0/24", "nat", "nat", "vcidr", "10.10.10.0/24")
 		r := httptest.NewRequest(http.MethodPost, "/networks/router/valid/"+peer, payload)
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -153,8 +148,6 @@ func TestSubnetRouter(t *testing.T) {
 	})
 
 	t.Run("delete", func(t *testing.T) {
-		setup(t)
-		defer shutdown(t)
 		r := httptest.NewRequest(http.MethodDelete, "/networks/router/valid/"+peer, nil)
 		r.AddCookie(testLogin(t, user))
 		w := httptest.NewRecorder()
@@ -167,10 +160,9 @@ func TestSubnetRouter(t *testing.T) {
 }
 
 func TestSubnetInUse(t *testing.T) {
+	deleteAllNetworks(t)
 	public, err := generateKeys()
 	should.NotBeError(t, err)
-	err = store.Delete("plexus", networkBucket)
-	should.BeTrue(t, err == nil || errors.Is(err, boltdb.ErrNoResults))
 	peer := plexus.NetworkPeer{
 		WGPublicKey: public.String(),
 		HostName:    "peer1",
@@ -182,9 +174,9 @@ func TestSubnetInUse(t *testing.T) {
 			Mask: net.CIDRMask(20, 32),
 		},
 	}
-	network.Peers = append(network.Peers, peer)
 	err = store.Save(network, network.Name, networkBucket)
 	should.NotBeError(t, err)
+
 	t.Run("overlap network", func(t *testing.T) {
 		subnet := &net.IPNet{
 			IP:   net.ParseIP("10.10.11.0"),

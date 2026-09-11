@@ -24,10 +24,11 @@ func deleteAllNetworks() {
 }
 
 func toAgentNetwork(in plexus.Network) Network {
-	out := Network{}
-	out.Name = in.Name
-	out.Net = in.Net
-	out.Peers = in.Peers
+	out := Network{
+		Name:  in.Name,
+		Net:   in.Net,
+		Peers: in.Peers,
+	}
 	return out
 }
 

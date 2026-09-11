@@ -368,8 +368,9 @@ func stunCheck(self *Device, network *Network, port int) (bool, bool, error) {
 }
 
 func getNewListenPorts(name string) (plexus.NetworkPeer, error) {
-	network := Network{}
-	network.Name = name
+	network := Network{
+		Name: name,
+	}
 	port, err := getFreePort(defaultWGPort)
 	if err != nil {
 		return plexus.NetworkPeer{}, err

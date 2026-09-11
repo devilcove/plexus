@@ -54,6 +54,7 @@ func TestConfigureServer(t *testing.T) {
 		config, err := configureServer()
 		should.BeErrorIs(t, err, ErrSecureBlankFQDN)
 		should.BeNil(t, config)
+		should.NotBeError(t, store.Close())
 	})
 
 	t.Run("secureWithIP", func(t *testing.T) {
@@ -61,6 +62,7 @@ func TestConfigureServer(t *testing.T) {
 		config, err := configureServer()
 		should.BeErrorIs(t, err, ErrSecureWithIP)
 		should.BeNil(t, config)
+		should.NotBeError(t, store.Close())
 	})
 
 	t.Run("secureNoEmail", func(t *testing.T) {
@@ -68,6 +70,7 @@ func TestConfigureServer(t *testing.T) {
 		config, err := configureServer()
 		should.BeErrorIs(t, err, ErrInValidEmail)
 		should.BeNil(t, config)
+		should.NotBeError(t, store.Close())
 	})
 
 	t.Run("insecure", func(t *testing.T) {
@@ -75,7 +78,7 @@ func TestConfigureServer(t *testing.T) {
 		config, err := configureServer()
 		should.NotBeError(t, err)
 		should.BeNil(t, config)
-		t.Log(err, config)
-		should.BeNil(t, store.Close())
+		// t.Log(err, config)
+		should.NotBeError(t, store.Close())
 	})
 }

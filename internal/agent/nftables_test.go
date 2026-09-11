@@ -110,17 +110,19 @@ func TestCheckForNat(t *testing.T) {
 	}
 	_, public, err := generateKeys()
 	should.NotBeError(t, err)
-	self := Device{}
-	self.WGPublicKey = public.String()
+	self := Device{
+		WGPublicKey: public.String(),
+	}
 	peer := plexus.NetworkPeer{
 		WGPublicKey: public.String(),
 		HostName:    "peer1",
 	}
-	network := Network{}
-	network.Name = "plexus"
-	network.Net = net.IPNet{
-		IP:   net.ParseIP("10.10.10.0").To4(),
-		Mask: net.CIDRMask(20, 32),
+	network := Network{
+		Name: "plexus",
+		Net: net.IPNet{
+			IP:   net.ParseIP("10.10.10.0").To4(),
+			Mask: net.CIDRMask(20, 32),
+		},
 	}
 	network.Peers = append(network.Peers, peer)
 	c := &nftables.Conn{}

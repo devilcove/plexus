@@ -167,6 +167,8 @@ func TestDisplayNetworkDetails(t *testing.T) {
 		Username: "hello",
 		Password: "world",
 	}
+	setup(t)
+	defer shutdown(t)
 	createTestUser(t, user)
 	createTestNetwork(t)
 	createTestNetworkPeer(t)
