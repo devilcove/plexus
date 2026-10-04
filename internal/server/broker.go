@@ -56,14 +56,14 @@ func broker(ctx context.Context, wg *sync.WaitGroup, tls *tls.Config) {
 	}
 	if config.Secure {
 		natsOptions.TLSConfig = tls
-		natsOptions.Host = config.FQDN
+		natsOptions.ServerName = config.FQDN
 	}
 	natServer, err = server.NewServer(natsOptions)
 	if err != nil {
 		slog.Error("nats server", "error", err)
 		return
 	}
-	go natServer.Start()
+	natServer.Start()
 	if !natServer.ReadyForConnections(natsTimeout) {
 		slog.Error("not ready for connection", "error", err)
 		return
