@@ -142,7 +142,7 @@ func startInterface(self Device, network Network) error {
 		Peers:        peers,
 	}
 	slog.Debug("creating new wireguard interface", "name", network.Interface, "address", address,
-		"key", config.PrivateKey, "port", config.ListenPort)
+		"key", config.PrivateKey, "port", config.ListenPort) //nolint:loggercheck // never nil
 	wg := plexus.New(network.Interface, mtu, address, config)
 	if err := wg.Up(); err != nil {
 		slog.Error("failed initializition interface", "interface", network.Interface, "error", err)
