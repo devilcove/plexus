@@ -9,9 +9,6 @@ import (
 
 func TestPrintHandshake(t *testing.T) {
 	t.Setenv("NO_COLOR", "true")
-	//bytes := make([]byte, 128)
-	//out, err := os.Open(os.Stdout.Name())
-	//should.NotBeError(t, err)
 
 	t.Run("one second", func(t *testing.T) {
 		s := handshakeTime(time.Now().Add(time.Second * -1))
