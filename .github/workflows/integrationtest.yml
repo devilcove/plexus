@@ -38,8 +38,7 @@ jobs:
           go-version-file: ./go.mod
       - name: run tests
         run: |
-          go vet ./...
-          sudo go test -v ./...
+          scripts/test.sh
 
 
   

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"os"
 	"testing"
 	"time"
 
@@ -9,51 +8,30 @@ import (
 )
 
 func TestPrintHandshake(t *testing.T) {
-	bytes := make([]byte, 128)
-	out, err := os.Open(os.Stdout.Name())
-	should.NotBeError(t, err)
+	t.Setenv("NO_COLOR", "true")
+	//bytes := make([]byte, 128)
+	//out, err := os.Open(os.Stdout.Name())
+	//should.NotBeError(t, err)
+
 	t.Run("one second", func(t *testing.T) {
-		printHandshake(time.Now().Add(time.Second * -1))
-		_, err := out.Read(bytes)
-		should.NotBeError(t, err)
-		should.ContainSubstring(t, string(bytes), "1 second ago")
-		should.BeNil(t, out.Close())
+		s := handshakeTime(time.Now().Add(time.Second * -1))
+		should.ContainSubstring(t, s, "1 second ago")
 	})
 	t.Run("one minute", func(t *testing.T) {
-		out, err := os.Open(os.Stdout.Name())
-		should.NotBeError(t, err)
-		printHandshake(time.Now().Add(time.Second * -60))
-		_, err = out.Read(bytes)
-		should.NotBeError(t, err)
-		should.ContainSubstring(t, string(bytes), "1 minute 0 seconds ago")
-		should.BeNil(t, out.Close())
+		s := handshakeTime(time.Now().Add(time.Second * -60))
+		should.ContainSubstring(t, s, "1 minute 0 seconds ago")
 	})
 	t.Run("hours", func(t *testing.T) {
-		out, err := os.Open(os.Stdout.Name())
-		should.NotBeError(t, err)
-		printHandshake(time.Now().Add(time.Second * -3600))
-		_, err = out.Read(bytes)
-		should.NotBeError(t, err)
-		should.ContainSubstring(t, string(bytes), "1 hour 0 minutes 0 seconds ago")
-		should.BeNil(t, out.Close())
+		s := handshakeTime(time.Now().Add(time.Second * -3600))
+		should.ContainSubstring(t, s, "1 hour 0 minutes 0 seconds ago")
 	})
 	t.Run("multi", func(t *testing.T) {
-		out, err := os.Open(os.Stdout.Name())
-		should.NotBeError(t, err)
-		printHandshake(time.Now().Add(time.Second * -7250))
-		_, err = out.Read(bytes)
-		should.NotBeError(t, err)
-		should.ContainSubstring(t, string(bytes), "2 hours 0 minutes 50 seconds ago")
-		should.BeNil(t, out.Close())
+		s := handshakeTime(time.Now().Add(time.Second * -7250))
+		should.ContainSubstring(t, s, "2 hours 0 minutes 50 seconds ago")
 	})
 	t.Run("now", func(t *testing.T) {
-		out, err := os.Open(os.Stdout.Name())
-		should.NotBeError(t, err)
-		printHandshake(time.Now())
-		_, err = out.Read(bytes)
-		should.NotBeError(t, err)
-		should.ContainSubstring(t, string(bytes), "never")
-		should.BeNil(t, out.Close())
+		s := handshakeTime(time.Now())
+		should.ContainSubstring(t, s, "never")
 	})
 }
 

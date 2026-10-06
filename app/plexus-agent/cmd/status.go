@@ -165,9 +165,12 @@ func showRelayedPeers(relayed []string, network agent.Network) {
 }
 
 func printHandshake(handshake time.Time) {
+	fmt.Println(handshakeTime(handshake))
+}
+
+func handshakeTime(handshake time.Time) string {
 	if handshake.IsZero() {
-		fmt.Printf("\tlast handshake: %s\n", color.RedString("never"))
-		return
+		return fmt.Sprintf("\tlast handshake: %s\n", color.RedString("never"))
 	}
 	d := time.Since(handshake)
 	hour := int(d.Hours())
@@ -204,7 +207,7 @@ func printHandshake(handshake time.Time) {
 	if minute == 0 && hour == 0 && second == 0 {
 		secondString = color.RedString(" never")
 	}
-	fmt.Println("\tlast handshake:", hourString, minuteString, secondString)
+	return fmt.Sprintf("\tlast handshake: %v %v %v", hourString, minuteString, secondString)
 }
 
 func prettyByteSize(b int64) string {

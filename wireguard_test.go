@@ -2,7 +2,6 @@ package plexus
 
 import (
 	"net"
-	"os/user"
 	"testing"
 	"time"
 
@@ -13,12 +12,6 @@ import (
 
 func TestNew(t *testing.T) {
 	deleteAllWireguardInterfaces(t)
-	user, err := user.Current()
-	should.NotBeError(t, err)
-	if user.Uid != "0" {
-		t.Log("this test must be run as root")
-		t.Skip()
-	}
 	key, err := wgtypes.GeneratePrivateKey()
 	should.NotBeError(t, err)
 	peerKey, err := wgtypes.ParseKey("uREcerxMksoD3K0dy1ciJDRGzGCJ8jvIzJ5r9jWApXY=")

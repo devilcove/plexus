@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"os/user"
 	"testing"
 
 	"github.com/Kairum-Labs/should"
@@ -9,12 +8,6 @@ import (
 )
 
 func TestInterface(t *testing.T) {
-	user, err := user.Current()
-	should.NotBeError(t, err)
-	if user.Uid != "0" {
-		t.Log("this test must be run as root")
-		t.Skip()
-	}
 	deleteAllNetworks()
 	deleteAllInterfaces()
 	nets := createTestSeverNetworks(t)

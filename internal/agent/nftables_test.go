@@ -2,7 +2,6 @@ package agent
 
 import (
 	"net"
-	"os/user"
 	"testing"
 
 	"github.com/Kairum-Labs/should"
@@ -14,14 +13,8 @@ import (
 func TestAddNAT(t *testing.T) {
 	table := &nftables.Table{}
 	chain := &nftables.Chain{}
-	user, err := user.Current()
-	should.NotBeError(t, err)
-	if user.Uid != "0" {
-		t.Log("this test must be run as root")
-		t.Skip()
-	}
 	c := nftables.Conn{}
-	err = addNat()
+	err := addNat()
 	should.NotBeError(t, err)
 	tables, err := c.ListTables()
 	should.NotBeError(t, err)
@@ -58,12 +51,6 @@ func TestAddNAT(t *testing.T) {
 }
 
 func TestDelNat(t *testing.T) {
-	user, err := user.Current()
-	should.NotBeError(t, err)
-	if user.Uid != "0" {
-		t.Log("this test must be run as root")
-		t.Skip()
-	}
 	c := &nftables.Conn{}
 	table := c.AddTable(&nftables.Table{
 		Name:   "plexus",
@@ -84,7 +71,7 @@ func TestDelNat(t *testing.T) {
 		},
 	}
 	c.AddRule(rule)
-	err = c.Flush()
+	err := c.Flush()
 	should.NotBeError(t, err)
 	err = delNat()
 	should.NotBeError(t, err)
@@ -101,13 +88,6 @@ func TestDelNat(t *testing.T) {
 }
 
 func TestCheckForNat(t *testing.T) {
-	// plexus.SetLogging("debug")
-	user, err := user.Current()
-	should.NotBeError(t, err)
-	if user.Uid != "0" {
-		t.Log("this test must be run as root")
-		t.Skip()
-	}
 	_, public, err := generateKeys()
 	should.NotBeError(t, err)
 	self := Device{
