@@ -21,6 +21,7 @@ import (
 var (
 	restartEndpointServer chan struct{}
 	store                 *boltdb.Store
+	agentConn             *nats.Conn
 )
 
 func Run() {

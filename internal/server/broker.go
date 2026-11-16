@@ -205,91 +205,30 @@ func registerPermissions() *server.Permissions {
 
 func serverSubcriptions() []*nats.Subscription {
 	subcriptions := []*nats.Subscription{}
-
-	// token subscriptions.
-	// register handler.
-	register, err := natsConn.Subscribe("register", subscribeRegister)
-	// 	func(msg *nats.Msg) {
-	// 	request := &plexus.ServerRegisterRequest{}
-	// 	if err := json.Unmarshal(msg.Data, request); err != nil {
-	// 		slog.Debug("invalid register Request", "error", err, "data", string(msg.Data))
-	// 		publish.ErrorMessage(natsConn, msg.Reply, "invalid request", err)
-	// 	}
-	// 	response := registerHandler(request)
-	// 	slog.Debug("publish register reply", "response", response)
-	// 	publish.Message(natsConn, msg.Reply, response)
-	// 	if err := decrementKeyUsage(request.KeyName); err != nil {
-	// 		slog.Error("decrement key usage", "error", err)
-	// 	}
-	// })
-	if err != nil {
-		slog.Error("subscribe register", "error", err)
+	subs := []struct {
+		subject  string
+		callback nats.MsgHandler
+	}{
+		{"register", subscribeRegister},
+		{"*" + plexus.Checkin, subscribeCheckin},
+		{"*" + plexus.JoinNetwork, subscribeJoinNetwork},
+		{"*" + plexus.Version, subscribeVersion},
+		{"*" + plexus.LeaveNetwork, subscribeLeaveNetwork},
+		{"*" + plexus.LeaveServer, subscribeLeaveServer},
+		{"*" + plexus.Reload, subscribeReload},
+		{"*" + plexus.UpdateListenPorts, subscribeUpdateListenPort},
+		{"*" + plexus.UpdatePeer, subscribeUpdatePeer},
+		{"*" + plexus.UpdateNetworkPeer, subscribeUpdateNetworkPeer},
 	}
-	subcriptions = append(subcriptions, register)
 
-	// device subscriptions,
-	// checkin.
-	checkin, err := natsConn.Subscribe("*"+plexus.Checkin, subscribeCheckin)
-	if err != nil {
-		slog.Error("subcribe checkin", "error", err)
+	for _, s := range subs {
+		sub, err := natsConn.Subscribe(s.subject, s.callback)
+		if err != nil {
+			slog.Error("subscription error", "subject", s.subject, "error", err)
+			continue
+		}
+		subcriptions = append(subcriptions, sub)
 	}
-	subcriptions = append(subcriptions, checkin)
-
-	// join.
-	join, err := natsConn.Subscribe("*"+plexus.JoinNetwork, subscribeJoinNetwork)
-	if err != nil {
-		slog.Error("subcribe join", "error", err)
-	}
-	subcriptions = append(subcriptions, join)
-
-	// version.
-	version, err := natsConn.Subscribe("*"+plexus.Version, subscribeVersion)
-	if err != nil {
-		slog.Error("subcribe version", "error", err)
-	}
-	subcriptions = append(subcriptions, version)
-
-	// leave.
-	leave, err := natsConn.Subscribe("*"+plexus.LeaveNetwork, subscribeLeaveNetwork)
-	if err != nil {
-		slog.Error("subcribe leave", "error", err)
-	}
-	subcriptions = append(subcriptions, leave)
-
-	// leaveServer.
-	leaveServer, err := natsConn.Subscribe("*"+plexus.LeaveServer, subscribeLeaveServer)
-	if err != nil {
-		slog.Error("subcribe leave server", "error", err)
-	}
-	subcriptions = append(subcriptions, leaveServer)
-
-	// reload.
-	reload, err := natsConn.Subscribe("*"+plexus.Reload, subscribeReload)
-	if err != nil {
-		slog.Error("subcribe reload", "error", err)
-	}
-	subcriptions = append(subcriptions, reload)
-
-	// listenPortUpdate  -- reply to a listenPortRequest.
-	portUpdate, err := natsConn.Subscribe("*"+plexus.UpdateListenPorts, subscribeUpdateListenPort)
-	if err != nil {
-		slog.Error("subscribe network peer update", "error", err)
-	}
-	subcriptions = append(subcriptions, portUpdate)
-
-	// deviceUpdate.
-	deviceUpdate, err := natsConn.Subscribe("*"+plexus.UpdatePeer, subscribeUpdatePeer)
-	if err != nil {
-		slog.Error("subscribe device updates", "error", err)
-	}
-	subcriptions = append(subcriptions, deviceUpdate)
-
-	// network peer updates.
-	peerUpdate, err := natsConn.Subscribe("*"+plexus.UpdateNetworkPeer, subscribeUpdateNetworkPeer)
-	if err != nil {
-		slog.Error("subscribe peer update", "error", err)
-	}
-	subcriptions = append(subcriptions, peerUpdate)
 
 	return subcriptions
 }
