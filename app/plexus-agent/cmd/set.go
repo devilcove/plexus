@@ -45,7 +45,7 @@ var setCmd = &cobra.Command{
 				fmt.Println("invalid ip")
 				return
 			}
-			addr, err := netlink.AddrList(nil, netlink.FAMILY_V4)
+			addr, err := netlink.AddrList(nil, netlink.FAMILY_ALL)
 			if err != nil {
 				fmt.Println("error getting addresses", err)
 				return
